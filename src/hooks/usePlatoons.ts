@@ -8,6 +8,7 @@ import {
     PlatoonCreatePayload,
     PlatoonUpdatePayload,
 } from "@/app/lib/api/platoonApi";
+import { getFriendlyApiErrorMessage } from "@/app/lib/apiClient";
 
 export function usePlatoons() {
     const [platoons, setPlatoons] = useState<Platoon[]>([]);
@@ -23,7 +24,7 @@ export function usePlatoons() {
             setPlatoons(data);
             return data;
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Failed to fetch platoons";
+            const errorMessage = getFriendlyApiErrorMessage(err, "Failed to fetch platoons");
             setError(errorMessage);
             throw err;
         } finally {
@@ -39,7 +40,7 @@ export function usePlatoons() {
             const newPlatoon = await createPlatoon(payload);
             return newPlatoon;
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Failed to create platoon";
+            const errorMessage = getFriendlyApiErrorMessage(err, "Failed to create platoon");
             setError(errorMessage);
             throw err;
         } finally {
@@ -55,7 +56,7 @@ export function usePlatoons() {
             const updatedPlatoon = await updatePlatoon(key, payload);
             return updatedPlatoon;
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Failed to update platoon";
+            const errorMessage = getFriendlyApiErrorMessage(err, "Failed to update platoon");
             setError(errorMessage);
             throw err;
         } finally {
@@ -70,7 +71,7 @@ export function usePlatoons() {
         try {
             await deletePlatoon(id);
         } catch (err) {
-            const errorMessage = err instanceof Error ? err.message : "Failed to delete platoon";
+            const errorMessage = getFriendlyApiErrorMessage(err, "Failed to delete platoon");
             setError(errorMessage);
             throw err;
         } finally {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 vi.mock("@/app/lib/jwt", () => ({
@@ -47,6 +47,11 @@ function makeRequest(path: string, options?: { method?: string; token?: string }
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+afterEach(() => {
+  process.env.AUTHZ_V2_ENABLED = "false";
+  process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "false";
 });
 
 describe("middleware access-control hardening", () => {
@@ -131,6 +136,42 @@ describe("middleware access-control hardening", () => {
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body.error).toBe("forbidden");
+  });
+
+  it("defers admin API authorization to route-level RBAC when v2 is enabled", async () => {
+    process.env.AUTHZ_V2_ENABLED = "true";
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "false";
+
+    const res = await middleware(makeRequest("/api/v1/admin/users/user-1", { token: "pc-token" }));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("location")).toBeNull();
+    expect(verifyAccessJWT).not.toHaveBeenCalled();
+  });
+
+  it("allows anonymous active appointment lookup for the login page", async () => {
+    const res = await middleware(makeRequest("/api/v1/admin/appointments?active=true"));
+
+    expect(res.status).toBe(200);
+    expect(verifyAccessJWT).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "/api/v1/platoons",
+    "/api/v1/admin/users/check-username?username=demo",
+  ])("requires auth for former public operational data endpoint %s", async (path) => {
+    const res = await middleware(makeRequest(path));
+
+    expect(res.status).toBe(401);
+    const body = await res.json();
+    expect(body.error).toBe("unauthorized");
+  });
+
+  it("keeps public site settings subroutes anonymous", async () => {
+    const res = await middleware(makeRequest("/api/v1/site-settings/awards"));
+
+    expect(res.status).toBe(200);
+    expect(verifyAccessJWT).not.toHaveBeenCalled();
   });
 
   it("allows authenticated non-admin callers to reach shared read-only admin metadata endpoints", async () => {

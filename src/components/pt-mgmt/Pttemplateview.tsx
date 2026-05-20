@@ -150,6 +150,7 @@ export default function PTTemplateView({
             copySourceCourseId.length > 0 &&
             copyTargetCourseId.length > 0 &&
             copySourceCourseId !== copyTargetCourseId;
+        const canApplyDefault = Boolean(onApplyDefaultTemplate) && currentCourseId.length > 0;
 
         return (
             <Card>
@@ -158,8 +159,8 @@ export default function PTTemplateView({
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <p className="text-sm text-muted-foreground">
-                        Initialize semester-wise PT defaults (Sem 1-6) using upsert-missing
-                        behavior. Existing custom rows are preserved.
+                        Initialize semester-wise PT defaults (Sem 1-6) for the selected course
+                        using upsert-missing behavior. Existing custom rows are preserved.
                     </p>
                     <div className="flex flex-wrap gap-2">
                         {onApplyDefaultTemplate ? (
@@ -168,7 +169,7 @@ export default function PTTemplateView({
                                     type="button"
                                     variant="outline"
                                     onClick={() => void runApply(true)}
-                                    disabled={busyMode !== null}
+                                    disabled={!canApplyDefault || busyMode !== null}
                                 >
                                     {busyMode === "dry-run" ? (
                                         <>
@@ -182,7 +183,7 @@ export default function PTTemplateView({
 
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button type="button" disabled={busyMode !== null}>
+                                        <Button type="button" disabled={!canApplyDefault || busyMode !== null}>
                                             Apply Default PT Template
                                         </Button>
                                     </AlertDialogTrigger>
@@ -193,7 +194,8 @@ export default function PTTemplateView({
                                             </AlertDialogTitle>
                                             <AlertDialogDescription>
                                                 This updates canonical PT template rows and creates missing
-                                                defaults. It does not delete organization-specific entries.
+                                                defaults for the selected course. It does not delete
+                                                organization-specific entries.
                                             </AlertDialogDescription>
                                         </AlertDialogHeader>
                                         <AlertDialogFooter>

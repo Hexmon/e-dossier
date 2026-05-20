@@ -14,6 +14,8 @@ import OverallPerformance from "./OverallPerformance";
 import { toast } from "sonner";
 import type { RootState } from "@/store";
 import { saveOlqTableData, saveObservations } from "@/store/slices/overallAssessmentSlice";
+import { listOlqRecords } from "@/app/lib/api/olqApi";
+import { ApiClientError } from "@/app/lib/apiClient";
 
 interface Row {
     factor: string;
@@ -34,6 +36,59 @@ const DEFAULT_TABLE_DATA: Row[] = [
     { factor: "6th Term", column1: 0, column2: 0, column3: 0, column4: 0, column5: 0, remarks: "" },
 ];
 
+type OlqCategory = {
+    code?: string | null;
+    title?: string | null;
+    subtitles?: Array<{ marksScored?: number | string | null }>;
+};
+
+const normalizeCategoryName = (value: string) => value.toUpperCase().replace(/[^A-Z0-9]+/g, "");
+
+const getCategoryColumn = (category: OlqCategory): "column1" | "column2" | "column3" | "column4" | null => {
+    const key = normalizeCategoryName(`${category.code ?? ""} ${category.title ?? ""}`);
+
+    if (key.includes("PLGORG") || key.includes("PLGANDORG") || key.includes("PLANNINGORGANISATION") || key.includes("PLANNINGORGANIZATION")) {
+        return "column1";
+    }
+    if (key.includes("SOCIALADJUSTMENT")) {
+        return "column2";
+    }
+    if (key.includes("SOCIALEFFECTIVENESS")) {
+        return "column3";
+    }
+    if (key.includes("DYNAMIC")) {
+        return "column4";
+    }
+
+    return null;
+};
+
+const sumCategoryMarks = (category: OlqCategory) =>
+    (category.subtitles ?? []).reduce((sum, subtitle) => sum + (Number(subtitle.marksScored) || 0), 0);
+
+const mergeRemarks = (rows: Row[], savedRows?: Row[]) => {
+    if (!savedRows?.length) return rows;
+
+    const remarksByFactor = new Map(savedRows.map((row) => [row.factor, row.remarks ?? ""]));
+    return rows.map((row) => ({
+        ...row,
+        remarks: remarksByFactor.get(row.factor) ?? row.remarks,
+    }));
+};
+
+const rowsEqual = (a: Row[], b: Row[]) =>
+    a.length === b.length && a.every((row, index) => {
+        const other = b[index];
+        return other
+            && row.factor === other.factor
+            && row.column1 === other.column1
+            && row.column2 === other.column2
+            && row.column3 === other.column3
+            && row.column4 === other.column4
+            && row.column5 === other.column5
+            && row.remarks === other.remarks;
+    });
+
 export default function OlqAssessment() {
     const params = useParams();
     const paramId = params?.id || params?.ocId;
@@ -50,11 +105,13 @@ export default function OlqAssessment() {
 
     // Initialize state from Redux or defaults
     const [tableData, setTableData] = useState<Row[]>(() =>
-        savedData?.olqTableData || DEFAULT_TABLE_DATA
+        mergeRemarks(DEFAULT_TABLE_DATA, savedData?.olqTableData)
     );
     const [observations, setObservations] = useState(() =>
         savedData?.observations || ""
     );
+    const [hasLoadedOlqTotals, setHasLoadedOlqTotals] = useState(false);
+    const [isLoadingOlqTotals, setIsLoadingOlqTotals] = useState(false);
 
     // Debounce refs
     const tableDebounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -62,19 +119,77 @@ export default function OlqAssessment() {
 
     // Load saved data when ocId changes
     useEffect(() => {
-        if (savedData) {
-            if (savedData.olqTableData && savedData.olqTableData.length > 0) {
-                setTableData(savedData.olqTableData);
-            }
-            if (savedData.observations) {
-                setObservations(savedData.observations);
-            }
-        }
+        setTableData(prev => {
+            const next = mergeRemarks(prev, savedData?.olqTableData);
+            return rowsEqual(prev, next) ? prev : next;
+        });
+        setObservations(savedData?.observations || "");
     }, [ocId, savedData]);
+
+    useEffect(() => {
+        if (!ocId) return;
+
+        let mounted = true;
+        setHasLoadedOlqTotals(false);
+        setIsLoadingOlqTotals(true);
+
+        const fetchSavedOlqTotals = async () => {
+            try {
+                const semesterSheets = await Promise.all(
+                    DEFAULT_TABLE_DATA.map(async (_row, index) => {
+                        try {
+                            const response = await listOlqRecords(ocId, index + 1) as { data?: { categories?: OlqCategory[] } };
+                            return response.data ?? null;
+                        } catch (error) {
+                            if (error instanceof ApiClientError && error.status === 404) {
+                                return null;
+                            }
+                            throw error;
+                        }
+                    })
+                );
+
+                if (!mounted) return;
+
+                setTableData(prev => {
+                    const rows = DEFAULT_TABLE_DATA.map((defaultRow, index) => {
+                        const nextRow: Row = { ...defaultRow, remarks: prev[index]?.remarks ?? defaultRow.remarks };
+                        const categories = semesterSheets[index]?.categories ?? [];
+
+                        categories.forEach((category) => {
+                            const column = getCategoryColumn(category);
+                            if (!column) return;
+                            nextRow[column] += sumCategoryMarks(category);
+                        });
+
+                        return nextRow;
+                    });
+
+                    return rowsEqual(prev, rows) ? prev : rows;
+                });
+                setHasLoadedOlqTotals(true);
+            } catch (error) {
+                console.error(error);
+                if (mounted) {
+                    toast.error("Failed to load saved OLQ assessment data");
+                }
+            } finally {
+                if (mounted) {
+                    setIsLoadingOlqTotals(false);
+                }
+            }
+        };
+
+        fetchSavedOlqTotals();
+
+        return () => {
+            mounted = false;
+        };
+    }, [ocId]);
 
     // Auto-save table data with debounce
     useEffect(() => {
-        if (!ocId) return;
+        if (!ocId || !hasLoadedOlqTotals) return;
 
         if (tableDebounceRef.current) {
             clearTimeout(tableDebounceRef.current);
@@ -89,7 +204,7 @@ export default function OlqAssessment() {
                 clearTimeout(tableDebounceRef.current);
             }
         };
-    }, [tableData, ocId, dispatch]);
+    }, [tableData, ocId, dispatch, hasLoadedOlqTotals]);
 
     // Auto-save observations with debounce
     useEffect(() => {
@@ -174,17 +289,7 @@ export default function OlqAssessment() {
                 if (isTotalRow) {
                     return <span className="text-center block">{value}</span>;
                 }
-                return isEditingTable ? (
-                    <Input
-                        type="number"
-                        value={value}
-                        onChange={(e) => handleChange(row.factor, "column1", e.target.value)}
-                        placeholder="0"
-                        className="w-full"
-                    />
-                ) : (
-                    <span>{value || "-"}</span>
-                );
+                return <span>{value || "-"}</span>;
             }
         },
         {
@@ -196,17 +301,7 @@ export default function OlqAssessment() {
                 if (isTotalRow) {
                     return <span className="text-center block">{value}</span>;
                 }
-                return isEditingTable ? (
-                    <Input
-                        type="number"
-                        value={value}
-                        onChange={(e) => handleChange(row.factor, "column2", e.target.value)}
-                        placeholder="0"
-                        className="w-full"
-                    />
-                ) : (
-                    <span>{value || "-"}</span>
-                );
+                return <span>{value || "-"}</span>;
             }
         },
         {
@@ -218,17 +313,7 @@ export default function OlqAssessment() {
                 if (isTotalRow) {
                     return <span className="text-center block">{value}</span>;
                 }
-                return isEditingTable ? (
-                    <Input
-                        type="number"
-                        value={value}
-                        onChange={(e) => handleChange(row.factor, "column3", e.target.value)}
-                        placeholder="0"
-                        className="w-full"
-                    />
-                ) : (
-                    <span>{value || "-"}</span>
-                );
+                return <span>{value || "-"}</span>;
             }
         },
         {
@@ -240,17 +325,7 @@ export default function OlqAssessment() {
                 if (isTotalRow) {
                     return <span className="text-center block">{value}</span>;
                 }
-                return isEditingTable ? (
-                    <Input
-                        type="number"
-                        value={value}
-                        onChange={(e) => handleChange(row.factor, "column4", e.target.value)}
-                        placeholder="0"
-                        className="w-full"
-                    />
-                ) : (
-                    <span>{value || "-"}</span>
-                );
+                return <span>{value || "-"}</span>;
             }
         },
         {
@@ -320,6 +395,9 @@ export default function OlqAssessment() {
 
                     <div>
                         <h2 className="p-2 text-lg font-bold text-left text-foreground underline">OLQ Assessment</h2>
+                        {isLoadingOlqTotals && (
+                            <p className="px-2 pb-2 text-sm text-muted-foreground">Loading saved OLQ totals...</p>
+                        )}
                         <UniversalTable<Row>
                             data={displayData}
                             config={config}

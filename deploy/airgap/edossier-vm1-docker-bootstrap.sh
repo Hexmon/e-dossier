@@ -111,6 +111,13 @@ render_template() {
   printf '%s\n' "$rendered" > "$destination"
 }
 
+url_host() {
+  local url="$1"
+  url="${url#*://}"
+  url="${url%%/*}"
+  printf '%s' "$url"
+}
+
 require_root
 require_docker_compose
 
@@ -128,6 +135,8 @@ NGINX_CONF="${APP_NGINX_DIR}/edossier.conf"
 PUBLIC_APP_ORIGIN="${PUBLIC_APP_ORIGIN%/}"
 MINIO_ORIGIN="${MINIO_ORIGIN%/}"
 MEDIA_PROXY_URL="${PUBLIC_APP_ORIGIN}/media"
+PUBLIC_APP_HOST="$(url_host "$PUBLIC_APP_ORIGIN")"
+MINIO_HOST="$(url_host "$MINIO_ORIGIN")"
 
 log "Preparing Docker runtime directories"
 install -d -m 755 "$APP_ROOT" "$APP_RELEASES_DIR" "$APP_NGINX_DIR"
@@ -144,7 +153,9 @@ log "Rendering Docker Nginx site"
 render_template \
   "${SCRIPT_DIR}/templates/edossier-nginx.docker.conf" \
   "$NGINX_CONF" \
-  "__MINIO_ORIGIN__" "$MINIO_ORIGIN"
+  "__MINIO_ORIGIN__" "$MINIO_ORIGIN" \
+  "__PUBLIC_HOST__" "$PUBLIC_APP_HOST" \
+  "__MINIO_HOST__" "$MINIO_HOST"
 
 log "Preparing shared application environment"
 cp "${REPO_ROOT}/.env.production.example" "$APP_ENV_EXAMPLE"

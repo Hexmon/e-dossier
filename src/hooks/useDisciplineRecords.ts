@@ -13,6 +13,14 @@ import {
 
 import type { DisciplineRow as RawDisciplineRow, DisciplineForm } from "@/types/dicp-records";
 
+function round2(value: number) {
+    return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function formatDecimal(value: number) {
+    return round2(value).toFixed(2);
+}
+
 /**
  * Normalized row used by UI
  */
@@ -50,7 +58,7 @@ export function useDisciplineRecords(ocId: string, semestersCount = 6) {
                 const prev = groups[idx];
                 const prevCumulative = prev.length ? Number(prev[prev.length - 1].cumulative) || 0 : 0;
                 const pointsDelta = Number(r.pointsDelta ?? 0);
-                const newCumulative = prevCumulative + pointsDelta;
+                const newCumulative = round2(Number(r.pointsCumulative ?? prevCumulative + pointsDelta));
 
                 groups[idx].push({
                     id: r.id,
@@ -63,7 +71,7 @@ export function useDisciplineRecords(ocId: string, semestersCount = 6) {
                     dateOfAward: (r.awardedOn ?? "").split("T")[0] || "-",
                     byWhomAwarded: r.awardedBy ?? "-",
                     negativePts: String(r.pointsDelta ?? "0"),
-                    cumulative: String(newCumulative),
+                    cumulative: formatDecimal(newCumulative),
                     semester: sem,
                 });
             }
@@ -89,7 +97,7 @@ export function useDisciplineRecords(ocId: string, semestersCount = 6) {
                 awardedOn: r.dateOfAward ?? null,
                 awardedBy: r.byWhomAwarded ?? null,
                 pointsDelta: r.negativePts ? Number(r.negativePts) : 0,
-                pointsCumulative: r.cumulative ? Number(r.cumulative) : 0,
+                pointsCumulative: r.cumulative ? round2(Number(r.cumulative)) : 0,
             }));
 
             return await saveDisciplineRecords(ocId, payload);

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
-import { bootstrapSuperAdmin } from "@/app/lib/api/setupApi";
+import { applyBootstrapTemplate, bootstrapSuperAdmin } from "@/app/lib/api/setupApi";
 import { getAllCourses } from "@/app/lib/api/courseApi";
 import { loginUser } from "@/app/lib/api/authApi";
 import { hierarchyAdminApi } from "@/app/lib/api/hierarchyAdminApi";
@@ -15,8 +15,10 @@ import { listSubjects } from "@/app/lib/api/subjectsApi";
 import type { SetupStatus, SetupStepKey, SetupStepStatus } from "@/app/lib/setup-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { IndiaPhoneInput } from "@/components/ui/india-phone-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useSetupStatus } from "@/hooks/useSetupStatus";
 import type { SidebarRoleGroup } from "@/lib/sidebar-visibility";
 import { resolveToneClasses } from "@/lib/theme-color";
@@ -29,6 +31,7 @@ type SetupPageClientProps = {
 const STEP_LABELS: Record<SetupStepKey, string> = {
   superAdmin: "Super Admin",
   platoons: "Platoons",
+  appointments: "Users & Appointments",
   hierarchy: "Hierarchy",
   courses: "Courses",
   offerings: "Offerings / Semesters",
@@ -89,7 +92,12 @@ function StepSummary({
 export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: setupStatus, isLoading, refetch } = useSetupStatus(initialStatus);
+  const { data: setupStatus, isLoading, refetch } = useSetupStatus(initialStatus, {
+    refetchOnMount: "always",
+    refetchOnReconnect: "always",
+    refetchOnWindowFocus: "always",
+    staleTime: 0,
+  });
   const [bootstrapForm, setBootstrapForm] = useState({
     username: "",
     email: "",
@@ -121,7 +129,7 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
   });
   const coursesQuery = useQuery({
     queryKey: ["setup-courses"],
-    queryFn: getAllCourses,
+    queryFn: () => getAllCourses(),
     enabled: canManageSetup,
   });
   const subjectsQuery = useQuery({
@@ -163,7 +171,6 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
     onSuccess: async (result) => {
       await loginUser({
         appointmentId: result.appointmentId,
-        username: bootstrapForm.username.trim().toLowerCase(),
         password: bootstrapForm.password,
       });
 
@@ -196,16 +203,31 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
 
   const syncHierarchyMutation = useMutation({
     mutationFn: async () => {
-      if (!rootNode) {
-        throw new Error("ROOT hierarchy node is missing.");
+      let targetRootNode = rootNode;
+      let createdRoot = false;
+
+      if (!targetRootNode) {
+        const created = await hierarchyAdminApi.createNode({
+          key: "CTW_ROOT",
+          name: "Cadets Training Wing",
+          nodeType: "ROOT",
+          parentId: null,
+          sortOrder: 0,
+        });
+        targetRootNode = created.item;
+        createdRoot = true;
       }
 
       if (missingPlatoonNodes.length === 0) {
-        return 0;
+        return { createdRoot, createdPlatoonNodes: 0 };
+      }
+
+      if (!targetRootNode) {
+        throw new Error("ROOT hierarchy node is missing.");
       }
 
       const maxSortOrder = hierarchyNodes
-        .filter((node) => node.parentId === rootNode.id)
+        .filter((node) => node.parentId === targetRootNode.id)
         .reduce((current, node) => Math.max(current, Number(node.sortOrder ?? 0)), 0);
 
       for (const [index, platoon] of missingPlatoonNodes.entries()) {
@@ -213,27 +235,34 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
           key: `SETUP_PLATOON_${platoon.key}_${platoon.id.slice(0, 8).toUpperCase()}`,
           name: platoon.name,
           nodeType: "PLATOON",
-          parentId: rootNode.id,
+          parentId: targetRootNode.id,
           platoonId: platoon.id,
           sortOrder: maxSortOrder + index + 1,
         });
       }
 
-      return missingPlatoonNodes.length;
+      return { createdRoot, createdPlatoonNodes: missingPlatoonNodes.length };
     },
-    onSuccess: async (createdCount) => {
-      if (createdCount === 0) {
+    onSuccess: async ({ createdRoot, createdPlatoonNodes }) => {
+      if (!createdRoot && createdPlatoonNodes === 0) {
         setFeedback({
           tone: "info",
           message: "Hierarchy is already aligned with the active platoons.",
         });
         toast.success("Hierarchy is already aligned with the active platoons.");
       } else {
+        const parts = [
+          createdRoot ? "created root hierarchy node" : null,
+          createdPlatoonNodes > 0
+            ? `created ${createdPlatoonNodes} missing platoon hierarchy node(s)`
+            : null,
+        ].filter(Boolean);
+        const message = `Hierarchy updated: ${parts.join(", ")}.`;
         setFeedback({
           tone: "success",
-          message: `Created ${createdCount} missing platoon hierarchy node(s).`,
+          message,
         });
-        toast.success(`Created ${createdCount} missing platoon hierarchy node(s).`);
+        toast.success(message);
       }
 
       await Promise.all([
@@ -251,6 +280,47 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
             : "Failed to create missing platoon nodes.",
       });
       toast.error(error instanceof Error ? error.message : "Failed to create missing platoon nodes.");
+    },
+  });
+
+  const applyAppointmentTemplateMutation = useMutation({
+    mutationFn: async () =>
+      applyBootstrapTemplate({
+        module: "appointment",
+        profile: "default",
+        dryRun: false,
+      }),
+    onSuccess: async (result) => {
+      const warningText =
+        result.warnings.length > 0 ? ` ${result.warnings.length} assignment warning(s) need review.` : "";
+      const positionStats = result.stats?.positions;
+      const assignmentStats = result.stats?.assignments;
+      const detailText =
+        positionStats && assignmentStats
+          ? ` Positions created ${positionStats.created}, updated ${positionStats.updated}, skipped ${positionStats.skipped}. Assignments created ${assignmentStats.created}, updated ${assignmentStats.updated}, skipped ${assignmentStats.skipped}.`
+          : "";
+      setFeedback({
+        tone: "success",
+        message: `Default appointment positions applied.${detailText || ` Created ${result.createdCount}, updated ${result.updatedCount}, skipped ${result.skippedCount}.`}${warningText}`,
+      });
+      toast.success("Default appointment positions applied.");
+
+      await Promise.all([
+        refetch(),
+        queryClient.invalidateQueries({ queryKey: ["positions"] }),
+        queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+        queryClient.invalidateQueries({ queryKey: ["users"] }),
+      ]);
+    },
+    onError: (error: unknown) => {
+      setFeedback({
+        tone: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to apply default appointment positions.",
+      });
+      toast.error(error instanceof Error ? error.message : "Failed to apply default appointment positions.");
     },
   });
 
@@ -339,9 +409,8 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="setup-password">Password</Label>
-                    <Input
+                    <PasswordInput
                       id="setup-password"
-                      type="password"
                       value={bootstrapForm.password}
                       onChange={(event) =>
                         setBootstrapForm((current) => ({ ...current, password: event.target.value }))
@@ -352,9 +421,8 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="setup-password-confirm">Confirm Password</Label>
-                    <Input
+                    <PasswordInput
                       id="setup-password-confirm"
-                      type="password"
                       value={bootstrapForm.confirmPassword}
                       onChange={(event) =>
                         setBootstrapForm((current) => ({
@@ -391,14 +459,14 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
                   </div>
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="setup-phone">Phone</Label>
-                    <Input
+                    <IndiaPhoneInput
                       id="setup-phone"
                       value={bootstrapForm.phone}
-                      onChange={(event) =>
-                        setBootstrapForm((current) => ({ ...current, phone: event.target.value }))
+                      onValueChange={(value) =>
+                        setBootstrapForm((current) => ({ ...current, phone: value }))
                       }
-                      placeholder="+0000000000"
-                      autoComplete="tel"
+                      placeholder="9876543210"
+                      autoComplete="tel-national"
                     />
                   </div>
                 </div>
@@ -421,6 +489,7 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
               <ol className="list-inside list-decimal space-y-3">
                 <li>Create the initial super admin account.</li>
                 <li>Add platoons.</li>
+                <li>Create users and assign operational appointments.</li>
                 <li>Link platoons into the live hierarchy tree.</li>
                 <li>Create courses.</li>
                 <li>Configure offerings and semester availability.</li>
@@ -481,7 +550,7 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
         {feedback.message || "No setup feedback available."}
       </div>
 
-      <div className="mb-8 grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-8 grid gap-4 md:grid-cols-3 xl:grid-cols-[repeat(7,minmax(0,1fr))]">
         {(Object.entries(setupStatus.steps) as Array<
           [SetupStepKey, { status: SetupStepStatus }]
         >).map(([stepKey, step]) => (
@@ -497,6 +566,8 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
       <div className="mb-8 rounded-lg border bg-muted/20 p-4 text-sm text-muted-foreground">
         <p>
           Counts: {setupStatus.counts.activePlatoons} platoon(s), {setupStatus.counts.activeCourses} course(s),{" "}
+          {setupStatus.counts.availableAppointmentPositions} appointment position(s),{" "}
+          {setupStatus.counts.activeOperationalAppointments} operational appointment(s),{" "}
           {setupStatus.counts.activeOfferings} offering(s), {setupStatus.counts.activeOCs} OC record(s),{" "}
           {setupStatus.counts.activeHierarchyNodes} hierarchy node(s), and{" "}
           {setupStatus.counts.missingPlatoonHierarchyNodes} missing platoon hierarchy node(s).
@@ -519,9 +590,46 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
         </StepSummary>
 
         <StepSummary
+          title="Users & Appointments"
+          status={setupStatus.steps.appointments.status}
+          description="Create positions, add users, and assign at least one non-super-admin appointment before linking the hierarchy."
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Appointment positions: {setupStatus.counts.availableAppointmentPositions}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Active operational appointments: {setupStatus.counts.activeOperationalAppointments}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => applyAppointmentTemplateMutation.mutate()}
+                disabled={applyAppointmentTemplateMutation.isPending}
+              >
+                {applyAppointmentTemplateMutation.isPending
+                  ? "Applying Positions..."
+                  : "Apply Default Positions"}
+              </Button>
+              <Button asChild>
+                <Link href={buildReturnToHref("/dashboard/genmgmt/usersmgmt")}>
+                  Open User Management
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={buildReturnToHref("/dashboard/genmgmt/appointmentmgmt")}>
+                  Open Appointment Management
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </StepSummary>
+
+        <StepSummary
           title="Hierarchy"
           status={setupStatus.steps.hierarchy.status}
-          description="ROOT already exists. Each active platoon must have one linked PLATOON node."
+          description="Create the ROOT node, then link each active platoon as a PLATOON node."
         >
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
@@ -532,13 +640,14 @@ export function SetupPageClient({ initialStatus, roleGroup }: SetupPageClientPro
                 onClick={() => syncHierarchyMutation.mutate()}
                 disabled={
                   syncHierarchyMutation.isPending ||
-                  !rootNode ||
-                  missingPlatoonNodes.length === 0
+                  (Boolean(rootNode) && missingPlatoonNodes.length === 0)
                 }
               >
                 {syncHierarchyMutation.isPending
                   ? "Creating Missing Nodes..."
-                  : "Create Missing Platoon Nodes"}
+                  : rootNode
+                    ? "Create Missing Platoon Nodes"
+                    : "Create Root & Platoon Nodes"}
               </Button>
               <Button asChild variant="outline">
                 <Link href={buildReturnToHref("/dashboard/genmgmt/hierarchy")}>

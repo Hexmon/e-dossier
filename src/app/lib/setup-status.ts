@@ -9,10 +9,15 @@ import { users } from "@/app/db/schema/auth/users";
 import { courseOfferings } from "@/app/db/schema/training/courseOfferings";
 import { courses } from "@/app/db/schema/training/courses";
 import { ocCadets } from "@/app/db/schema/training/oc";
+import {
+  DATABASE_UNAVAILABLE_MESSAGE,
+  isDatabaseUnavailableError,
+} from "@/app/lib/http";
 
 export type SetupStepKey =
   | "superAdmin"
   | "platoons"
+  | "appointments"
   | "hierarchy"
   | "courses"
   | "offerings"
@@ -22,6 +27,8 @@ export type SetupStepStatus = "complete" | "pending" | "blocked";
 
 export type SetupStatusCounts = {
   activeSuperAdmins: number;
+  availableAppointmentPositions: number;
+  activeOperationalAppointments: number;
   activePlatoons: number;
   activeCourses: number;
   activeOfferings: number;
@@ -31,11 +38,21 @@ export type SetupStatusCounts = {
   missingPlatoonHierarchyNodes: number;
 };
 
+export type SetupAvailability =
+  | { ok: true }
+  | {
+      ok: false;
+      code: "database_unavailable";
+      message: string;
+      retryable: true;
+    };
+
 export type SetupStatus = {
   bootstrapRequired: boolean;
   setupComplete: boolean;
   nextStep: SetupStepKey | null;
   counts: SetupStatusCounts;
+  availability?: SetupAvailability;
   steps: Record<
     SetupStepKey,
     {
@@ -44,6 +61,53 @@ export type SetupStatus = {
     }
   >;
 };
+
+const ZERO_SETUP_COUNTS: SetupStatusCounts = {
+  activeSuperAdmins: 0,
+  availableAppointmentPositions: 0,
+  activeOperationalAppointments: 0,
+  activePlatoons: 0,
+  activeCourses: 0,
+  activeOfferings: 0,
+  activeOCs: 0,
+  activeHierarchyNodes: 0,
+  activeRootNodes: 0,
+  missingPlatoonHierarchyNodes: 0,
+};
+
+const BLOCKED_SETUP_STEPS: SetupStatus["steps"] = {
+  superAdmin: { status: "blocked", complete: false },
+  platoons: { status: "blocked", complete: false },
+  appointments: { status: "blocked", complete: false },
+  hierarchy: { status: "blocked", complete: false },
+  courses: { status: "blocked", complete: false },
+  offerings: { status: "blocked", complete: false },
+  ocs: { status: "blocked", complete: false },
+};
+
+export function isSetupStatusUnavailable(
+  setupStatus: SetupStatus
+): setupStatus is SetupStatus & {
+  availability: Extract<SetupAvailability, { ok: false }>;
+} {
+  return setupStatus.availability?.ok === false;
+}
+
+function createUnavailableSetupStatus(): SetupStatus {
+  return {
+    bootstrapRequired: false,
+    setupComplete: false,
+    nextStep: null,
+    counts: ZERO_SETUP_COUNTS,
+    steps: BLOCKED_SETUP_STEPS,
+    availability: {
+      ok: false,
+      code: "database_unavailable",
+      message: DATABASE_UNAVAILABLE_MESSAGE,
+      retryable: true,
+    },
+  };
+}
 
 function resolveStepStatus(params: {
   complete: boolean;
@@ -63,9 +127,10 @@ function resolveStepStatus(params: {
 export function deriveSetupStatus(counts: SetupStatusCounts): SetupStatus {
   const superAdminComplete = counts.activeSuperAdmins > 0;
   const platoonsComplete = counts.activePlatoons > 0;
+  const appointmentsComplete = counts.activeOperationalAppointments > 0;
   const hierarchyCoverageComplete =
     counts.activeRootNodes === 1 && counts.missingPlatoonHierarchyNodes === 0;
-  const hierarchyComplete = platoonsComplete && hierarchyCoverageComplete;
+  const hierarchyComplete = platoonsComplete && appointmentsComplete && hierarchyCoverageComplete;
   const coursesComplete = counts.activeCourses > 0;
   const offeringsComplete = counts.activeOfferings > 0;
   const ocsComplete = counts.activeOCs > 0;
@@ -85,17 +150,25 @@ export function deriveSetupStatus(counts: SetupStatusCounts): SetupStatus {
       }),
       complete: platoonsComplete,
     },
+    appointments: {
+      status: resolveStepStatus({
+        complete: appointmentsComplete,
+        prerequisitesMet: superAdminComplete && platoonsComplete,
+      }),
+      complete: appointmentsComplete,
+    },
     hierarchy: {
       status: resolveStepStatus({
         complete: hierarchyComplete,
-        prerequisitesMet: superAdminComplete && platoonsComplete,
+        prerequisitesMet: superAdminComplete && platoonsComplete && appointmentsComplete,
       }),
       complete: hierarchyComplete,
     },
     courses: {
       status: resolveStepStatus({
         complete: coursesComplete,
-        prerequisitesMet: superAdminComplete && platoonsComplete && hierarchyComplete,
+        prerequisitesMet:
+          superAdminComplete && platoonsComplete && appointmentsComplete && hierarchyComplete,
       }),
       complete: coursesComplete,
     },
@@ -103,7 +176,11 @@ export function deriveSetupStatus(counts: SetupStatusCounts): SetupStatus {
       status: resolveStepStatus({
         complete: offeringsComplete,
         prerequisitesMet:
-          superAdminComplete && platoonsComplete && hierarchyComplete && coursesComplete,
+          superAdminComplete &&
+          platoonsComplete &&
+          appointmentsComplete &&
+          hierarchyComplete &&
+          coursesComplete,
       }),
       complete: offeringsComplete,
     },
@@ -113,6 +190,7 @@ export function deriveSetupStatus(counts: SetupStatusCounts): SetupStatus {
         prerequisitesMet:
           superAdminComplete &&
           platoonsComplete &&
+          appointmentsComplete &&
           hierarchyComplete &&
           coursesComplete &&
           offeringsComplete,
@@ -131,6 +209,7 @@ export function deriveSetupStatus(counts: SetupStatusCounts): SetupStatus {
     nextStep,
     counts,
     steps,
+    availability: { ok: true },
   };
 }
 
@@ -216,8 +295,127 @@ async function readRowsOrEmpty<T>(query: Promise<T[]>): Promise<T[]> {
 }
 
 export async function getSetupStatus(): Promise<SetupStatus> {
+  let rows: [
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    number,
+    Array<{ id: string }>,
+    Array<{ platoonId: string | null }>,
+  ];
+
+  try {
+    rows = await Promise.all([
+      readCountOrZero(
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(appointments)
+          .innerJoin(users, eq(users.id, appointments.userId))
+          .innerJoin(positions, eq(positions.id, appointments.positionId))
+          .where(
+            and(
+              eq(positions.key, "SUPER_ADMIN"),
+              eq(users.isActive, true),
+              isNull(users.deletedAt),
+              isNull(appointments.deletedAt),
+              isNull(appointments.endsAt)
+            )
+          )
+      ),
+      readCountOrZero(
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(positions)
+          .where(sql`${positions.key} <> 'SUPER_ADMIN'`)
+      ),
+      readCountOrZero(
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(appointments)
+          .innerJoin(users, eq(users.id, appointments.userId))
+          .innerJoin(positions, eq(positions.id, appointments.positionId))
+          .where(
+            and(
+              sql`${positions.key} <> 'SUPER_ADMIN'`,
+              eq(users.isActive, true),
+              isNull(users.deletedAt),
+              isNull(appointments.deletedAt),
+              sql`${appointments.startsAt} <= now()`,
+              sql`(${appointments.endsAt} IS NULL OR ${appointments.endsAt} > now())`
+            )
+          )
+      ),
+      readCountOrZero(
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(platoons)
+          .where(isNull(platoons.deletedAt))
+      ),
+      readCountOrZero(
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(courses)
+          .where(isNull(courses.deletedAt))
+      ),
+      readCountOrZero(
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(courseOfferings)
+          .where(isNull(courseOfferings.deletedAt))
+      ),
+      readCountOrZero(
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(ocCadets)
+          .where(isNull(ocCadets.deletedAt))
+      ),
+      readCountOrZero(
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(orgHierarchyNodes)
+          .where(isNull(orgHierarchyNodes.deletedAt))
+      ),
+      readCountOrZero(
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(orgHierarchyNodes)
+          .where(
+            and(eq(orgHierarchyNodes.nodeType, "ROOT"), isNull(orgHierarchyNodes.deletedAt))
+          )
+      ),
+      readRowsOrEmpty(
+        db
+          .select({ id: platoons.id })
+          .from(platoons)
+          .where(isNull(platoons.deletedAt))
+      ),
+      readRowsOrEmpty(
+        db
+          .select({ platoonId: orgHierarchyNodes.platoonId })
+          .from(orgHierarchyNodes)
+          .where(
+            and(eq(orgHierarchyNodes.nodeType, "PLATOON"), isNull(orgHierarchyNodes.deletedAt))
+          )
+      ),
+    ]);
+  } catch (error) {
+    if (isDatabaseUnavailableError(error)) {
+      console.error("[SETUP STATUS]", error);
+      return createUnavailableSetupStatus();
+    }
+
+    throw error;
+  }
+
   const [
     activeSuperAdmins,
+    availableAppointmentPositions,
+    activeOperationalAppointments,
     activePlatoons,
     activeCourses,
     activeOfferings,
@@ -226,76 +424,7 @@ export async function getSetupStatus(): Promise<SetupStatus> {
     activeRootNodes,
     activePlatoonRows,
     activePlatoonNodeRows,
-  ] = await Promise.all([
-    readCountOrZero(
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(appointments)
-        .innerJoin(users, eq(users.id, appointments.userId))
-        .innerJoin(positions, eq(positions.id, appointments.positionId))
-        .where(
-          and(
-            eq(positions.key, "SUPER_ADMIN"),
-            eq(users.isActive, true),
-            isNull(users.deletedAt),
-            isNull(appointments.deletedAt),
-            isNull(appointments.endsAt)
-          )
-        )
-    ),
-    readCountOrZero(
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(platoons)
-        .where(isNull(platoons.deletedAt))
-    ),
-    readCountOrZero(
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(courses)
-        .where(isNull(courses.deletedAt))
-    ),
-    readCountOrZero(
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(courseOfferings)
-        .where(isNull(courseOfferings.deletedAt))
-    ),
-    readCountOrZero(
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(ocCadets)
-        .where(isNull(ocCadets.deletedAt))
-    ),
-    readCountOrZero(
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(orgHierarchyNodes)
-        .where(isNull(orgHierarchyNodes.deletedAt))
-    ),
-    readCountOrZero(
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(orgHierarchyNodes)
-        .where(
-          and(eq(orgHierarchyNodes.nodeType, "ROOT"), isNull(orgHierarchyNodes.deletedAt))
-        )
-    ),
-    readRowsOrEmpty(
-      db
-        .select({ id: platoons.id })
-        .from(platoons)
-        .where(isNull(platoons.deletedAt))
-    ),
-    readRowsOrEmpty(
-      db
-        .select({ platoonId: orgHierarchyNodes.platoonId })
-        .from(orgHierarchyNodes)
-        .where(
-          and(eq(orgHierarchyNodes.nodeType, "PLATOON"), isNull(orgHierarchyNodes.deletedAt))
-        )
-    ),
-  ]);
+  ] = rows;
 
   const activePlatoonIds = new Set(activePlatoonRows.map((row) => row.id));
   const hierarchyPlatoonIds = new Set(
@@ -313,6 +442,8 @@ export async function getSetupStatus(): Promise<SetupStatus> {
 
   return deriveSetupStatus({
     activeSuperAdmins,
+    availableAppointmentPositions,
+    activeOperationalAppointments,
     activePlatoons,
     activeCourses,
     activeOfferings,

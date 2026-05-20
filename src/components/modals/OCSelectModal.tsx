@@ -65,7 +65,7 @@ export default function OCSelectModal({
 
   const coursesQuery = useQuery({
     queryKey: ["oc-select-modal", "courses"],
-    queryFn: getAllCourses,
+    queryFn: () => getAllCourses(),
     enabled: open,
     staleTime: 10 * 60 * 1000,
   });

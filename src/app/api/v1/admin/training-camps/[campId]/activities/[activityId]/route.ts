@@ -15,7 +15,7 @@ import {
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
-async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ campId: string; activityId: string }> }) {
     try {
         await requireAuth(req);
         const { activityId } = trainingCampActivityParam.parse(await params);
@@ -27,7 +27,7 @@ async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{
     }
 }
 
-async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise<{ campId: string; activityId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { activityId } = trainingCampActivityParam.parse(await params);
@@ -53,7 +53,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     }
 }
 
-async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
+async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promise<{ campId: string; activityId: string }> }) {
     try {
         const adminCtx = await requireAuth(req);
         const { activityId } = trainingCampActivityParam.parse(await params);

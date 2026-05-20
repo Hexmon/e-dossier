@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, SubmitHandler, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -15,9 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useRelegationActions, useRelegationModule } from "@/hooks/useRelegation";
 import { ApiClientError } from "@/app/lib/apiClient";
-import type { RelegationTransferResponse } from "@/app/lib/api/relegationApi";
+import type { RelegationTransferMode, RelegationTransferResponse } from "@/app/lib/api/relegationApi";
 
 interface RelegationFormValues {
   ocId: string;
@@ -34,7 +36,9 @@ type RelegationFormMode = "transfer" | "promotion-exception";
 
 type RelegationFormPrefill = {
   ocId: string;
+  ocNo?: string;
   ocName: string;
+  currentSemester?: number;
   currentCourseId: string;
   currentCourseCode: string;
   transferToCourseId?: string;
@@ -43,8 +47,10 @@ type RelegationFormPrefill = {
 type RelegationFormProps = {
   mode?: RelegationFormMode;
   prefill?: RelegationFormPrefill;
+  initialTransferMode?: RelegationTransferMode;
   lockOcSelection?: boolean;
   lockTransferTo?: boolean;
+  lockTransferMode?: boolean;
   submitLabel?: string;
   className?: string;
   onSuccess?: (transfer: RelegationTransferResponse["transfer"]) => void;
@@ -65,8 +71,10 @@ function parseApiError(error: unknown, fallback: string): string {
 export default function RelegationForm({
   mode = "transfer",
   prefill,
+  initialTransferMode = "PREVIOUS_SEMESTER",
   lockOcSelection = false,
   lockTransferTo = false,
+  lockTransferMode = false,
   submitLabel,
   className,
   onSuccess,
@@ -96,29 +104,79 @@ export default function RelegationForm({
   const selectedOcId = watch("ocId");
   const currentCourseId = watch("currentCourseId");
   const selectedTransferToCourseId = watch("transferTo");
+  const [transferMode, setTransferMode] = useState<RelegationTransferMode>(initialTransferMode);
+  const targetCourseMode: RelegationTransferMode =
+    mode === "transfer" ? transferMode : "COURSE_TRANSFER";
 
-  const { ocOptionsQuery, nextCoursesQuery, presignMutation, transferMutation } =
-    useRelegationModule(currentCourseId || null);
+  const { ocOptionsQuery, nextCoursesQuery, presignMutation, cleanupPendingPdfMutation, transferMutation } =
+    useRelegationModule(currentCourseId || null, undefined, targetCourseMode);
   const { exceptionMutation } = useRelegationActions();
 
-  const ocOptions = ocOptionsQuery.data ?? [];
-  const transferOptions = nextCoursesQuery.data ?? [];
+  const ocOptions = useMemo(() => ocOptionsQuery.data ?? [], [ocOptionsQuery.data]);
+  const transferOptions = useMemo(() => nextCoursesQuery.data ?? [], [nextCoursesQuery.data]);
   const [ocNameSearch, setOcNameSearch] = useState("");
   const [isOcNameDropdownOpen, setIsOcNameDropdownOpen] = useState(false);
+  const [cleanupConfirmed, setCleanupConfirmed] = useState(false);
   const ocNameDropdownRef = useRef<HTMLDivElement>(null);
+  const lastTargetCourseErrorRef = useRef<string | null>(null);
 
   const isBusy =
-    presignMutation.isPending || transferMutation.isPending || exceptionMutation.isPending;
+    presignMutation.isPending ||
+    cleanupPendingPdfMutation.isPending ||
+    transferMutation.isPending ||
+    exceptionMutation.isPending;
 
   const selectedOc = useMemo(
-    () => ocOptions.find((item) => item.ocId === selectedOcId) ?? null,
-    [ocOptions, selectedOcId]
+    () =>
+      ocOptions.find((item) => item.ocId === selectedOcId) ??
+      (prefill && selectedOcId === prefill.ocId
+        ? {
+            ocId: prefill.ocId,
+            ocNo: prefill.ocNo ?? "",
+            ocName: prefill.ocName,
+            status: "ACTIVE",
+            isActive: true,
+            currentSemester: prefill.currentSemester ?? 1,
+            platoonId: null,
+            platoonKey: null,
+            platoonName: null,
+            currentCourseId: prefill.currentCourseId,
+            currentCourseCode: prefill.currentCourseCode,
+          }
+        : null),
+    [ocOptions, prefill, selectedOcId]
   );
   const selectedTargetCourse = useMemo(
     () => transferOptions.find((item) => item.courseId === selectedTransferToCourseId) ?? null,
     [transferOptions, selectedTransferToCourseId]
   );
+  const targetCourseErrorMessage = useMemo(
+    () =>
+      nextCoursesQuery.isError
+        ? parseApiError(nextCoursesQuery.error, "Failed to load target course options.")
+        : null,
+    [nextCoursesQuery.error, nextCoursesQuery.isError]
+  );
   const selectedCurrentSemester = selectedOc?.currentSemester ?? null;
+  const isPreviousSemesterMode = mode === "transfer" && transferMode === "PREVIOUS_SEMESTER";
+  const isRepeatSemesterMode = mode === "transfer" && transferMode === "REPEAT_SEMESTER";
+  const isCleanupSemesterMode = isPreviousSemesterMode || isRepeatSemesterMode;
+  const targetSemester =
+    selectedCurrentSemester == null
+      ? null
+      : isPreviousSemesterMode
+        ? Math.max(1, selectedCurrentSemester - 1)
+        : isRepeatSemesterMode
+          ? selectedCurrentSemester
+        : selectedCurrentSemester;
+  const previousSemesterUnavailable = isPreviousSemesterMode && selectedCurrentSemester != null && selectedCurrentSemester <= 1;
+  const requiresCleanupConfirmation = isCleanupSemesterMode && Boolean(selectedOc) && !previousSemesterUnavailable;
+  const targetCourseUnavailable =
+    Boolean(selectedOc) &&
+    (nextCoursesQuery.isLoading ||
+      nextCoursesQuery.isError ||
+      transferOptions.length === 0 ||
+      !selectedTargetCourse);
 
   useEffect(() => {
     setOcNameSearch(selectedOc?.ocName ?? "");
@@ -126,6 +184,7 @@ export default function RelegationForm({
 
   useEffect(() => {
     if (!prefill) return;
+    setTransferMode(initialTransferMode);
     reset({
       ocId: prefill.ocId,
       ocName: prefill.ocName,
@@ -138,7 +197,47 @@ export default function RelegationForm({
     });
     setValue("ocId", prefill.ocId, { shouldDirty: false, shouldValidate: true });
     setOcNameSearch(prefill.ocName);
-  }, [prefill, reset, setValue]);
+  }, [initialTransferMode, prefill, reset, setValue]);
+
+  useEffect(() => {
+    setCleanupConfirmed(false);
+  }, [selectedOcId, selectedTransferToCourseId, transferMode]);
+
+  useEffect(() => {
+    if (!isCleanupSemesterMode || lockTransferTo || selectedTransferToCourseId || transferOptions.length !== 1) {
+      return;
+    }
+    setValue("transferTo", transferOptions[0].courseId, { shouldDirty: true, shouldValidate: true });
+  }, [isCleanupSemesterMode, lockTransferTo, selectedTransferToCourseId, setValue, transferOptions]);
+
+  useEffect(() => {
+    if (!targetCourseErrorMessage || !selectedOc) {
+      lastTargetCourseErrorRef.current = null;
+      return;
+    }
+
+    const key = `${currentCourseId}:${targetCourseMode}:${targetCourseErrorMessage}`;
+    if (lastTargetCourseErrorRef.current === key) return;
+
+    toast.error(targetCourseErrorMessage);
+    lastTargetCourseErrorRef.current = key;
+  }, [currentCourseId, selectedOc, targetCourseErrorMessage, targetCourseMode]);
+
+  useEffect(() => {
+    if (lockTransferTo || !selectedTransferToCourseId || nextCoursesQuery.isLoading) return;
+    const selectedStillAvailable = transferOptions.some(
+      (course) => course.courseId === selectedTransferToCourseId
+    );
+    if (!selectedStillAvailable) {
+      setValue("transferTo", "", { shouldDirty: true, shouldValidate: true });
+    }
+  }, [
+    lockTransferTo,
+    nextCoursesQuery.isLoading,
+    selectedTransferToCourseId,
+    setValue,
+    transferOptions,
+  ]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -186,8 +285,16 @@ export default function RelegationForm({
   };
 
   const onSubmit: SubmitHandler<RelegationFormValues> = async (formData) => {
+    let pdfObjectKey: string | null = null;
     try {
-      let pdfObjectKey: string | null = null;
+      if (isCleanupSemesterMode && (!targetSemester || previousSemesterUnavailable || !cleanupConfirmed)) {
+        throw new Error("Confirm the semester cleanup before submitting.");
+      }
+
+      if (targetCourseUnavailable) {
+        throw new Error(targetCourseErrorMessage ?? "Select a valid target course before submitting.");
+      }
+
       let pdfUrl: string | null = null;
 
       const file = formData.pdfFile?.[0];
@@ -197,6 +304,7 @@ export default function RelegationForm({
           contentType: "application/pdf",
           sizeBytes: file.size,
         });
+        pdfObjectKey = presign.objectKey;
 
         const uploadResponse = await fetch(presign.uploadUrl, {
           method: "PUT",
@@ -214,13 +322,14 @@ export default function RelegationForm({
           );
         }
 
-        pdfObjectKey = presign.objectKey;
         pdfUrl = presign.publicUrl;
       }
 
       const payload = {
         ocId: formData.ocId,
         toCourseId: formData.transferTo,
+        relegationMode: targetCourseMode,
+        targetSemester: isCleanupSemesterMode ? targetSemester : null,
         reason: formData.reason.trim(),
         remark: formData.remark?.trim() ? formData.remark.trim() : null,
         pdfObjectKey,
@@ -233,24 +342,42 @@ export default function RelegationForm({
           : await transferMutation.mutateAsync(payload);
 
       const transfer = response.transfer;
-      setValue("courseNo", transfer.toCourse.courseCode, { shouldDirty: false });
-      setValue("currentCourseId", transfer.toCourse.courseId, { shouldDirty: false });
-
-      if (mode === "transfer") {
-        setValue("transferTo", "", { shouldDirty: false });
+      if (lockOcSelection || prefill) {
+        setValue("courseNo", transfer.toCourse.courseCode, { shouldDirty: false });
+        setValue("currentCourseId", transfer.toCourse.courseId, { shouldDirty: false });
+        setValue("reason", "", { shouldDirty: false });
+        setValue("remark", "", { shouldDirty: false });
+        resetField("pdfFile");
+        setCleanupConfirmed(false);
+      } else {
+        reset({
+          ocId: "",
+          ocName: "",
+          courseNo: "",
+          currentCourseId: "",
+          transferTo: "",
+          reason: "",
+          remark: "",
+          pdfFile: null,
+        });
+        setOcNameSearch("");
+        setCleanupConfirmed(false);
       }
-
-      setValue("reason", "", { shouldDirty: false });
-      setValue("remark", "", { shouldDirty: false });
-      resetField("pdfFile");
 
       const successMessage =
         mode === "promotion-exception"
           ? `OC ${transfer.oc.ocNo} marked as promotion exception.`
+          : transfer.history.movementKind === "SEMESTER_REPEAT"
+            ? `OC ${transfer.oc.ocNo} moved to ${transfer.toCourse.courseCode} semester ${transfer.history.toSemester ?? targetSemester}.`
+          : transfer.history.movementKind === "SEMESTER_RELEGATION"
+            ? `OC ${transfer.oc.ocNo} moved to ${transfer.toCourse.courseCode} semester ${transfer.history.toSemester ?? targetSemester}.`
           : `OC ${transfer.oc.ocNo} transferred from ${transfer.fromCourse.courseCode} to ${transfer.toCourse.courseCode}.`;
       toast.success(successMessage);
       onSuccess?.(transfer);
     } catch (error) {
+      if (pdfObjectKey) {
+        await cleanupPendingPdfMutation.mutateAsync({ objectKey: pdfObjectKey }).catch(() => undefined);
+      }
       toast.error(parseApiError(error, "Failed to submit relegation request."));
     }
   };
@@ -341,6 +468,45 @@ export default function RelegationForm({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
+        {mode === "transfer" && !lockTransferMode ? (
+          <div className="space-y-2 md:col-span-2">
+            <Label>Relegation Type</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant={transferMode === "PREVIOUS_SEMESTER" ? "destructive" : "outline"}
+                onClick={() => setTransferMode("PREVIOUS_SEMESTER")}
+                disabled={isBusy}
+              >
+                Previous semester relegation
+              </Button>
+              <Button
+                type="button"
+                variant={transferMode === "COURSE_TRANSFER" ? "default" : "outline"}
+                onClick={() => setTransferMode("COURSE_TRANSFER")}
+                disabled={isBusy}
+              >
+                Course transfer
+              </Button>
+            </div>
+          </div>
+        ) : mode === "transfer" && lockTransferMode ? (
+          <div className="space-y-2 md:col-span-2">
+            <Label>Relegation Type</Label>
+            <Input
+              value={
+                transferMode === "REPEAT_SEMESTER"
+                  ? "Repeat semester relegation"
+                  : transferMode === "PREVIOUS_SEMESTER"
+                    ? "Previous semester relegation"
+                    : "Course transfer"
+              }
+              disabled
+              readOnly
+            />
+          </div>
+        ) : null}
+
         <div className="space-y-2">
           <Label htmlFor="courseNo">Current Course</Label>
           <Input id="courseNo" {...register("courseNo")} disabled />
@@ -368,7 +534,12 @@ export default function RelegationForm({
                 value={field.value || undefined}
                 onValueChange={field.onChange}
                 disabled={
-                  !selectedOc || nextCoursesQuery.isLoading || isBusy || lockTransferTo || !currentCourseId
+                  !selectedOc ||
+                  nextCoursesQuery.isLoading ||
+                  nextCoursesQuery.isError ||
+                  isBusy ||
+                  lockTransferTo ||
+                  !currentCourseId
                 }
               >
                 <SelectTrigger id="transferTo">
@@ -387,14 +558,16 @@ export default function RelegationForm({
           {errors.transferTo ? (
             <p className="text-sm text-destructive">{errors.transferTo.message}</p>
           ) : null}
-          {selectedOc && !nextCoursesQuery.isLoading && transferOptions.length === 0 ? (
+          {selectedOc && !nextCoursesQuery.isLoading && !nextCoursesQuery.isError && transferOptions.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No immediate next course available for current course.
+              {isCleanupSemesterMode
+                ? "No next course batch is available for this OC's relegation."
+                : "No other course is available for transfer."}
             </p>
           ) : null}
-          {nextCoursesQuery.isError ? (
+          {targetCourseErrorMessage ? (
             <p className="text-sm text-destructive">
-              {parseApiError(nextCoursesQuery.error, "Failed to load transfer options.")}
+              {targetCourseErrorMessage}
             </p>
           ) : null}
         </div>
@@ -403,13 +576,46 @@ export default function RelegationForm({
           <Label htmlFor="targetSemester">Targeted Semester</Label>
           <Input
             id="targetSemester"
-            value={selectedCurrentSemester ? `Semester ${selectedCurrentSemester}` : ""}
+            value={targetSemester ? `Semester ${targetSemester}` : ""}
             placeholder={selectedTargetCourse ? "Target semester resolved" : "Select target course"}
             disabled
             readOnly
           />
         </div>
       </div>
+
+      {isCleanupSemesterMode && selectedOc ? (
+        <Alert variant={previousSemesterUnavailable ? "destructive" : "default"} className="border-destructive/50">
+          <AlertTitle>
+            {isRepeatSemesterMode ? "Repeat-Semester Relegation" : "Previous-Semester Relegation"}
+          </AlertTitle>
+          <AlertDescription className="space-y-3">
+            {previousSemesterUnavailable ? (
+              <p>OC {selectedOc.ocNo} is already in semester 1, so previous-semester relegation is not available.</p>
+            ) : (
+              <>
+                <p>
+                  OC {selectedOc.ocNo} will move from {selectedOc.currentCourseCode} semester {selectedCurrentSemester} to{" "}
+                  {selectedTargetCourse?.courseCode ?? "the selected target course"} semester {targetSemester}.
+                </p>
+                <p>
+                  {isRepeatSemesterMode
+                    ? `Data after semester ${selectedCurrentSemester} will be deleted for the current attempt. Semester ${selectedCurrentSemester} data will remain in history.`
+                    : `Data from ${selectedOc.currentCourseCode} semester ${selectedCurrentSemester} and later will be deleted for the current attempt. Semester ${targetSemester} data from the first attempt will remain in history.`}
+                </p>
+                <label className="flex items-start gap-2 text-sm">
+                  <Checkbox
+                    checked={cleanupConfirmed}
+                    onCheckedChange={(checked) => setCleanupConfirmed(checked === true)}
+                    disabled={isBusy}
+                  />
+                  <span>I understand the future-semester data cleanup for this OC.</span>
+                </label>
+              </>
+            )}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <div className="space-y-2">
         <Label htmlFor="reason">Reason</Label>
@@ -444,11 +650,20 @@ export default function RelegationForm({
           type="file"
           accept="application/pdf"
           {...register("pdfFile")}
-          disabled={isBusy}
+          disabled={isBusy || targetCourseUnavailable}
         />
       </div>
 
-      <Button type="submit" disabled={isBusy} className="w-full cursor-pointer">
+      <Button
+        type="submit"
+        disabled={
+          isBusy ||
+          targetCourseUnavailable ||
+          previousSemesterUnavailable ||
+          (requiresCleanupConfirmation && !cleanupConfirmed)
+        }
+        className="w-full cursor-pointer"
+      >
         {isBusy
           ? mode === "promotion-exception"
             ? "Saving Exception..."

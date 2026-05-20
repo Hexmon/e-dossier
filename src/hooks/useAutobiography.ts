@@ -8,16 +8,25 @@ import {
     getAutobiographyDetails,
     saveAutobiography,
     patchAutobiography,
+    AutoBio,
     AutoBioPayload,
 } from "@/app/lib/api/autobiographyApi";
 import { ApiClientError } from "@/app/lib/apiClient";
 
 export function useAutobiography(ocId: string) {
-    const [autoBio, setAutoBio] = useState<AutoBioPayload | null>(null);
+    const [autoBio, setAutoBio] = useState<AutoBio | null>(null);
     const [exists, setExists] = useState(false);
+    const [hasFetched, setHasFetched] = useState(false);
 
     const fetchAutoBio = useCallback(async () => {
-        if (!ocId) return;
+        if (!ocId) {
+            setAutoBio(null);
+            setExists(false);
+            setHasFetched(true);
+            return;
+        }
+
+        setHasFetched(false);
 
         try {
             const record = await getAutobiographyDetails(ocId);
@@ -31,6 +40,8 @@ export function useAutobiography(ocId: string) {
             }
         } catch {
             toast.error("Failed to load autobiography.");
+        } finally {
+            setHasFetched(true);
         }
     }, [ocId]);
 
@@ -60,6 +71,7 @@ export function useAutobiography(ocId: string) {
     return {
         autoBio,
         exists,
+        hasFetched,
         fetchAutoBio,
         save,
     };

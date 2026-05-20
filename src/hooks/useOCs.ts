@@ -3,7 +3,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import {
     fetchOCsWithCount,
     createOC,
@@ -13,9 +13,87 @@ import {
     type OCRecord,
     type FetchOCParams,
 } from "@/app/lib/api/ocApi";
+import { getFriendlyApiErrorMessage } from "@/app/lib/apiClient";
 
-export function useOCs(params?: FetchOCParams) {
+const OCS_QUERY_KEY = ["ocs"] as const;
+
+export type OCSemesterFilter = 1 | 2 | 3 | 4 | 5 | 6;
+
+type UseOCsParams = FetchOCParams & {
+    semester?: OCSemesterFilter;
+};
+
+type OCManagementFilters = {
+    platoonId?: string;
+    branch?: FetchOCParams["branch"];
+    status?: FetchOCParams["status"];
+    q?: string;
+    courseId?: string;
+    semester?: OCSemesterFilter;
+};
+
+export function filterOCsForManagement(items: OCListRow[], filters: OCManagementFilters): OCListRow[] {
+    let filtered = [...items];
+
+    // Apply search filter (q)
+    if (filters.q && filters.q.trim()) {
+        const query = filters.q.toLowerCase().trim();
+        filtered = filtered.filter((oc) => {
+            const nameMatch = oc.name?.toLowerCase().includes(query);
+            const ocNoMatch = oc.ocNo?.toLowerCase().includes(query);
+            return nameMatch || ocNoMatch;
+        });
+    }
+
+    // Apply course filter
+    if (filters.courseId && filters.courseId.trim()) {
+        filtered = filtered.filter((oc) => oc.courseId === filters.courseId);
+    }
+
+    // Apply platoon filter
+    if (filters.platoonId && filters.platoonId.trim()) {
+        filtered = filtered.filter((oc) => oc.platoonId === filters.platoonId);
+    }
+
+    // Apply branch filter
+    if (filters.branch && filters.branch.trim()) {
+        filtered = filtered.filter((oc) => oc.branch === filters.branch);
+    }
+
+    // Apply status filter
+    if (filters.status) {
+        switch (filters.status) {
+            case 'ACTIVE':
+                filtered = filtered.filter((oc) => !oc.withdrawnOn);
+                break;
+            case 'WITHDRAWN':
+                filtered = filtered.filter((oc) => oc.withdrawnOn);
+                break;
+            case 'DELEGATED':
+                filtered = filtered.filter((oc) => oc.status === 'DELEGATED');
+                break;
+            case 'PASSED_OUT':
+                filtered = filtered.filter((oc) => oc.status === 'PASSED_OUT');
+                break;
+        }
+    }
+
+    // Apply current semester filter.
+    if (filters.semester) {
+        filtered = filtered.filter((oc) => Number(oc.currentSemester ?? 1) === filters.semester);
+    }
+
+    return filtered;
+}
+
+export function useOCs(params?: UseOCsParams) {
     const queryClient = useQueryClient();
+    const refreshOCs = useCallback(async () => {
+        await queryClient.invalidateQueries({
+            queryKey: OCS_QUERY_KEY,
+            refetchType: "active",
+        });
+    }, [queryClient]);
 
     // Extract filter params for client-side filtering
     const {
@@ -24,6 +102,7 @@ export function useOCs(params?: FetchOCParams) {
         status: filterStatus,
         q: filterQuery,
         courseId: filterCourseId,
+        semester: filterSemester,
         ...backendParams
     } = params || {};
 
@@ -34,20 +113,21 @@ export function useOCs(params?: FetchOCParams) {
         refetch,
         error,
     } = useQuery({
-        queryKey: ["ocs", backendParams], // Only use pagination params for cache key
+        queryKey: [...OCS_QUERY_KEY, backendParams], // Backend controls affect the cache key.
         queryFn: async () => {
             try {
-                // Only send pagination to backend since it ignores other filters anyway
+                // Only send backend-supported list controls. Other filters are applied client-side below.
                 const res = await fetchOCsWithCount<OCListRow>({
                     limit: backendParams.limit,
                     offset: backendParams.offset,
+                    sort: backendParams.sort,
                 });
                 return {
                     items: res.items ?? [],
                     count: res.count ?? 0,
                 };
             } catch (err) {
-                toast.error("Failed to load OCs");
+                toast.error(getFriendlyApiErrorMessage(err, "Failed to load OCs"));
                 return { items: [], count: 0 };
             }
         },
@@ -58,69 +138,33 @@ export function useOCs(params?: FetchOCParams) {
 
     // CLIENT-SIDE FILTERING
     const filteredData = useMemo(() => {
-        let filtered = [...rawData.items];
-
-        // Apply search filter (q)
-        if (filterQuery && filterQuery.trim()) {
-            const query = filterQuery.toLowerCase().trim();
-            filtered = filtered.filter((oc) => {
-                const nameMatch = oc.name?.toLowerCase().includes(query);
-                const ocNoMatch = oc.ocNo?.toLowerCase().includes(query);
-                return nameMatch || ocNoMatch;
-            });
-        }
-
-        // Apply course filter
-        if (filterCourseId && filterCourseId.trim()) {
-            filtered = filtered.filter((oc) => oc.courseId === filterCourseId);
-        }
-
-        // Apply platoon filter
-        if (filterPlatoonId && filterPlatoonId.trim()) {
-            filtered = filtered.filter((oc) => oc.platoonId === filterPlatoonId);
-        }
-
-        // Apply branch filter
-        if (filterBranch && filterBranch.trim()) {
-            filtered = filtered.filter((oc) => oc.branch === filterBranch);
-        }
-
-        // Apply status filter
-        if (filterStatus) {
-            switch (filterStatus) {
-                case 'ACTIVE':
-                    filtered = filtered.filter((oc) => !oc.withdrawnOn);
-                    break;
-                case 'WITHDRAWN':
-                    filtered = filtered.filter((oc) => oc.withdrawnOn);
-                    break;
-                case 'DELEGATED':
-                    filtered = filtered.filter((oc) => oc.status === 'DELEGATED');
-                    break;
-                case 'PASSED_OUT':
-                    filtered = filtered.filter((oc) => oc.status === 'PASSED_OUT');
-                    break;
-            }
-        }
+        const filtered = filterOCsForManagement(rawData.items, {
+            platoonId: filterPlatoonId,
+            branch: filterBranch,
+            status: filterStatus,
+            q: filterQuery,
+            courseId: filterCourseId,
+            semester: filterSemester,
+        });
 
 
         return {
             items: filtered,
             count: filtered.length,
         };
-    }, [rawData.items, filterPlatoonId, filterBranch, filterStatus, filterQuery, filterCourseId]);
+    }, [rawData.items, filterPlatoonId, filterBranch, filterStatus, filterQuery, filterCourseId, filterSemester]);
 
     // Add OC mutation
     const addOCMutation = useMutation({
         mutationFn: async (payload: Omit<OCRecord, "id" | "uid" | "createdAt">) => {
             return await createOC(payload);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["ocs"] });
+        onSuccess: async () => {
+            await refreshOCs();
             toast.success("OC added successfully");
         },
         onError: (error: any) => {
-            toast.error(error.message || "Failed to add OC");
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to add OC"));
         },
     });
 
@@ -129,12 +173,12 @@ export function useOCs(params?: FetchOCParams) {
         mutationFn: async ({ id, payload }: { id: string; payload: Partial<OCRecord> }) => {
             return await updateOC(id, payload);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["ocs"] });
+        onSuccess: async () => {
+            await refreshOCs();
             toast.success("OC updated successfully");
         },
         onError: (error: any) => {
-            toast.error(error.message || "Failed to update OC");
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to update OC"));
         },
     });
 
@@ -143,12 +187,12 @@ export function useOCs(params?: FetchOCParams) {
         mutationFn: async (id: string) => {
             await deleteOC(id);
         },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["ocs"] });
+        onSuccess: async () => {
+            await refreshOCs();
             toast.success("OC deleted successfully");
         },
         onError: (error: any) => {
-            toast.error(error.message || "Failed to delete OC");
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to delete OC"));
         },
     });
 
@@ -158,7 +202,8 @@ export function useOCs(params?: FetchOCParams) {
         loading,
         error,
         fetchOCs: (newParams: FetchOCParams) => {
-            queryClient.invalidateQueries({ queryKey: ["ocs"] });
+            void newParams;
+            return refreshOCs();
         },
         addOC: addOCMutation.mutateAsync,
         editOC: (id: string, payload: Partial<OCRecord>) =>
@@ -167,6 +212,7 @@ export function useOCs(params?: FetchOCParams) {
         setOcList: () => {
             // Kept for backward compatibility
         },
+        refreshOCs,
         refetch,
     };
 }

@@ -328,7 +328,14 @@ export default function PhysicalTrainingPage() {
     };
 
     const handleApplyDefaultTemplate = async (dryRun: boolean): Promise<PtTemplateApplyResult> => {
-        const response = await applyDefaultTemplate({ dryRun, profile: "default" });
+        if (!selectedCourseId) {
+            throw new Error("Select a course before applying the default PT template.");
+        }
+        const response = await applyDefaultTemplate({
+            dryRun,
+            profile: "default",
+            courseId: selectedCourseId,
+        });
         const { message, ...result } = response;
         void message;
         if (result.module !== "pt") {

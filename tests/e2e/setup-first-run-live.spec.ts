@@ -14,9 +14,19 @@ type SetupStatusResponse = {
   setup: {
     bootstrapRequired: boolean;
     setupComplete: boolean;
-    nextStep: "superAdmin" | "platoons" | "hierarchy" | "courses" | "offerings" | "ocs" | null;
+    nextStep:
+      | "superAdmin"
+      | "platoons"
+      | "appointments"
+      | "hierarchy"
+      | "courses"
+      | "offerings"
+      | "ocs"
+      | null;
     counts: {
       activeSuperAdmins: number;
+      availableAppointmentPositions: number;
+      activeOperationalAppointments: number;
       activePlatoons: number;
       activeCourses: number;
       activeOfferings: number;
@@ -26,7 +36,7 @@ type SetupStatusResponse = {
       missingPlatoonHierarchyNodes: number;
     };
     steps: Record<
-      "superAdmin" | "platoons" | "hierarchy" | "courses" | "offerings" | "ocs",
+      "superAdmin" | "platoons" | "appointments" | "hierarchy" | "courses" | "offerings" | "ocs",
       { status: "complete" | "pending" | "blocked"; complete: boolean }
     >;
   };
@@ -34,6 +44,11 @@ type SetupStatusResponse = {
 
 type SetupStateSnapshot = {
   superAdminAppointments: Array<{
+    id: string;
+    endsAt: string | null;
+    deletedAt: string | null;
+  }>;
+  operationalAppointments: Array<{
     id: string;
     endsAt: string | null;
     deletedAt: string | null;
@@ -64,6 +79,9 @@ type SetupStateSnapshot = {
 type CreatedSetupResources = {
   userId: string | null;
   appointmentId: string | null;
+  operationalUserId: string | null;
+  operationalAppointmentId: string | null;
+  operationalPositionId: string | null;
   platoonId: string | null;
   hierarchyNodeId: string | null;
   courseId: string | null;
@@ -95,7 +113,7 @@ async function withDb<T>(fn: (client: Client) => Promise<T>): Promise<T> {
 }
 
 async function snapshotSetupState(client: Client): Promise<SetupStateSnapshot> {
-  const [superAdminAppointments, platoonRows, hierarchyRows, courseRows, offeringRows, ocRows] =
+  const [superAdminAppointments, operationalAppointments, platoonRows, hierarchyRows, courseRows, offeringRows, ocRows] =
     await Promise.all([
       client.query(
         `
@@ -108,6 +126,23 @@ async function snapshotSetupState(client: Client): Promise<SetupStateSnapshot> {
           where p.key = 'SUPER_ADMIN'
             and a.deleted_at is null
             and a.ends_at is null
+        `
+      ),
+      client.query(
+        `
+          select
+            a.id,
+            a.ends_at as "endsAt",
+            a.deleted_at as "deletedAt"
+          from appointments a
+          inner join positions p on p.id = a.position_id
+          inner join users u on u.id = a.user_id
+          where p.key <> 'SUPER_ADMIN'
+            and u.is_active = true
+            and u.deleted_at is null
+            and a.deleted_at is null
+            and a.starts_at <= now()
+            and (a.ends_at is null or a.ends_at > now())
         `
       ),
       client.query(
@@ -150,6 +185,7 @@ async function snapshotSetupState(client: Client): Promise<SetupStateSnapshot> {
 
   return {
     superAdminAppointments: superAdminAppointments.rows,
+    operationalAppointments: operationalAppointments.rows,
     platoons: platoonRows.rows,
     hierarchyNodes: hierarchyRows.rows,
     courses: courseRows.rows,
@@ -167,6 +203,17 @@ async function prepareFreshLikeState(client: Client, snapshot: SetupStateSnapsho
         where id = any($1::uuid[])
       `,
       [snapshot.superAdminAppointments.map((row) => row.id)]
+    );
+  }
+
+  if (snapshot.operationalAppointments.length > 0) {
+    await client.query(
+      `
+        update appointments
+        set ends_at = now()
+        where id = any($1::uuid[])
+      `,
+      [snapshot.operationalAppointments.map((row) => row.id)]
     );
   }
 
@@ -259,6 +306,19 @@ async function cleanupCreatedResources(client: Client, created: CreatedSetupReso
     await client.query(`delete from platoons where id = $1`, [created.platoonId]);
   }
 
+  if (created.operationalAppointmentId) {
+    await client.query(`delete from appointments where id = $1`, [created.operationalAppointmentId]);
+  }
+
+  if (created.operationalPositionId) {
+    await client.query(`delete from positions where id = $1`, [created.operationalPositionId]);
+  }
+
+  if (created.operationalUserId) {
+    await client.query(`delete from credentials_local where user_id = $1`, [created.operationalUserId]);
+    await client.query(`delete from users where id = $1`, [created.operationalUserId]);
+  }
+
   if (created.appointmentId) {
     await client.query(`delete from appointments where id = $1`, [created.appointmentId]);
   }
@@ -272,6 +332,19 @@ async function cleanupCreatedResources(client: Client, created: CreatedSetupReso
 async function restoreSetupState(client: Client, snapshot: SetupStateSnapshot) {
   if (snapshot.superAdminAppointments.length > 0) {
     for (const row of snapshot.superAdminAppointments) {
+      await client.query(
+        `
+          update appointments
+          set ends_at = $2::timestamptz, deleted_at = $3::timestamptz
+          where id = $1::uuid
+        `,
+        [row.id, row.endsAt, row.deletedAt]
+      );
+    }
+  }
+
+  if (snapshot.operationalAppointments.length > 0) {
+    for (const row of snapshot.operationalAppointments) {
       await client.query(
         `
           update appointments
@@ -397,6 +470,9 @@ test("fresh setup can be bootstrapped coherently through /setup and reaches comp
   const created: CreatedSetupResources = {
     userId: null,
     appointmentId: null,
+    operationalUserId: null,
+    operationalAppointmentId: null,
+    operationalPositionId: null,
     platoonId: null,
     hierarchyNodeId: null,
     courseId: null,
@@ -463,9 +539,65 @@ test("fresh setup can be bootstrapped coherently through /setup and reaches comp
     const platoonBody = await platoonResponse.json();
     created.platoonId = platoonBody.platoon?.id ?? null;
 
-    setup = await expectSetupStep(context, "hierarchy");
+    setup = await expectSetupStep(context, "appointments");
     expect(setup.counts.activePlatoons).toBe(1);
     expect(setup.counts.missingPlatoonHierarchyNodes).toBe(1);
+
+    const positionResponse = await context.request.post("/api/v1/admin/positions", {
+      headers: {
+        "X-CSRF-Token": csrfToken,
+      },
+      data: {
+        key: `PH7_APPT_${String(runId).slice(-8)}`,
+        displayName: `Phase 7 Appointment ${runId}`,
+        defaultScope: "GLOBAL",
+        singleton: true,
+      },
+    });
+    expect(positionResponse.ok()).toBeTruthy();
+    const positionBody = await positionResponse.json();
+    created.operationalPositionId = positionBody.data?.id ?? null;
+    expect(created.operationalPositionId).toBeTruthy();
+
+    const operationalUserResponse = await context.request.post("/api/v1/admin/users", {
+      headers: {
+        "X-CSRF-Token": csrfToken,
+      },
+      data: {
+        username: `setupuser${String(runId).slice(-8)}`,
+        name: `Setup User ${runId}`,
+        email: `setup.user.${runId}@example.mil`,
+        phone: `91${String(runId).slice(-9)}`,
+        rank: "MAJ",
+        password: `SetupUser${String(runId).slice(-4)}!1`,
+        isActive: true,
+      },
+    });
+    expect(operationalUserResponse.ok()).toBeTruthy();
+    const operationalUserBody = await operationalUserResponse.json();
+    created.operationalUserId = operationalUserBody.user?.id ?? null;
+    expect(created.operationalUserId).toBeTruthy();
+
+    const operationalAppointmentResponse = await context.request.post("/api/v1/admin/appointments", {
+      headers: {
+        "X-CSRF-Token": csrfToken,
+      },
+      data: {
+        userId: created.operationalUserId,
+        positionId: created.operationalPositionId,
+        assignment: "PRIMARY",
+        scopeType: "GLOBAL",
+        startsAt: new Date(Date.now() - 1000).toISOString(),
+        reason: "Phase 7 setup live test operational appointment",
+      },
+    });
+    expect(operationalAppointmentResponse.ok()).toBeTruthy();
+    const operationalAppointmentBody = await operationalAppointmentResponse.json();
+    created.operationalAppointmentId = operationalAppointmentBody.data?.id ?? null;
+    expect(created.operationalAppointmentId).toBeTruthy();
+
+    setup = await expectSetupStep(context, "hierarchy");
+    expect(setup.counts.activeOperationalAppointments).toBe(1);
 
     await page.goto("/setup");
     await page.getByRole("button", { name: "Create Missing Platoon Nodes" }).click();

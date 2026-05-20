@@ -5,6 +5,7 @@ import { signupLocal } from '@/app/db/queries/auth';
 import { createSignupRequest } from '@/app/db/queries/signupRequests';
 import { preflightConflicts } from '@/utils/preflightConflicts';
 import { getClientIp, checkSignupRateLimit, getRateLimitHeaders } from '@/lib/ratelimit';
+import { assertSignupAllowedDuringSetup } from '@/app/lib/setup-gate';
 import {
   withAuditRoute,
   AuditEventType,
@@ -16,6 +17,8 @@ type PgError = { code?: string; detail?: string };
 
 async function POSTHandler(req: AuditNextRequest) {
   try {
+    await assertSignupAllowedDuringSetup();
+
     // SECURITY FIX: Rate limiting for signup attempts (3 per hour)
     const clientIp = getClientIp(req);
     const rateLimitResult = await checkSignupRateLimit(clientIp);

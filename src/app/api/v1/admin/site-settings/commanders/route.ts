@@ -1,7 +1,7 @@
 import { requireAdmin } from "@/app/lib/authz";
 import { handleApiError, json } from "@/app/lib/http";
 import { commanderCreateSchema } from "@/app/lib/validators.site-settings";
-import { createSiteCommander, listSiteCommanders } from "@/app/db/queries/site-settings";
+import { createSiteCommander, listSiteCommandersForDisplay } from "@/app/db/queries/site-settings";
 import {
   AuditEventType,
   AuditResourceType,
@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 async function GETHandler(req: AuditNextRequest) {
   try {
     const auth = await requireAdmin(req);
-    const items = await listSiteCommanders();
+    const items = await listSiteCommandersForDisplay();
 
     await req.audit.log({
       action: AuditEventType.API_REQUEST,

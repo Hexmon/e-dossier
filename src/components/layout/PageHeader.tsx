@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings, LogOut, Repeat, Loader2, Timer } from "lucide-react";
+import { Settings, LogOut, Repeat, Loader2, Timer, KeyRound } from "lucide-react";
 import { useState } from "react";
 import {
   DropdownMenu,
@@ -14,6 +14,7 @@ import { SidebarTrigger } from "../ui/sidebar";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMe } from "@/hooks/useMe";
 import SwitchUserModal from "@/components/auth/SwitchUserModal";
+import ChangePasswordDialog from "@/components/auth/ChangePasswordDialog";
 import OCSelectModal from "@/components/modals/OCSelectModal";
 import { buildDossierPathForOc, extractDossierContext, isDossierManagementRoute } from "@/lib/dossier-route";
 import { logoutAndRedirect } from "@/lib/auth/logout";
@@ -46,6 +47,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [switchUserOpen, setSwitchUserOpen] = useState(false);
   const [switchOcOpen, setSwitchOcOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   // Replaces the manual useEffect + fetchMe with a single React Query call
   // that's shared across the entire app
@@ -173,6 +175,11 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
                   </DropdownMenuItem>
                 )}
 
+                <DropdownMenuItem onClick={() => setChangePasswordOpen(true)}>
+                  <KeyRound className="mr-2 h-4 w-4" />
+                  <span>Change Password</span>
+                </DropdownMenuItem>
+
                 <DropdownMenuItem
                   onClick={() => {
                     void handleLogout();
@@ -201,6 +208,10 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
           roleKey: position || null,
           username: username || null,
         }}
+      />
+      <ChangePasswordDialog
+        open={changePasswordOpen}
+        onOpenChange={setChangePasswordOpen}
       />
       <OCSelectModal
         open={switchOcOpen}

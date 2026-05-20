@@ -52,10 +52,12 @@ function makeDecision(allow: boolean) {
 
 describe('OC academics bulk API', () => {
   const originalAuthzFlag = process.env.AUTHZ_V2_ENABLED;
+  const originalPublicAuthzFlag = process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED;
 
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.AUTHZ_V2_ENABLED = 'false';
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = 'false';
     (mustBeAuthed as any).mockResolvedValue({ userId: 'u-1', roles: ['HOAT'] });
     (assertWorkflowDirectWriteAllowed as any).mockResolvedValue(undefined);
     (getOcAcademicSemester as any).mockResolvedValue({
@@ -88,6 +90,7 @@ describe('OC academics bulk API', () => {
 
   afterEach(() => {
     process.env.AUTHZ_V2_ENABLED = originalAuthzFlag;
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = originalPublicAuthzFlag;
   });
 
   it('allows authenticated non-admin users to read bulk academics', async () => {
@@ -126,6 +129,7 @@ describe('OC academics bulk API', () => {
 
   it('returns 403 when authz denies the bulk-read action', async () => {
     process.env.AUTHZ_V2_ENABLED = 'true';
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = 'true';
     (getAuthzEngine as any).mockReturnValue({
       engine: 'test-engine',
       authorize: vi.fn(async () => makeDecision(false)),
@@ -224,6 +228,35 @@ describe('OC academics bulk API', () => {
       },
       expect.anything(),
     );
+  });
+
+  it('rejects bulk upserts with empty academic mark objects', async () => {
+    const req = attachAudit(
+      makeJsonRequest({
+        method: 'POST',
+        path: '/api/v1/oc/academics/bulk',
+        body: {
+          items: [
+            {
+              op: 'upsert',
+              ocId: '11111111-1111-4111-8111-111111111111',
+              semester: 1,
+              subjectId: '22222222-2222-4222-8222-222222222222',
+              theory: {},
+              practical: {},
+            },
+          ],
+          failFast: true,
+        },
+      }),
+    );
+
+    const res = await POST(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('bad_request');
+    expect(updateOcAcademicSubject).not.toHaveBeenCalled();
   });
 
   it('returns 403 when admin bulk access is disabled by module access settings', async () => {

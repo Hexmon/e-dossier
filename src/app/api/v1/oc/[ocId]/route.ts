@@ -2,13 +2,14 @@ import { z } from 'zod';
 import { db } from '@/app/db/client';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAdmin } from '@/app/lib/authz';
-import { ocCadets } from '@/app/db/schema/training/oc';
+import { ocCadets, ocPersonal } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
 import { and, eq, isNull } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { getCurrentSemesterForOc } from '@/app/db/queries/oc-enrollments';
+import { syncOcLifecycleFromCadet } from '@/app/db/queries/oc-lifecycle';
 import { mustHaveOcAccess } from '../_checks';
 
 const OcParam = z.object({ ocId: z.string().uuid() });
@@ -27,10 +28,64 @@ const updateSchema = z.object({
     platoonId: z.string().uuid().nullable().optional(),
     arrivalAtUniversity: z.coerce.date().optional(),
     withdrawnOn: z.coerce.date().nullable().optional(),
+    personal: z.object({
+        visibleIdentMarks: z.string().nullable().optional(),
+        pi: z.string().nullable().optional(),
+        dob: z.preprocess((value) => value === '' ? null : value, z.coerce.date().nullable()).optional(),
+        placeOfBirth: z.string().nullable().optional(),
+        domicile: z.string().nullable().optional(),
+        religion: z.string().nullable().optional(),
+        nationality: z.string().nullable().optional(),
+        bloodGroup: z.string().nullable().optional(),
+        identMarks: z.string().nullable().optional(),
+        mobileNo: z.string().nullable().optional(),
+        email: z.string().email().nullable().optional(),
+        passportNo: z.string().nullable().optional(),
+        panNo: z.string().nullable().optional(),
+        aadhaarNo: z.string().nullable().optional(),
+        fatherName: z.string().nullable().optional(),
+        fatherMobile: z.string().nullable().optional(),
+        fatherAddrPerm: z.string().nullable().optional(),
+        fatherAddrPresent: z.string().nullable().optional(),
+        fatherProfession: z.string().nullable().optional(),
+        guardianName: z.string().nullable().optional(),
+        guardianAddress: z.string().nullable().optional(),
+        monthlyIncome: z.coerce.number().int().nullable().optional(),
+        nokDetails: z.string().nullable().optional(),
+        nokAddrPerm: z.string().nullable().optional(),
+        nokAddrPresent: z.string().nullable().optional(),
+        nearestRailwayStation: z.string().nullable().optional(),
+        familyInSecunderabad: z.string().nullable().optional(),
+        relativeInArmedForces: z.string().nullable().optional(),
+        govtFinancialAssistance: z.boolean().nullable().optional(),
+        bankDetails: z.string().nullable().optional(),
+        idenCardNo: z.string().nullable().optional(),
+        upscRollNo: z.string().nullable().optional(),
+        ssbCentre: z.string().nullable().optional(),
+        games: z.string().nullable().optional(),
+        hobbies: z.string().nullable().optional(),
+        swimmer: z.boolean().nullable().optional(),
+        languages: z.string().nullable().optional(),
+    }).optional(),
 });
 
 async function requireAdminForWrite(req: AuditNextRequest) {
     return requireAdmin(req);
+}
+
+function hasLifecycleChange(dto: z.infer<typeof updateSchema>) {
+    return (
+        dto.courseId !== undefined ||
+        dto.branch !== undefined ||
+        dto.platoonId !== undefined ||
+        dto.withdrawnOn !== undefined
+    );
+}
+
+function stripUndefined<T extends Record<string, unknown>>(value: T): Partial<T> {
+    return Object.fromEntries(
+        Object.entries(value).filter(([, fieldValue]) => fieldValue !== undefined),
+    ) as Partial<T>;
 }
 
 async function GETHandler(req: AuditNextRequest, { params }: { params: Promise<{ ocId: string }> }) {
@@ -135,17 +190,43 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
         const adminCtx = await requireAdminForWrite(req);
         const { ocId } = await OcParam.parseAsync(await params);
         const dto = updateSchema.parse(await req.json());
+        const { personal, ...cadetPatch } = dto;
         const [existing] = await db
             .select()
             .from(ocCadets)
             .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
             .limit(1);
         if (!existing) throw new ApiError(404, 'OC not found', 'not_found');
-        const [row] = await db
-            .update(ocCadets)
-            .set(dto)
-            .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
-            .returning();
+
+        const row = await db.transaction(async (tx) => {
+            const [updated] = await tx
+                .update(ocCadets)
+                .set({ ...cadetPatch, updatedAt: new Date() })
+                .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
+                .returning();
+
+            if (personal) {
+                const personalPatch = stripUndefined(personal);
+                if (Object.keys(personalPatch).length > 0) {
+                    await tx
+                        .insert(ocPersonal)
+                        .values({ ocId, ...personalPatch })
+                        .onConflictDoUpdate({
+                            target: ocPersonal.ocId,
+                            set: personalPatch,
+                        });
+                }
+            }
+
+            return updated;
+        });
+
+        if (hasLifecycleChange(dto)) {
+            await syncOcLifecycleFromCadet(ocId, {
+                actorUserId: adminCtx.userId,
+                reason: 'oc_patch_canonical_sync',
+            });
+        }
 
         await req.audit.log({
             action: AuditEventType.OC_UPDATED,
@@ -155,7 +236,8 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
             metadata: {
                 description: `Updated OC ${ocId}`,
                 ocId,
-                changes: Object.keys(dto),
+                changes: Object.keys(cadetPatch),
+                personalChanges: personal ? Object.keys(stripUndefined(personal)) : [],
             },
         });
         return json.ok({ message: 'OC updated successfully.', oc: row });

@@ -274,6 +274,41 @@
       "when": 1777102200000,
       "tag": "0038_reset_active_enrollment_semester_to_one",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1778496548000,
+      "tag": "0039_oc_zero_loss_reconciliation",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1778664526279,
+      "tag": "0040_wide_slipstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1779052200000,
+      "tag": "0041_previous_semester_relegation",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1779148800000,
+      "tag": "0042_repeat_semester_relegation",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1779193110000,
+      "tag": "0043_rbac_permission_key_uniqueness",
+      "breakpoints": true
     }
   ]
 }

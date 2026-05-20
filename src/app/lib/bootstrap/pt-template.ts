@@ -1,5 +1,6 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { db } from '@/app/db/client';
+import { courses } from '@/app/db/schema/training/courses';
 import {
   ptAttemptGrades,
   ptMotivationAwardFields,
@@ -25,6 +26,7 @@ type ApplyPtTemplateProfileInput = {
   profile?: PtTemplateProfile;
   dryRun?: boolean;
   actorUserId?: string;
+  courseId?: string | null;
 };
 
 type MutableStats = {
@@ -39,6 +41,7 @@ type MutableStats = {
 type ApplyContext = {
   now: Date;
   dryRun: boolean;
+  courseId: string | null;
   warnings: string[];
   stats: MutableStats;
 };
@@ -95,6 +98,7 @@ function toResult(ctx: ApplyContext, profile: PtTemplateProfile): PtTemplateAppl
   return {
     module: 'pt',
     profile,
+    courseId: ctx.courseId,
     dryRun: ctx.dryRun,
     createdCount,
     updatedCount,
@@ -134,6 +138,25 @@ function selectPack(profile: PtTemplateProfile = DEFAULT_PROFILE): PtTemplatePac
   return DEFAULT_TEMPLATE;
 }
 
+function scopedCoursePredicate(
+  column: typeof ptTypes.courseId | typeof ptMotivationAwardFields.courseId,
+  courseId: string | null
+) {
+  return courseId === null ? isNull(column) : eq(column, courseId);
+}
+
+async function ensureTemplateCourseExists(courseId: string): Promise<void> {
+  const [course] = await db
+    .select({ id: courses.id })
+    .from(courses)
+    .where(eq(courses.id, courseId))
+    .limit(1);
+
+  if (!course) {
+    throw new Error(`Course "${courseId}" does not exist.`);
+  }
+}
+
 export function getPtTemplatePack(profile: PtTemplateProfile = DEFAULT_PROFILE): PtTemplatePack {
   return selectPack(profile);
 }
@@ -155,13 +178,20 @@ async function upsertPtType(
       deletedAt: ptTypes.deletedAt,
     })
     .from(ptTypes)
-    .where(and(eq(ptTypes.semester, semester), eq(ptTypes.code, templateType.code)))
+    .where(
+      and(
+        scopedCoursePredicate(ptTypes.courseId, ctx.courseId),
+        eq(ptTypes.semester, semester),
+        eq(ptTypes.code, templateType.code)
+      )
+    )
     .limit(1);
 
   if (!existing) {
     const [created] = await tx
       .insert(ptTypes)
       .values({
+        courseId: ctx.courseId,
         semester,
         code: templateType.code,
         title: templateType.title,
@@ -416,11 +446,18 @@ async function upsertMotivationField(
       deletedAt: ptMotivationAwardFields.deletedAt,
     })
     .from(ptMotivationAwardFields)
-    .where(and(eq(ptMotivationAwardFields.semester, semester), eq(ptMotivationAwardFields.label, label)))
+    .where(
+      and(
+        scopedCoursePredicate(ptMotivationAwardFields.courseId, ctx.courseId),
+        eq(ptMotivationAwardFields.semester, semester),
+        eq(ptMotivationAwardFields.label, label)
+      )
+    )
     .limit(1);
 
   if (!existing) {
     await tx.insert(ptMotivationAwardFields).values({
+      courseId: ctx.courseId,
       semester,
       label,
       sortOrder,
@@ -525,11 +562,18 @@ async function applyPackWithClient(tx: DbExecutor, pack: PtTemplatePack, ctx: Ap
 export async function applyPtTemplateProfile({
   profile = DEFAULT_PROFILE,
   dryRun = false,
+  courseId = null,
 }: ApplyPtTemplateProfileInput): Promise<PtTemplateApplyResult> {
   const pack = selectPack(profile);
+  const targetCourseId = courseId ?? null;
+  if (targetCourseId) {
+    await ensureTemplateCourseExists(targetCourseId);
+  }
+
   const context: ApplyContext = {
     now: new Date(),
     dryRun,
+    courseId: targetCourseId,
     warnings: [],
     stats: createStats(),
   };

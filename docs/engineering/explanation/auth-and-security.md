@@ -57,8 +57,7 @@
   - adds/propagates `x-request-id`
   - performs public-vs-protected path gate
   - applies rate limit and CSRF checks
-- `src/app/lib/security-headers.ts` defines shared security headers helper, but it is not globally wired in `next.config.ts`.
-- `next.config.ts` currently only disables `x-powered-by` (`poweredByHeader: false`).
+- `next.config.ts` disables `x-powered-by` (`poweredByHeader: false`) and applies shared security headers through `headers()`.
 
 ## RBAC / Authorization (Current)
 
@@ -74,7 +73,7 @@
 ### Runtime checks
 - `requireAuth` used broadly in handlers.
 - Scope-aware OC authorization exists in `src/lib/authorization.ts` (`authorizeOcAccess`) but is only used by a subset of OC routes.
-- Permission helper `src/app/db/queries/authz.ts` exists but is not wired into API route guards.
+- Permission bundle lookups live in `src/app/db/queries/authz-permissions.ts` and are used by the ACX guard layer under `src/app/lib/acx`.
 
 ## Audit Logging (Hexmon v2 + legacy)
 - Primary wrapper: `withAuditRoute` from `src/lib/audit.ts`.

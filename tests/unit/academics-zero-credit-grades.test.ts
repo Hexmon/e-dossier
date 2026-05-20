@@ -37,6 +37,7 @@ import {
   marksToGradePointsWithPolicy,
   marksToLetterGradeWithPolicy,
 } from "@/app/lib/grading-policy";
+import { buildAcademicGpaComponent, computeAcademicSgpa } from "@/app/lib/academic-marks-core";
 import { buildAcademicSemesterView } from "@/app/lib/semester-marks";
 import { getAcademicGradingPolicy } from "@/app/db/queries/academicGradingPolicy";
 import { recalculateAcademicGrading } from "@/app/services/academic-grading-recalculate";
@@ -179,5 +180,73 @@ describe("zero-credit academics grading", () => {
       after: marksToGradePointsWithPolicy(80, policy),
     });
     expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("excludes other branch subjects when recalculating stored academic summaries", async () => {
+    const policy = DEFAULT_ACADEMIC_GRADING_POLICY;
+    vi.mocked(getAcademicGradingPolicy).mockResolvedValue(policy);
+
+    orderByMock.mockResolvedValue([
+      {
+        id: "row-branch",
+        ocId: "oc-mech",
+        courseId: "course-1",
+        ocBranch: "M",
+        semester: 3,
+        sgpa: 0,
+        cgpa: 0,
+        marksScored: 0,
+        subjects: [
+          {
+            subjectCode: "COM301",
+            subjectName: "Common Subject",
+            branch: "C",
+            theory: { finalMarks: 80, grade: marksToLetterGradeWithPolicy(80, policy) },
+            meta: { theoryCredits: 3 },
+          },
+          {
+            subjectCode: "MEC301",
+            subjectName: "Mechanical Subject",
+            branch: "M",
+            theory: { finalMarks: 70, grade: marksToLetterGradeWithPolicy(70, policy) },
+            meta: { theoryCredits: 3 },
+          },
+          {
+            subjectCode: "ELE301",
+            subjectName: "Electrical Subject",
+            branch: "E",
+            theory: { finalMarks: 10, grade: marksToLetterGradeWithPolicy(10, policy) },
+            meta: { theoryCredits: 3 },
+          },
+        ],
+      },
+    ]);
+
+    const expectedSgpa = computeAcademicSgpa(
+      [
+        buildAcademicGpaComponent(80, 3, policy),
+        buildAcademicGpaComponent(70, 3, policy),
+      ].filter((entry): entry is NonNullable<typeof entry> => Boolean(entry)),
+      policy
+    );
+
+    const result = await recalculateAcademicGrading({ dryRun: true, scope: "all" });
+
+    expect(result.sampleChanges).toContainEqual({
+      ocId: "oc-mech",
+      courseId: "course-1",
+      semester: 3,
+      field: "sgpa",
+      before: 0,
+      after: expectedSgpa,
+    });
+    expect(result.sampleChanges).toContainEqual({
+      ocId: "oc-mech",
+      courseId: "course-1",
+      semester: 3,
+      field: "marksScored",
+      before: 0,
+      after: 1012.5,
+    });
   });
 });

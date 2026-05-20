@@ -118,6 +118,7 @@ describe("medical category routes", () => {
           mosAndDiagnostics: "Observation",
           catFrom: null,
           catTo: null,
+          category: "Temporary Low Medical Category",
           mhFrom: "",
           mhTo: "",
           absence: "",
@@ -136,6 +137,7 @@ describe("medical category routes", () => {
         mosAndDiagnostics: "Observation",
         catFrom: null,
         catTo: null,
+        category: "Temporary Low Medical Category",
         mhFrom: null,
         mhTo: null,
         absence: null,
@@ -177,11 +179,16 @@ describe("medical category routes", () => {
       makeJsonRequest({
         method: "PATCH",
         path: `/api/v1/oc/${ocId}/medical-category/${recordId}`,
-        body: { mosAndDiagnostics: "Observation" },
+        body: { mosAndDiagnostics: "Observation", category: "Fit" },
       }) as any,
       createRouteContext({ ocId, id: recordId })
     );
     expect(patchRes.status).toBe(200);
+    expect(ocQueries.updateMedCat).toHaveBeenCalledWith(
+      ocId,
+      recordId,
+      expect.objectContaining({ mosAndDiagnostics: "Observation", category: "Fit" })
+    );
 
     const deleteRes = await deleteMedicalCategoryRoute(
       makeJsonRequest({

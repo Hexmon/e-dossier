@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  POST as createDisciplineRoute,
+} from "@/app/api/v1/oc/[ocId]/discipline/route";
+import {
   DELETE as deleteDisciplineRoute,
   GET as getDisciplineRoute,
   PATCH as patchDisciplineRoute,
@@ -35,6 +38,7 @@ vi.mock("@/app/api/v1/oc/_checks", () => ({
 }));
 
 vi.mock("@/app/db/queries/oc", () => ({
+  createDiscipline: vi.fn(),
   getDiscipline: vi.fn(),
   updateDiscipline: vi.fn(),
   deleteDiscipline: vi.fn(),
@@ -57,6 +61,38 @@ beforeEach(() => {
 });
 
 describe("discipline record route", () => {
+  it("creates a discipline record with decimal punishment points", async () => {
+    vi.mocked(ocQueries.createDiscipline).mockResolvedValue({
+      id: recordId,
+      ocId,
+      semester: 5,
+    } as any);
+
+    const res = await createDisciplineRoute(
+      makeJsonRequest({
+        method: "POST",
+        path: `/api/v1/oc/${ocId}/discipline`,
+        body: {
+          semester: 5,
+          dateOfOffence: "2026-04-05",
+          offence: "Late fall-in",
+          pointsDelta: 1.5,
+          pointsCumulative: 2.5,
+        },
+      }) as any,
+      createRouteContext({ ocId })
+    );
+
+    expect(res.status).toBe(201);
+    expect(ocQueries.createDiscipline).toHaveBeenCalledWith(
+      ocId,
+      expect.objectContaining({
+        pointsDelta: 1.5,
+        pointsCumulative: 2.5,
+      })
+    );
+  });
+
   it("retrieves an active discipline record", async () => {
     vi.mocked(ocQueries.getDiscipline).mockResolvedValue({
       id: recordId,

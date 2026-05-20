@@ -23,8 +23,14 @@ import {
   UpdatePhysicalTrainingScores,
   PhysicalTrainingTemplateRow,
 } from "@/hooks/usePhysicalTraining";
-import { buildPTTableRows, PTTableRow } from "./ptTableHelpers";
-import { isFreeEntryPtAttemptCode, resolvePtDraftMarks } from "@/app/lib/physical-training-attempts";
+import {
+  buildPTTableRows,
+  buildPTUpdatePayloadFromRows,
+  resolvePTTableRowAttemptChange,
+  resolvePTTableRowGradeChange,
+  PTTableRow,
+} from "./ptTableHelpers";
+import { isFreeEntryPtAttemptCode } from "@/app/lib/physical-training-attempts";
 
 interface IpetFormProps {
   onMarksChange: (marks: number) => void;
@@ -106,29 +112,7 @@ export default function IpetForm({
         prev.map((row) => {
           if (row.id !== rowId) return row;
 
-          const attemptGroup = row.attemptGroups.find(
-            (g) => g.attemptCode === attemptCode
-          );
-          const nextGrade = attemptGroup?.grades[0];
-          const nextScoreId = nextGrade?.scoreId ?? row.selectedScoreId;
-
-          const statusMarks = nextGrade?.maxMarks ?? row.column3;
-          const marks = resolvePtDraftMarks(
-            attemptCode,
-            statusMarks,
-            scoreById.get(nextScoreId)?.marksScored ?? null
-          );
-
-          return {
-            ...row,
-            selectedAttempt: attemptCode,
-            column4: attemptCode,
-            selectedGrade: nextGrade?.gradeCode ?? row.selectedGrade,
-            column5: nextGrade?.gradeCode ?? row.column5,
-            selectedScoreId: nextScoreId,
-            column3: statusMarks,
-            column6: marks,
-          };
+          return resolvePTTableRowAttemptChange(row, attemptCode, scoreById);
         })
       );
     },
@@ -141,27 +125,7 @@ export default function IpetForm({
         prev.map((row) => {
           if (row.id !== rowId) return row;
 
-          const attemptGroup = row.attemptGroups.find(
-            (g) => g.attemptCode === row.selectedAttempt
-          );
-          const grade = attemptGroup?.grades.find((g) => g.gradeCode === gradeCode);
-          const nextScoreId = grade?.scoreId ?? row.selectedScoreId;
-
-          const statusMarks = grade?.maxMarks ?? row.column3;
-          const marks = resolvePtDraftMarks(
-            row.selectedAttempt,
-            statusMarks,
-            scoreById.get(nextScoreId)?.marksScored ?? null
-          );
-
-          return {
-            ...row,
-            selectedGrade: gradeCode,
-            column5: gradeCode,
-            selectedScoreId: nextScoreId,
-            column3: statusMarks,
-            column6: marks,
-          };
+          return resolvePTTableRowGradeChange(row, gradeCode, scoreById);
         })
       );
     },
@@ -219,23 +183,22 @@ export default function IpetForm({
       }
     }
 
-    const scoresForApi = tableData
-      .filter((row) => row.selectedScoreId && !isVirtualId(row.selectedScoreId))
-      .map((row) => ({
-        ptTaskScoreId: row.selectedScoreId,
-        marksScored: row.column6 ?? 0,
-        attemptCode: row.selectedAttempt,
-        gradeCode: row.selectedGrade,
-      }));
-
-    if (scoresForApi.length === 0) {
+    if (tableData.some((row) => row.selectedScoreId && isVirtualId(row.selectedScoreId))) {
       toast.error(
         "Template is not fully configured, Contact Admin."
       );
       return;
     }
 
-    await updateScores(semesterNum, scoresForApi);
+    const { scores: scoresForApi, deleteScoreIds } = buildPTUpdatePayloadFromRows(tableData);
+
+    if (scoresForApi.length === 0 && deleteScoreIds.length === 0) {
+      toast.message("No changed values to save.");
+      setIsEditing(false);
+      return;
+    }
+
+    await updateScores(semesterNum, scoresForApi, deleteScoreIds);
     setIsEditing(false);
     toast.success("IPET data saved successfully");
   }, [tableData, activeSemester, updateScores]);
@@ -340,7 +303,7 @@ export default function IpetForm({
           if (row.id === "total") {
             return <span className="text-center block">{tableTotal}</span>;
           }
-          const disabled = isVirtualId(row.selectedScoreId);
+          const disabled = !row.selectedScoreId || isVirtualId(row.selectedScoreId);
           return isEditing ? (
             <Input
               type="number"

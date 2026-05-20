@@ -6,8 +6,10 @@ import { createPostgresAuditSink } from '@hexmon_tech/audit-sink-postgres';
 import { withAudit } from '@hexmon_tech/audit-next';
 import type { AuditNextRequest, NextAuditOptions } from '@hexmon_tech/audit-next';
 import { NextRequest } from 'next/server';
-import { ApiError } from '@/app/lib/http';
+import { ApiError, handleApiError } from '@/app/lib/http';
 import { normalizeDatabaseUrl } from '@/app/db/connectionString';
+import { isPublicApiPath } from '@/app/lib/access-control-policy';
+import { isAuthzV2Enabled } from '@/app/lib/acx/feature-flag';
 
 // ── Re-export types ───────────────────────────────────────────────
 export type { AuditNextRequest, AuditEventInput, AuditLogger };
@@ -175,12 +177,13 @@ export const auditLogger = createAuditLogger({
 
 // ── Route Handler Types ───────────────────────────────────────────
 type RouteParams = Record<string, string | string[] | undefined>;
+type EmptyRouteParams = Record<string, never>;
 
-export type RouteContext<TParams = RouteParams> = {
+export type RouteContext<TParams = EmptyRouteParams> = {
   params: Promise<TParams>;
 };
 
-type AuditRouteHandler<TParams = undefined> = (
+type AuditRouteHandler<TParams = EmptyRouteParams> = (
   req: AuditNextRequest,
   context: RouteContext<TParams>
 ) => Promise<Response> | Response;
@@ -214,7 +217,7 @@ function logAccess(
 }
 
 // ── withAuditRoute Wrapper ────────────────────────────────────────
-export function withAuditRoute<TParams = undefined>(
+export function withAuditRoute<TParams = EmptyRouteParams>(
   _method: string,
   handler: AuditRouteHandler<TParams>,
   options?: NextAuditOptions,
@@ -226,7 +229,16 @@ export function withAuditRoute<TParams = undefined>(
       const requestIdHeader = req.headers.get('x-request-id');
 
       try {
-        const response = await handler(req, context);
+        const pathname = new URL(req.url).pathname;
+        let effectiveHandler = handler;
+        if (isAuthzV2Enabled() && !isPublicApiPath(pathname, req.method)) {
+          const { isAuthzRouteHandler, withAuthz } = await import('@/app/lib/acx/withAuthz');
+          effectiveHandler = isAuthzRouteHandler(handler)
+            ? handler
+            : (withAuthz(handler as any) as AuditRouteHandler<TParams>);
+        }
+
+        const response = await effectiveHandler(req, context);
         const status = response.status ?? 200;
         logAccess(req, startTime, status, inferOutcome(status));
         if (requestIdHeader && !response.headers.get('x-request-id')) {
@@ -234,9 +246,13 @@ export function withAuditRoute<TParams = undefined>(
         }
         return response;
       } catch (error) {
-        const status = error instanceof ApiError ? error.status : 500;
+        const response = handleApiError(error);
+        const status = response.status ?? (error instanceof ApiError ? error.status : 500);
         logAccess(req, startTime, status, status >= 500 ? 'ERROR' : 'FAILURE');
-        throw error;
+        if (requestIdHeader && !response.headers.get('x-request-id')) {
+          response.headers.set('x-request-id', requestIdHeader);
+        }
+        return response;
       }
     },
     {

@@ -13,6 +13,7 @@ import {
   type SidebarRoleGroup,
   type SidebarSectionKey,
 } from "@/lib/sidebar-visibility";
+import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
 
 export type ModuleAccessKey = "DOSSIER" | "BULK_UPLOAD" | "REPORTS";
 
@@ -264,6 +265,8 @@ export async function assertModuleApiAccessByPath(
   pathname: string,
   principal: ModuleAccessPrincipal
 ) {
+  if (isAuthzV2Enabled()) return;
+
   const requirement = resolveModuleRequirementForApiPath(pathname);
   if (!requirement) return;
 

@@ -51,7 +51,7 @@ jobs:
         run: pnpm run validate:api-tests
 
       - name: Run test suite
-        run: pnpm test
+        run: pnpm run test
 
       - name: Run verification pipeline
         run: pnpm run verify

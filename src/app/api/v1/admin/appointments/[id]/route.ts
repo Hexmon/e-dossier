@@ -6,15 +6,21 @@ import { appointments } from '@/app/db/schema/auth/appointments';
 import { json, handleApiError, ApiError } from '@/app/lib/http';
 import { requireAuth } from '@/app/lib/authz';
 import { appointmentUpdateSchema } from '@/app/lib/validators';
-import { and, eq, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAdmin } from '@/app/lib/authz';
 import {
+    assertCanDeleteAppointmentRecord,
+    assertCanEditAppointmentRecord,
     assertCanManageAppointmentRecord,
     assertCanManageUser,
 } from '@/app/lib/admin-boundaries';
+import {
+    appointmentOverlapConflictDetails,
+    findOverlappingPrimaryAppointment,
+} from '@/app/db/queries/appointment-overlap';
 
 export const runtime = 'nodejs';
 
@@ -65,23 +71,37 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
     try {
         const adminCtx = await requireAdmin(req);
         const { id } = await params;
+        await assertCanEditAppointmentRecord(id);
         await assertCanManageAppointmentRecord(adminCtx, id);
         const body = await req.json();
         const parsed = appointmentUpdateSchema.safeParse(body);
         if (!parsed.success) throw new ApiError(400, 'Validation failed', 'bad_request', parsed.error.flatten());
         const updates = parsed.data;
 
-        // scope consistency checks
-        if (updates.scopeType === 'PLATOON' && updates.scopeId === null) {
+        const [previous] = await db.select().from(appointments).where(eq(appointments.id, id)).limit(1);
+        if (!previous) throw new ApiError(404, 'Appointment not found');
+
+        const nextScopeType = updates.scopeType ?? previous.scopeType;
+        const nextScopeId =
+            nextScopeType === 'GLOBAL'
+                ? null
+                : updates.scopeId !== undefined
+                    ? updates.scopeId
+                    : previous.scopeId;
+        const nextStartsAt = updates.startsAt ?? previous.startsAt;
+        const nextEndsAt = updates.endsAt !== undefined ? updates.endsAt : previous.endsAt;
+        const nextAssignment = updates.assignment ?? previous.assignment;
+
+        if (nextScopeType === 'PLATOON' && !nextScopeId) {
             throw new ApiError(400, 'scopeId required when scopeType = PLATOON');
         }
-        if (updates.scopeType === 'GLOBAL' && updates.scopeId) {
-            throw new ApiError(400, 'scopeId must be null when scopeType = GLOBAL');
+
+        if (nextEndsAt && !(nextStartsAt < nextEndsAt)) {
+            throw new ApiError(400, 'startsAt must be earlier than endsAt', 'bad_request');
         }
 
-        // optional: verify platoon exists if provided
-        if (updates.scopeType === 'PLATOON' && updates.scopeId) {
-            const [pl] = await db.select().from(platoons).where(eq(platoons.id, updates.scopeId));
+        if (nextScopeType === 'PLATOON' && nextScopeId) {
+            const [pl] = await db.select().from(platoons).where(eq(platoons.id, nextScopeId));
             if (!pl) throw new ApiError(400, 'Invalid platoon scopeId');
         }
 
@@ -97,15 +117,40 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
             await assertCanManageUser(adminCtx, updates.userId);
         }
 
-        const txResult = await db.transaction(async (tx) => {
-            const [previous] = await tx.select().from(appointments).where(eq(appointments.id, id)).limit(1);
-            if (!previous) throw new ApiError(404, 'Appointment not found');
+        const conflicting = nextAssignment === 'PRIMARY'
+            ? await findOverlappingPrimaryAppointment({
+                db,
+                positionId: previous.positionId,
+                scopeType: nextScopeType,
+                scopeId: nextScopeId,
+                startsAt: nextStartsAt,
+                endsAt: nextEndsAt,
+                excludeAppointmentId: id,
+            })
+            : null;
 
+        if (conflicting) {
+            throw new ApiError(
+                409,
+                'Another active/overlapping appointment already exists for this position & scope',
+                'conflict',
+                appointmentOverlapConflictDetails({
+                    positionId: previous.positionId,
+                    scopeType: nextScopeType,
+                    scopeId: nextScopeId,
+                    conflictingAppointment: conflicting,
+                })
+            );
+        }
+
+        const txResult = await db.transaction(async (tx) => {
             const appointmentPatch = {
                 ...(appointmentFieldUpdates.userId !== undefined ? { userId: appointmentFieldUpdates.userId } : {}),
                 ...(appointmentFieldUpdates.assignment !== undefined ? { assignment: appointmentFieldUpdates.assignment } : {}),
                 ...(appointmentFieldUpdates.scopeType !== undefined ? { scopeType: appointmentFieldUpdates.scopeType } : {}),
-                ...(appointmentFieldUpdates.scopeId !== undefined ? { scopeId: appointmentFieldUpdates.scopeId } : {}),
+                ...(appointmentFieldUpdates.scopeId !== undefined || appointmentFieldUpdates.scopeType === 'GLOBAL'
+                    ? { scopeId: nextScopeId }
+                    : {}),
                 ...(appointmentFieldUpdates.startsAt !== undefined ? { startsAt: appointmentFieldUpdates.startsAt } : {}),
                 ...(appointmentFieldUpdates.endsAt !== undefined ? { endsAt: appointmentFieldUpdates.endsAt } : {}),
                 ...(appointmentFieldUpdates.reason !== undefined ? { reason: appointmentFieldUpdates.reason } : {}),
@@ -214,6 +259,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
     try {
         const adminCtx = await requireAdmin(req);
         const { id } = await params;
+        await assertCanDeleteAppointmentRecord(id);
         await assertCanManageAppointmentRecord(adminCtx, id);
         // Soft delete by setting deleted_at = now()
         const [previous] = await db.select().from(appointments).where(eq(appointments.id, id)).limit(1);

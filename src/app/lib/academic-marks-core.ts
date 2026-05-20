@@ -33,6 +33,8 @@ export type AcademicCumulativeSemester = {
   components: AcademicGpaComponent[];
 };
 
+export type AcademicSubjectBranch = "C" | "E" | "M";
+
 export type AcademicSubjectLike = {
   includeTheory?: boolean | null;
   includePractical?: boolean | null;
@@ -45,6 +47,25 @@ export type AcademicSubjectLike = {
   theory?: TheoryMarksLike | null;
   practical?: PracticalMarksLike | null;
 };
+
+export function normalizeAcademicSubjectBranch(value: unknown): AcademicSubjectBranch {
+  return value === "E" || value === "M" ? value : "C";
+}
+
+export function normalizeOcAcademicBranch(value: unknown): "E" | "M" | null {
+  return value === "E" || value === "M" ? value : null;
+}
+
+export function isAcademicSubjectEligibleForOc(
+  semester: number,
+  ocBranch: unknown,
+  subjectBranch: unknown
+): boolean {
+  const branch = normalizeAcademicSubjectBranch(subjectBranch);
+  if (semester <= 2) return branch === "C";
+  const normalizedOcBranch = normalizeOcAcademicBranch(ocBranch);
+  return branch === "C" || (normalizedOcBranch !== null && branch === normalizedOcBranch);
+}
 
 export function toFiniteAcademicNumber(value: unknown): number {
   if (typeof value === "number") {

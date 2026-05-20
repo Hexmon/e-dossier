@@ -4,6 +4,25 @@ export type RbacPermission = {
   id: string;
   key: string;
   description: string | null;
+  system?: boolean;
+  defaultGrant?: boolean;
+  display?: {
+    title: string;
+    moduleLabel: string;
+    areaLabel: string;
+    actionLabel: string;
+    description: string;
+  };
+};
+
+export type RbacPermissionPage = {
+  message: string;
+  items: RbacPermission[];
+  count: number;
+  total: number;
+  limit: number;
+  offset: number;
+  hasMore: boolean;
 };
 
 export type RbacRole = {
@@ -32,6 +51,33 @@ export type PositionPermissionMapping = {
   permissionKey: string;
 };
 
+export type RbacDefaultProfile = {
+  key: string;
+  label: string;
+  roleKeys: string[];
+  positionKeys: string[];
+  permissionKeys: string[];
+  protected?: boolean;
+};
+
+export type RbacDefaultRoleMapping = RolePermissionMapping & {
+  profileKey: string;
+};
+
+export type RbacDefaultPositionMapping = PositionPermissionMapping & {
+  profileKey: string;
+};
+
+export type RbacPermissionDisplayMeta = {
+  permissionId: string;
+  permissionKey: string;
+  title: string;
+  moduleLabel: string;
+  areaLabel: string;
+  actionLabel: string;
+  description: string;
+};
+
 export type FieldRule = {
   id: string;
   permissionId: string;
@@ -45,11 +91,47 @@ export type FieldRule = {
   note: string | null;
   createdAt: string;
   updatedAt: string;
+  defaultRule?: boolean;
+  customRule?: boolean;
+};
+
+export type RbacDefaultFieldRule = {
+  key: string;
+  label: string;
+  permissionKey: string;
+  roleKeys: string[];
+  positionKeys: string[];
+  mode: 'ALLOW' | 'DENY' | 'OMIT' | 'MASK';
+  fields: string[];
+  note?: string | null;
+};
+
+export type RbacFieldRuleDefaults = {
+  defaultFieldRules: RbacDefaultFieldRule[];
+  missingDefaultFieldRules: RbacDefaultFieldRule[];
+};
+
+export type EffectiveRbacBundle = {
+  userId: string;
+  roles: string[];
+  appointment: {
+    appointmentId: string | null;
+    positionId: string | null;
+    positionKey: string | null;
+    scopeType: string | null;
+    scopeId: string | null;
+  };
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  permissions: string[];
+  deniedPermissions: string[];
+  fieldRulesByAction: Record<string, unknown[]>;
+  policyVersion: number;
 };
 
 export const rbacApi = {
   listPermissions: async (params?: { q?: string; limit?: number; offset?: number }) => {
-    return api.get<{ message: string; items: RbacPermission[]; count: number }>(
+    return api.get<RbacPermissionPage>(
       '/api/v1/admin/rbac/permissions',
       { query: params }
     );
@@ -108,7 +190,19 @@ export const rbacApi = {
       positions: RbacPosition[];
       roleMappings: RolePermissionMapping[];
       positionMappings: PositionPermissionMapping[];
+      defaults: {
+        defaultProfiles: RbacDefaultProfile[];
+        defaultRoleMappings: RbacDefaultRoleMapping[];
+        defaultPositionMappings: RbacDefaultPositionMapping[];
+        permissionMeta: RbacPermissionDisplayMeta[];
+      };
     }>('/api/v1/admin/rbac/mappings', { query: params });
+  },
+
+  getEffectivePermissions: async (params?: { userId?: string; appointmentId?: string }) => {
+    return api.get<{ message: string; bundle: EffectiveRbacBundle }>('/api/v1/admin/rbac/effective', {
+      query: params,
+    });
   },
 
   setRoleMappings: async (input: { roleId: string; permissionIds: string[] }) => {
@@ -126,7 +220,7 @@ export const rbacApi = {
   },
 
   listFieldRules: async (params?: { permissionId?: string; positionId?: string; roleId?: string }) => {
-    return api.get<{ message: string; items: FieldRule[]; count: number }>('/api/v1/admin/rbac/field-rules', {
+    return api.get<{ message: string; items: FieldRule[]; count: number; defaults: RbacFieldRuleDefaults }>('/api/v1/admin/rbac/field-rules', {
       query: params,
     });
   },

@@ -54,8 +54,8 @@ export const rbacFieldRuleCreateSchema = z
     fields: z.array(z.string().trim().min(1)).default([]),
     note: z.string().trim().max(1000).nullable().optional(),
   })
-  .refine((payload) => Boolean(payload.positionId || payload.roleId), {
-    message: 'Either positionId or roleId is required.',
+  .refine((payload) => Boolean(payload.positionId) !== Boolean(payload.roleId), {
+    message: 'Exactly one of positionId or roleId is required.',
   });
 
 export const rbacFieldRuleUpdateSchema = z

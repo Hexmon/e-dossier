@@ -104,6 +104,28 @@ export class ApiClientError extends Error {
     }
 }
 
+export function getFriendlyApiErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof ApiClientError) {
+        const detail = typeof error.extras?.detail === "string" ? error.extras.detail : null;
+
+        if (error.code === "service_unavailable") {
+            return error.message || "Backend service is temporarily unavailable. Please try again after it is restored.";
+        }
+
+        if (error.code === "network_error") {
+            return error.message || "Unable to reach the server. Please check the connection and retry.";
+        }
+
+        return detail || error.message || fallback;
+    }
+
+    if (error instanceof Error) {
+        return error.message || fallback;
+    }
+
+    return fallback;
+}
+
 export type ApiRequestOptions<B = unknown> = {
     /** "GET" | "POST" |  */
     method: HttpMethod;
@@ -316,7 +338,17 @@ export async function apiRequest<T = unknown, B = unknown>(opts: ApiRequestOptio
         };
     }
 
-    const res = await fetch(url, init);
+    let res: Response;
+    try {
+        res = await fetch(url, init);
+    } catch {
+        throw new ApiClientError(
+            "Unable to reach the server. Please check the connection and retry.",
+            0,
+            "network_error",
+            { retryable: true }
+        );
+    }
 
     // Refresh CSRF token from response header if present
     const resCsrf = res.headers.get('X-CSRF-Token');

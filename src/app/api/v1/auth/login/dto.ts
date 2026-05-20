@@ -5,8 +5,6 @@ export const LoginBody = z
   .object({
     appointmentId: z.string().uuid().optional(),
     delegationId: z.string().uuid().optional(),
-    platoonId: z.string().uuid().optional(),
-    username: z.string().min(1),
     password: z.string().min(8),
   })
   .superRefine((value, ctx) => {

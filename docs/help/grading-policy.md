@@ -97,3 +97,76 @@ After saving and applying:
 - Applying to all courses unintentionally.
 - Using non-descending thresholds.
 - Expecting changes in reports before running `Apply Updates`.
+
+## 8. Detailed Grading Policy Reference {#detailed-grading-policy-reference}
+
+The grading policy controls how numeric academic marks convert into grades, grade points, SGPA, CGPA, and report values.
+
+### 8.1 Data ownership detail
+
+| Data | Owner | Notes |
+|---|---|---|
+| Numeric marks | Academic marks entry and bulk upload | Should remain unchanged when grading policy changes. |
+| Letter grade | Grading policy calculation | Derived from configured threshold bands when marks exist. |
+| Grade point | Grading policy calculation | Derived from configured grade-point bands. |
+| SGPA formula | Academic grading policy settings | Formula must match institution rules and available mark fields. |
+| CGPA formula | Academic grading policy settings | Formula must match semester aggregation rules. |
+| Report display | Academic report pages | Reports should use current policy or stored fallback where code supports fallback. |
+
+### 8.2 Boundary testing requirements
+
+Every grading policy change must test boundary values:
+
+- Exactly on each threshold.
+- One mark below each threshold.
+- Minimum passing threshold.
+- Failure threshold.
+- Empty or missing mark behavior.
+- Existing stored grade fallback where marks are absent.
+
+For the default policy, test `80`, `79`, `70`, `69`, `60`, `59`, `55`, `54`, `50`, `49`, `45`, `44`, `41`, `40`, `38`, `37`, `35`, and `34`.
+
+### 8.3 Recalculation safety rules
+
+Before apply:
+
+- Confirm scope is correct.
+- Confirm preview counts match expectations.
+- Review sample changed rows.
+- Confirm no unrelated courses are included.
+
+During apply:
+
+- Apply only after preview.
+- Avoid simultaneous grading changes from multiple users.
+- Keep the previous policy values available for rollback.
+
+After apply:
+
+- Verify an OC academics page.
+- Verify all affected reports.
+- Re-run the preview to confirm changed rows are no longer unexpectedly pending.
+
+### 8.4 Report and workflow impact
+
+Grading changes can affect:
+
+- Consolidated sessional mark sheets.
+- Semester grade report.
+- Final result compilation.
+- OC academic semester pages.
+- Course performance reports.
+- Workflow review pages if pending marks depend on calculated values.
+
+Grading policy changes should be treated as controlled configuration changes, not normal data-entry edits.
+
+### 8.5 Grading policy QA matrix
+
+| Scenario | Expected result |
+|---|---|
+| Save valid descending bands | Settings persist after refresh. |
+| Save overlapping or non-descending bands | UI or API prevents invalid policy where validation exists. |
+| Preview selected course | Only selected course rows are scanned. |
+| Apply selected course | Only selected course rows change. |
+| Report after apply | Letter grade and grade point match current policy. |
+| Missing marks in report | Stored grade fallback is used where implemented. |

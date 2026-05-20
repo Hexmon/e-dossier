@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useDebouncedValue } from "@/app/lib/debounce";
 import { useRelegationHistory } from "@/hooks/useRelegation";
 import type { PromotionRelegationCourseOption } from "@/hooks/usePromotionRelegationMgmt";
+import type { RelegationMovementKind } from "@/app/lib/api/relegationApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,7 @@ export default function RelegationHistoryTable({
   const [search, setSearch] = useState("");
   const [courseFromId, setCourseFromId] = useState("all");
   const [courseToId, setCourseToId] = useState("all");
+  const [movementKind, setMovementKind] = useState<"all" | RelegationMovementKind>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState<10 | 25 | 50 | 100>(25);
   const [pendingVoidRow, setPendingVoidRow] = useState<{ ocId: string; ocNo: string } | null>(null);
@@ -52,19 +54,25 @@ export default function RelegationHistoryTable({
     q: debouncedSearch.trim() ? debouncedSearch.trim() : undefined,
     courseFromId: courseFromId === "all" ? undefined : courseFromId,
     courseToId: courseToId === "all" ? undefined : courseToId,
+    movementKind: movementKind === "all" ? undefined : movementKind,
     limit: pageSize,
     offset: (currentPage - 1) * pageSize,
   });
 
   const items = useMemo(() => query.data?.items ?? [], [query.data?.items]);
-  const total = query.data?.total ?? 0;
+  const lastKnownTotalRef = useRef(0);
+  if (typeof query.data?.total === "number") {
+    lastKnownTotalRef.current = query.data.total;
+  }
+
+  const total = query.data?.total ?? lastKnownTotalRef.current;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasPrev = currentPage > 1;
   const hasNext = currentPage < totalPages;
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, courseFromId, courseToId, pageSize]);
+  }, [debouncedSearch, courseFromId, courseToId, movementKind, pageSize]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -76,13 +84,34 @@ export default function RelegationHistoryTable({
     setSearch("");
     setCourseFromId("all");
     setCourseToId("all");
+    setMovementKind("all");
     setCurrentPage(1);
     setPageSize(25);
   };
 
+  const formatCourseSemester = (courseCode: string, semester?: number | null) =>
+    semester ? `${courseCode} / Sem ${semester}` : courseCode;
+
+  const formatMovementKind = (kind: string) => {
+    switch (kind) {
+      case "SEMESTER_RELEGATION":
+        return "Previous-semester relegation";
+      case "SEMESTER_REPEAT":
+        return "Repeat-semester relegation";
+      case "PROMOTION_BATCH":
+        return "Semester promotion";
+      case "PROMOTION_EXCEPTION":
+        return "Promotion exception";
+      case "VOID_PROMOTION":
+        return "Voided promotion";
+      default:
+        return "Course transfer";
+    }
+  };
+
   return (
     <div className="space-y-4 rounded-xl border border-border p-4">
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
         <div className="space-y-1">
           <Label>Search</Label>
           <Input
@@ -126,11 +155,33 @@ export default function RelegationHistoryTable({
           </Select>
         </div>
 
+        <div className="space-y-1">
+          <Label>Movement Type</Label>
+          <Select
+            value={movementKind}
+            onValueChange={(value) => setMovementKind(value as "all" | RelegationMovementKind)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="COURSE_TRANSFER">Course transfer</SelectItem>
+              <SelectItem value="SEMESTER_RELEGATION">Previous-semester relegation</SelectItem>
+              <SelectItem value="SEMESTER_REPEAT">Repeat-semester relegation</SelectItem>
+              <SelectItem value="PROMOTION_BATCH">Semester promotion</SelectItem>
+              <SelectItem value="PROMOTION_EXCEPTION">Promotion exception</SelectItem>
+              <SelectItem value="VOID_PROMOTION">Voided promotion</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex items-end">
           <Button
+            type="button"
             variant="outline"
             onClick={handleReset}
-            disabled={!search && courseFromId === "all" && courseToId === "all"}
+            disabled={!search && courseFromId === "all" && courseToId === "all" && movementKind === "all"}
             className="w-full"
           >
             Reset Filters
@@ -170,18 +221,16 @@ export default function RelegationHistoryTable({
                 <tr key={row.id} className="border-b align-top">
                   <td className="p-2 font-medium">{row.ocNo}</td>
                   <td className="p-2">{row.ocName}</td>
-                  <td className="p-2">{row.fromCourseCode}</td>
-                  <td className="p-2">{row.toCourseCode}</td>
+                  <td className="p-2">{formatCourseSemester(row.fromCourseCode, row.fromSemester)}</td>
+                  <td className="p-2">{formatCourseSemester(row.toCourseCode, row.toSemester)}</td>
                   <td className="p-2">
                     <div>{row.reason}</div>
-                    {row.movementKind !== "TRANSFER" ? (
-                      <div className="mt-1 text-xs text-muted-foreground">{row.movementKind}</div>
-                    ) : null}
+                    <div className="mt-1 text-xs text-muted-foreground">{formatMovementKind(row.movementKind)}</div>
                   </td>
                   <td className="p-2">{new Date(row.performedAt).toLocaleDateString()}</td>
                   <td className="p-2">
                     {row.hasMedia ? (
-                      <Button size="sm" variant="outline" onClick={() => onViewPdf(row.id)}>
+                      <Button type="button" size="sm" variant="outline" onClick={() => onViewPdf(row.id)}>
                         View PDF
                       </Button>
                     ) : (
@@ -191,6 +240,7 @@ export default function RelegationHistoryTable({
                   <td className="p-2">
                     <div className="flex flex-wrap gap-2">
                       <Button
+                        type="button"
                         size="sm"
                         variant="outline"
                         onClick={() => onViewEnrollments(row.ocId, row.ocName)}
@@ -199,6 +249,7 @@ export default function RelegationHistoryTable({
                       </Button>
                       {row.movementKind === "PROMOTION_BATCH" && row.fromCourseId !== row.toCourseId ? (
                         <Button
+                          type="button"
                           size="sm"
                           variant="destructive"
                           onClick={() => setPendingVoidRow({ ocId: row.ocId, ocNo: row.ocNo })}
@@ -243,6 +294,7 @@ export default function RelegationHistoryTable({
           </Select>
 
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
@@ -254,6 +306,7 @@ export default function RelegationHistoryTable({
             Page {currentPage} / {totalPages}
           </span>
           <Button
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}

@@ -37,7 +37,7 @@ if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE
 }
 
-& pnpm test
+& pnpm run test
 if ($LASTEXITCODE -ne 0) {
   Write-Host "❌ TESTS FAILED - Push Blocked" -ForegroundColor Red
   exit $LASTEXITCODE
@@ -46,6 +46,12 @@ if ($LASTEXITCODE -ne 0) {
 & pnpm run lint
 if ($LASTEXITCODE -ne 0) {
   Write-Host "❌ LINT FAILED - Push Blocked" -ForegroundColor Red
+  exit $LASTEXITCODE
+}
+
+& pnpm run typecheck
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "❌ TYPECHECK FAILED - Push Blocked" -ForegroundColor Red
   exit $LASTEXITCODE
 }
 

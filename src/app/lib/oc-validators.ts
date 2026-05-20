@@ -213,6 +213,7 @@ export const medCatCreateSchema = z.object({
     mosAndDiagnostics: requiredNonEmptyText,
     catFrom: nullableOptionalDate,
     catTo: nullableOptionalDate,
+    category: nullableOptionalText,
     mhFrom: nullableOptionalDate,
     mhTo: nullableOptionalDate,
     absence: nullableOptionalText,
@@ -228,8 +229,8 @@ export const disciplineCreateSchema = z.object({
     awardedOn: z.coerce.date().optional(),
     awardedBy: z.string().optional(),
     numberOfPunishments: z.coerce.number().int().optional(),
-    pointsDelta: z.coerce.number().int().optional(),             // e.g. -3, -1, 0
-    pointsCumulative: z.coerce.number().int().optional(),
+    pointsDelta: z.coerce.number().optional(),
+    pointsCumulative: z.coerce.number().optional(),
 });
 export const disciplineUpdateSchema = disciplineCreateSchema.partial();
 
@@ -420,6 +421,11 @@ const academicLetterGradeSchema = z.preprocess((value) => {
     return normalized === '' ? undefined : normalized;
 }, z.enum(LETTER_GRADE_VALUES).optional());
 
+function hasAcademicSubjectFields(value: Record<string, unknown> | undefined): boolean {
+    if (!value) return false;
+    return Object.values(value).some((entry) => entry !== undefined);
+}
+
 export const academicSubjectPatchSchema = z.object({
     theory: z.object({
         phaseTest1Marks: z.coerce.number().optional(),
@@ -437,7 +443,7 @@ export const academicSubjectPatchSchema = z.object({
         grade: academicLetterGradeSchema,
         tutorial: z.string().optional(),
     }).partial().optional(),
-}).refine((value) => Boolean(value.theory || value.practical), {
+}).refine((value) => hasAcademicSubjectFields(value.theory) || hasAcademicSubjectFields(value.practical), {
     message: 'No subject fields provided.',
 });
 

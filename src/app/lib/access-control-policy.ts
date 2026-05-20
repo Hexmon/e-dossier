@@ -7,19 +7,28 @@ const PUBLIC_API_ANY_RULES: readonly PathRule[] = [
   { path: "/api/v1/auth/login", exact: true },
   { path: "/api/v1/auth/signup", exact: true },
   { path: "/api/v1/auth/logout", exact: true },
-  { path: "/api/v1/admin/users/check-username", exact: true },
   { path: "/api/v1/health", exact: true },
   { path: "/api/v1/bootstrap/super-admin", exact: true },
 ];
 
 const PUBLIC_API_METHOD_RULES: Readonly<Record<string, readonly PathRule[]>> = {
   GET: [
+    // Login needs active appointment identities before a user has a token.
+    // The route handler forces anonymous callers into active-only public projection mode.
     { path: "/api/v1/admin/appointments", exact: true },
-    { path: "/api/v1/platoons" },
-    { path: "/api/v1/site-settings", exact: true },
+    { path: "/api/v1/site-settings" },
     { path: "/api/v1/setup/status", exact: true },
   ],
 };
+
+export type PublicApiRule = PathRule & {
+  method: "ANY" | "GET";
+};
+
+export const PUBLIC_API_REGISTRY: readonly PublicApiRule[] = [
+  ...PUBLIC_API_ANY_RULES.map((rule) => ({ ...rule, method: "ANY" as const })),
+  ...PUBLIC_API_METHOD_RULES.GET.map((rule) => ({ ...rule, method: "GET" as const })),
+];
 
 const SHARED_AUTHENTICATED_ADMIN_METHOD_RULES: Readonly<Record<string, readonly PathRule[]>> = {
   GET: [

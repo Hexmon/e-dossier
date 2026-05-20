@@ -1,13 +1,14 @@
 import { z } from 'zod';
+import { normalizeCourseCode } from '@/app/lib/course-code';
 
 export const courseCreateSchema = z.object({
-    code: z.string().trim().min(2).max(32),              // 'TES-50'
+    code: z.string().trim().min(2).max(32).transform(normalizeCourseCode),              // 'TES-50'
     title: z.string().trim().min(2).max(160),
     notes: z.string().trim().max(2000).optional(),
 });
 
 export const courseUpdateSchema = z.object({
-    code: z.string().trim().min(2).max(32).optional(),
+    code: z.string().trim().min(2).max(32).transform(normalizeCourseCode).optional(),
     title: z.string().trim().min(2).max(160).optional(),
     notes: z.string().trim().max(2000).optional(),
     restore: z.boolean().optional(),                     // undelete if true

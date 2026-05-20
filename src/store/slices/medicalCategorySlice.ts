@@ -5,6 +5,7 @@ export interface MedicalCategoryRowData {
     diagnosis: string;
     catFrom: string;
     catTo: string;
+    category: string;
     mhFrom: string;
     mhTo: string;
     absence: string;

@@ -22,6 +22,18 @@ interface Props {
     readOnly?: boolean;
 }
 
+function formatDisplayDate(value: unknown) {
+    if (typeof value !== "string" || value === "-") return value ? String(value) : "-";
+    const datePart = value.split("T")[0];
+    const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
+}
+
+function formatDecimal(value: unknown) {
+    const num = Number(value ?? 0);
+    return Number.isFinite(num) ? num.toFixed(2) : "0.00";
+}
+
 export default function DisciplineTable({
     rows,
     loading,
@@ -89,7 +101,7 @@ export default function DisciplineTable({
                         onChange={(e) => changeEdit("dateOfOffence", e.target.value as any)}
                         className="w-full min-w-0"
                     />
-                ) : value || "-";
+                ) : formatDisplayDate(value);
             }
         },
         {
@@ -167,7 +179,7 @@ export default function DisciplineTable({
                         onChange={(e) => changeEdit("dateOfAward", e.target.value as any)}
                         className="w-full min-w-0"
                     />
-                ) : value || "-";
+                ) : formatDisplayDate(value);
             }
         },
         {
@@ -206,7 +218,7 @@ export default function DisciplineTable({
             key: "cumulative",
             label: "Cumulative",
             width: "90px",
-            render: (value) => value ?? "0"
+            render: (value) => formatDecimal(value)
         }
     ];
 

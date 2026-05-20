@@ -1,10 +1,19 @@
-import { and, asc, eq, ilike, inArray } from 'drizzle-orm';
+import { and, asc, eq, ilike, inArray, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { authzPolicyState, permissionFieldRules } from '../schema/auth/rbac-extensions';
 import { permissions, positionPermissions, rolePermissions, roles } from '../schema/auth/rbac';
 import { positions } from '../schema/auth/positions';
 import { clearEffectivePermissionsCache } from '@/app/lib/acx/cache';
-import { ensureInterviewRbacDefaults } from './authz-permissions';
+import { ensureCodeRbacDefaults, ensureInterviewRbacDefaults } from './authz-permissions';
+import {
+  getPermissionSystemMeta,
+  getRbacDefaultProfiles,
+  isSystemPermissionKey,
+  normalizeRbacKey,
+} from '@/app/lib/rbac/default-permissions';
+import { getRbacDefaultFieldRules } from '@/app/lib/rbac/default-field-rules';
+import { getPermissionDisplayMeta } from '@/app/lib/rbac/permission-display';
+import { ApiError } from '@/app/lib/http';
 
 type Paging = {
   q?: string;
@@ -14,9 +23,17 @@ type Paging = {
 
 export async function listRbacPermissions(input: Paging = {}) {
   await ensureInterviewRbacDefaults();
+  await ensureCodeRbacDefaults();
   const limit = Math.min(Math.max(input.limit ?? 100, 1), 500);
   const offset = Math.max(input.offset ?? 0, 0);
   const q = input.q?.trim();
+  const whereClause = q ? ilike(permissions.key, `%${q}%`) : undefined;
+
+  const [totalRow] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(permissions)
+    .where(whereClause);
+  const total = Number(totalRow?.total ?? 0);
 
   const rows = await db
     .select({
@@ -25,19 +42,41 @@ export async function listRbacPermissions(input: Paging = {}) {
       description: permissions.description,
     })
     .from(permissions)
-    .where(q ? ilike(permissions.key, `%${q}%`) : undefined)
+    .where(whereClause)
     .orderBy(asc(permissions.key))
     .limit(limit)
     .offset(offset);
 
-  return rows;
+  const items = rows.map((row) => ({
+    ...row,
+    ...getPermissionSystemMeta(row.key),
+    display: getPermissionDisplayMeta(row.key, row.description),
+  }));
+
+  return {
+    items,
+    count: items.length,
+    total,
+    limit,
+    offset,
+    hasMore: offset + items.length < total,
+  };
 }
 
 export async function createRbacPermission(input: { key: string; description?: string | null }) {
+  const key = input.key.trim();
+  if (isSystemPermissionKey(key)) {
+    throw new ApiError(
+      403,
+      'System permissions are managed by the action map and cannot be created manually.',
+      'system_permission_immutable'
+    );
+  }
+
   const [created] = await db
     .insert(permissions)
     .values({
-      key: input.key.trim(),
+      key,
       description: input.description ?? null,
     })
     .returning({
@@ -47,13 +86,41 @@ export async function createRbacPermission(input: { key: string; description?: s
     });
 
   await bumpPolicyVersionAndInvalidate();
-  return created;
+  return {
+    ...created,
+    ...getPermissionSystemMeta(created.key),
+    display: getPermissionDisplayMeta(created.key, created.description),
+  };
 }
 
 export async function updateRbacPermission(
   permissionId: string,
   input: { key?: string; description?: string | null }
 ) {
+  const [existing] = await db
+    .select({ id: permissions.id, key: permissions.key, description: permissions.description })
+    .from(permissions)
+    .where(eq(permissions.id, permissionId))
+    .limit(1);
+
+  if (!existing) return undefined;
+
+  if (isSystemPermissionKey(existing.key)) {
+    throw new ApiError(
+      403,
+      'System permissions are managed by the action map and cannot be edited.',
+      'system_permission_immutable'
+    );
+  }
+
+  if (input.key !== undefined && isSystemPermissionKey(input.key.trim())) {
+    throw new ApiError(
+      403,
+      'System permission keys are reserved by the action map.',
+      'system_permission_immutable'
+    );
+  }
+
   const [updated] = await db
     .update(permissions)
     .set({
@@ -68,10 +135,31 @@ export async function updateRbacPermission(
     });
 
   await bumpPolicyVersionAndInvalidate();
-  return updated;
+  if (!updated) return updated;
+  return {
+    ...updated,
+    ...getPermissionSystemMeta(updated.key),
+    display: getPermissionDisplayMeta(updated.key, updated.description),
+  };
 }
 
 export async function deleteRbacPermission(permissionId: string) {
+  const [existing] = await db
+    .select({ id: permissions.id, key: permissions.key })
+    .from(permissions)
+    .where(eq(permissions.id, permissionId))
+    .limit(1);
+
+  if (!existing) return undefined;
+
+  if (isSystemPermissionKey(existing.key)) {
+    throw new ApiError(
+      403,
+      'System permissions are managed by the action map and cannot be deleted.',
+      'system_permission_immutable'
+    );
+  }
+
   const [deleted] = await db
     .delete(permissions)
     .where(eq(permissions.id, permissionId))
@@ -82,6 +170,7 @@ export async function deleteRbacPermission(permissionId: string) {
 
 export async function listRbacRoles() {
   await ensureInterviewRbacDefaults();
+  await ensureCodeRbacDefaults();
   return db
     .select({ id: roles.id, key: roles.key, description: roles.description })
     .from(roles)
@@ -150,6 +239,7 @@ export async function deleteRbacRole(roleId: string) {
 
 export async function listRbacPositions() {
   await ensureInterviewRbacDefaults();
+  await ensureCodeRbacDefaults();
   return db
     .select({ id: positions.id, key: positions.key, displayName: positions.displayName })
     .from(positions)
@@ -158,6 +248,7 @@ export async function listRbacPositions() {
 
 export async function listRolePermissionMappings(roleId?: string) {
   await ensureInterviewRbacDefaults();
+  await ensureCodeRbacDefaults();
   const rows = await db
     .select({
       roleId: rolePermissions.roleId,
@@ -175,6 +266,7 @@ export async function listRolePermissionMappings(roleId?: string) {
 
 export async function listPositionPermissionMappings(positionId?: string) {
   await ensureInterviewRbacDefaults();
+  await ensureCodeRbacDefaults();
   const rows = await db
     .select({
       positionId: positionPermissions.positionId,
@@ -188,6 +280,72 @@ export async function listPositionPermissionMappings(positionId?: string) {
     .where(positionId ? eq(positionPermissions.positionId, positionId) : undefined);
 
   return rows;
+}
+
+export async function getRbacDefaultMappingMetadata() {
+  await ensureCodeRbacDefaults();
+
+  const [permissionRows, roleRows, positionRows] = await Promise.all([
+    db.select({ id: permissions.id, key: permissions.key, description: permissions.description }).from(permissions),
+    db.select({ id: roles.id, key: roles.key }).from(roles),
+    db.select({ id: positions.id, key: positions.key }).from(positions),
+  ]);
+
+  const permissionByKey = new Map(permissionRows.map((row) => [row.key, row]));
+  const roleByNormalizedKey = new Map(roleRows.map((row) => [normalizeRbacKey(row.key), row]));
+  const positionByNormalizedKey = new Map(positionRows.map((row) => [normalizeRbacKey(row.key), row]));
+  const defaultProfiles = getRbacDefaultProfiles();
+
+  const defaultRoleMappings = defaultProfiles.flatMap((profile) =>
+    profile.roleKeys.flatMap((roleKey) => {
+      const role = roleByNormalizedKey.get(normalizeRbacKey(roleKey));
+      if (!role) return [];
+      return profile.permissionKeys
+        .map((permissionKey) => {
+          const permission = permissionByKey.get(permissionKey);
+          if (!permission) return null;
+          return {
+            profileKey: profile.key,
+            roleId: role.id,
+            roleKey: role.key,
+            permissionId: permission.id,
+            permissionKey,
+          };
+        })
+        .filter((row): row is NonNullable<typeof row> => Boolean(row));
+    })
+  );
+
+  const defaultPositionMappings = defaultProfiles.flatMap((profile) =>
+    profile.positionKeys.flatMap((positionKey) => {
+      const position = positionByNormalizedKey.get(normalizeRbacKey(positionKey));
+      if (!position) return [];
+      return profile.permissionKeys
+        .map((permissionKey) => {
+          const permission = permissionByKey.get(permissionKey);
+          if (!permission) return null;
+          return {
+            profileKey: profile.key,
+            positionId: position.id,
+            positionKey: position.key,
+            permissionId: permission.id,
+            permissionKey,
+          };
+        })
+        .filter((row): row is NonNullable<typeof row> => Boolean(row));
+    })
+  );
+
+  return {
+    defaultProfiles,
+    defaultRoleMappings,
+    defaultPositionMappings,
+    permissionMeta: permissionRows.map((permission) => ({
+      permissionId: permission.id,
+      permissionKey: permission.key,
+      ...getPermissionDisplayMeta(permission.key, permission.description),
+    })),
+  };
 }
 
 export async function setRolePermissionMappings(roleId: string, permissionIds: string[]) {
@@ -272,7 +430,18 @@ export async function listFieldRules(input: { permissionId?: string; positionId?
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(asc(permissions.key));
 
-  return rows;
+  return rows.map((row) => ({
+    ...row,
+    defaultRule: false,
+    customRule: true,
+  }));
+}
+
+export function getRbacDefaultFieldRuleMetadata() {
+  return {
+    defaultFieldRules: getRbacDefaultFieldRules(),
+    missingDefaultFieldRules: [],
+  };
 }
 
 export async function createFieldRule(input: {
@@ -283,6 +452,16 @@ export async function createFieldRule(input: {
   fields?: string[];
   note?: string | null;
 }) {
+  const hasPosition = Boolean(input.positionId);
+  const hasRole = Boolean(input.roleId);
+  if (hasPosition === hasRole) {
+    throw new ApiError(
+      400,
+      'Exactly one of positionId or roleId is required for a field rule.',
+      'bad_request'
+    );
+  }
+
   const [created] = await db
     .insert(permissionFieldRules)
     .values({
@@ -317,6 +496,27 @@ export async function updateFieldRule(
     roleId?: string | null;
   }
 ) {
+  const [existing] = await db
+    .select({
+      positionId: permissionFieldRules.positionId,
+      roleId: permissionFieldRules.roleId,
+    })
+    .from(permissionFieldRules)
+    .where(eq(permissionFieldRules.id, ruleId))
+    .limit(1);
+
+  if (!existing) return undefined;
+
+  const nextPositionId = input.positionId !== undefined ? input.positionId : existing.positionId;
+  const nextRoleId = input.roleId !== undefined ? input.roleId : existing.roleId;
+  if (Boolean(nextPositionId) === Boolean(nextRoleId)) {
+    throw new ApiError(
+      400,
+      'Exactly one of positionId or roleId is required for a field rule.',
+      'bad_request'
+    );
+  }
+
   const [updated] = await db
     .update(permissionFieldRules)
     .set({

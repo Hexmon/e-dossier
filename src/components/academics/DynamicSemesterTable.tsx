@@ -3,12 +3,14 @@ import React, { useMemo } from "react";
 import { useOfferings } from "@/hooks/useOfferings";
 import { Offering } from "@/app/lib/api/offeringsApi";
 import AcademicTable, { AcademicRow } from "./AcademicTable";
+import { isAcademicSubjectEligibleForOc } from "@/app/lib/academic-marks-core";
 
 interface DynamicSemesterTableProps {
     ocId: string;
     courseId: string;
     semester: number;
     canEdit?: boolean;
+    ocBranch?: "E" | "M" | "O" | null;
 }
 
 export default function DynamicSemesterTable({
@@ -16,6 +18,7 @@ export default function DynamicSemesterTable({
     courseId,
     semester,
     canEdit = false,
+    ocBranch = null,
 }: DynamicSemesterTableProps) {
     const { loading, offerings } = useOfferings(courseId);
     const { rows, totalCredits } = useMemo(() => {
@@ -30,7 +33,11 @@ export default function DynamicSemesterTable({
 
         const semesterOfferings = offerings.filter((offering: Offering) => {
             const hasSubject = offering.subject !== undefined || offering.subjectName !== undefined;
-            return offering.semester === semester && hasSubject;
+            return (
+                offering.semester === semester &&
+                hasSubject &&
+                isAcademicSubjectEligibleForOc(semester, ocBranch, offering.subject?.branch)
+            );
         });
 
         if (semesterOfferings.length === 0) {
@@ -69,7 +76,7 @@ export default function DynamicSemesterTable({
         );
 
         return { rows: transformedRows, totalCredits: theoryTotal + practicalTotal };
-    }, [courseId, loading, offerings, semester]);
+    }, [courseId, loading, offerings, semester, ocBranch]);
 
     if (loading) {
         return <div className="p-4 text-center">Loading semester data...</div>;

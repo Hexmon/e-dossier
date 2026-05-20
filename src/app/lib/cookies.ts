@@ -8,7 +8,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 export function setAccessCookie(res: NextResponse, token: string) {
   res.cookies.set('access_token', token, {
     httpOnly: true,
-    secure: false,
+    secure: IS_PROD,
     sameSite: 'lax',
     path: '/',
     maxAge: ACCESS_TTL,
@@ -19,7 +19,7 @@ export function setAccessCookie(res: NextResponse, token: string) {
 export function clearAuthCookies(res: NextResponse) {
   res.cookies.set('access_token', '', {
     httpOnly: true,
-    secure: false,
+    secure: IS_PROD,
     sameSite: 'lax',
     path: '/',
     maxAge: 0,
@@ -33,7 +33,7 @@ function expireCookieByName(res: NextResponse, name: string) {
       path,
       maxAge: 0,
       expires: new Date(0),
-      secure: false,
+      secure: IS_PROD,
       sameSite: 'lax',
     });
   }

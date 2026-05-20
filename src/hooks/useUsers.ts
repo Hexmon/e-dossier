@@ -9,6 +9,7 @@ import {
     deleteUser,
     type User,
 } from "@/app/lib/api/userApi";
+import { getFriendlyApiErrorMessage } from "@/app/lib/apiClient";
 
 export function useUsers() {
     const queryClient = useQueryClient();
@@ -20,7 +21,7 @@ export function useUsers() {
             try {
                 return await getAllUsers();
             } catch (error) {
-                toast.error("Failed to load users.");
+                toast.error(getFriendlyApiErrorMessage(error, "Failed to load users."));
                 return [];
             }
         },
@@ -41,7 +42,7 @@ export function useUsers() {
             const detail =
                 messages.length > 0
                     ? messages.join(" ")
-                    : error?.message || error?.extras?.detail || "Failed to add user";
+                    : getFriendlyApiErrorMessage(error, "Failed to add user");
             toast.error(detail);
         },
     });
@@ -56,7 +57,7 @@ export function useUsers() {
             toast.success("User updated successfully");
         },
         onError: (error: any) => {
-            toast.error(error.message || "Failed to update user");
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to update user"));
         },
     });
 
@@ -70,7 +71,7 @@ export function useUsers() {
             toast.warning("User deleted");
         },
         onError: (error: any) => {
-            toast.error(error.message || "Failed to delete user");
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to delete user"));
         },
     });
 
