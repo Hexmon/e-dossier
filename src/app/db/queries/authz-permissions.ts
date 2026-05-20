@@ -236,7 +236,7 @@ export async function ensureInterviewRbacDefaults(): Promise<void> {
 const RBAC_CODE_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v1';
 const RBAC_DASHBOARD_SESSION_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v2_dashboard_session';
 const RBAC_OTHER_USER_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v3_other_user_defaults';
-const RBAC_ROLE_GROUP_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v4_role_group_defaults';
+const RBAC_ROLE_GROUP_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v5_other_user_dossier_defaults';
 let ensureCodeRbacDefaultsPromise: Promise<void> | null = null;
 
 async function upsertPermissionKeys(permissionKeys: string[]): Promise<Map<string, string>> {
