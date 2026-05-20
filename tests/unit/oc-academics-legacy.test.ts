@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { hydrateAcademicViewsWithSubjectCatalog } from "@/app/services/oc-academics";
+import { isAcademicSubjectEligibleForOc } from "@/app/lib/academic-marks-core";
 
 describe("hydrateAcademicViewsWithSubjectCatalog", () => {
+  it("allows common subjects in early terms and OC branch subjects from term three", () => {
+    expect(isAcademicSubjectEligibleForOc(1, "M", "C")).toBe(true);
+    expect(isAcademicSubjectEligibleForOc(1, "M", "M")).toBe(false);
+    expect(isAcademicSubjectEligibleForOc(3, "M", "C")).toBe(true);
+    expect(isAcademicSubjectEligibleForOc(3, "M", "M")).toBe(true);
+    expect(isAcademicSubjectEligibleForOc(3, "M", "E")).toBe(false);
+  });
+
   it("fills legacy subject credits and ids from the subject catalog", () => {
     const result = hydrateAcademicViewsWithSubjectCatalog(
       [

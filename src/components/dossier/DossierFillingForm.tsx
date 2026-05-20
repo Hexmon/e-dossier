@@ -31,13 +31,20 @@ interface DossierFillingFormProps {
 // Helper function to format dates
 function formatDate(dateString: string | null | undefined): string {
     if (!dateString) return "-";
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return "-";
-        return date.toLocaleDateString('en-GB'); // DD/MM/YYYY format
-    } catch {
-        return "-";
+
+    const trimmed = dateString.trim();
+    const dateParts = /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(trimmed);
+    if (dateParts) {
+        return `${dateParts[3]}-${dateParts[2]}-${dateParts[1]}`;
     }
+
+    const date = new Date(trimmed);
+    if (Number.isNaN(date.getTime())) return "-";
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
 }
 
 export default function DossierFillingForm({ ocId }: DossierFillingFormProps) {
