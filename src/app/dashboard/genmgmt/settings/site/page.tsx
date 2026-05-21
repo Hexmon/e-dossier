@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type SetStateAction, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -205,6 +205,7 @@ function formatDisplayDate(value: string) {
 export default function AdminSiteSettingsPage() {
   const [historySort, setHistorySort] = useState<"asc" | "desc">("asc");
   const [settingsDraft, setSettingsDraft] = useState<SettingsDraft>(DEFAULT_DRAFT);
+  const [settingsDraftDirty, setSettingsDraftDirty] = useState(false);
 
   const [commanderModalOpen, setCommanderModalOpen] = useState(false);
   const [editingCommander, setEditingCommander] = useState<SiteCommanderModel | null>(null);
@@ -264,9 +265,14 @@ export default function AdminSiteSettingsPage() {
     queryFn: () => getPlatoons(),
   });
 
+  const updateSettingsDraft = (updater: SetStateAction<SettingsDraft>) => {
+    setSettingsDraft(updater);
+    setSettingsDraftDirty(true);
+  };
+
   useEffect(() => {
     const settings = settingsQuery.data?.settings;
-    if (!settings) return;
+    if (!settings || settingsDraftDirty) return;
 
     setSettingsDraft({
       logoUrl: settings.logoUrl,
@@ -279,7 +285,7 @@ export default function AdminSiteSettingsPage() {
       awardsSectionTitle: settings.awardsSectionTitle,
       historySectionTitle: settings.historySectionTitle,
     });
-  }, [settingsQuery.data?.settings]);
+  }, [settingsDraftDirty, settingsQuery.data?.settings]);
 
   useEffect(() => {
     setAwardsLocal(awardsQuery.data?.items ?? []);
@@ -394,7 +400,19 @@ export default function AdminSiteSettingsPage() {
 
   const handleSaveSettings = async () => {
     try {
-      await updateSettingsMutation.mutateAsync(settingsDraft);
+      const response = await updateSettingsMutation.mutateAsync(settingsDraft);
+      setSettingsDraft({
+        logoUrl: response.settings.logoUrl,
+        logoObjectKey: response.settings.logoObjectKey,
+        heroBgUrl: response.settings.heroBgUrl,
+        heroBgObjectKey: response.settings.heroBgObjectKey,
+        heroTitle: response.settings.heroTitle,
+        heroDescription: response.settings.heroDescription,
+        commandersSectionTitle: response.settings.commandersSectionTitle,
+        awardsSectionTitle: response.settings.awardsSectionTitle,
+        historySectionTitle: response.settings.historySectionTitle,
+      });
+      setSettingsDraftDirty(false);
       toast.success("Site settings saved.");
     } catch (error) {
       toast.error(parseApiError(error, "Failed to save site settings."));
@@ -772,7 +790,7 @@ export default function AdminSiteSettingsPage() {
 
                         try {
                           const uploaded = await uploadImageWithPresign(file);
-                          setSettingsDraft((prev) => ({
+                          updateSettingsDraft((prev) => ({
                             ...prev,
                             logoUrl: uploaded.imageUrl,
                             logoObjectKey: uploaded.imageObjectKey,
@@ -815,7 +833,7 @@ export default function AdminSiteSettingsPage() {
 
                         try {
                           const uploaded = await uploadHeroBgWithPresign(file);
-                          setSettingsDraft((prev) => ({
+                          updateSettingsDraft((prev) => ({
                             ...prev,
                             heroBgUrl: uploaded.imageUrl,
                             heroBgObjectKey: uploaded.imageObjectKey,
@@ -847,7 +865,7 @@ export default function AdminSiteSettingsPage() {
                     id="hero-title"
                     value={settingsDraft.heroTitle}
                     onChange={(event) =>
-                      setSettingsDraft((prev) => ({ ...prev, heroTitle: event.target.value }))
+                      updateSettingsDraft((prev) => ({ ...prev, heroTitle: event.target.value }))
                     }
                   />
                 </div>
@@ -858,7 +876,7 @@ export default function AdminSiteSettingsPage() {
                     id="hero-description"
                     value={settingsDraft.heroDescription}
                     onChange={(event) =>
-                      setSettingsDraft((prev) => ({ ...prev, heroDescription: event.target.value }))
+                      updateSettingsDraft((prev) => ({ ...prev, heroDescription: event.target.value }))
                     }
                   />
                 </div>
@@ -869,7 +887,7 @@ export default function AdminSiteSettingsPage() {
                     id="commanders-title"
                     value={settingsDraft.commandersSectionTitle}
                     onChange={(event) =>
-                      setSettingsDraft((prev) => ({
+                      updateSettingsDraft((prev) => ({
                         ...prev,
                         commandersSectionTitle: event.target.value,
                       }))
@@ -883,7 +901,7 @@ export default function AdminSiteSettingsPage() {
                     id="awards-title"
                     value={settingsDraft.awardsSectionTitle}
                     onChange={(event) =>
-                      setSettingsDraft((prev) => ({ ...prev, awardsSectionTitle: event.target.value }))
+                      updateSettingsDraft((prev) => ({ ...prev, awardsSectionTitle: event.target.value }))
                     }
                   />
                 </div>
@@ -894,7 +912,7 @@ export default function AdminSiteSettingsPage() {
                     id="history-title"
                     value={settingsDraft.historySectionTitle}
                     onChange={(event) =>
-                      setSettingsDraft((prev) => ({ ...prev, historySectionTitle: event.target.value }))
+                      updateSettingsDraft((prev) => ({ ...prev, historySectionTitle: event.target.value }))
                     }
                   />
                 </div>

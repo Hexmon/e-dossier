@@ -9,6 +9,7 @@ import { makeJsonRequest, createRouteContext } from "../utils/next";
 import * as authz from "@/app/lib/authz";
 import * as siteQueries from "@/app/db/queries/site-settings";
 import * as storage from "@/app/lib/storage";
+import { revalidatePath } from "next/cache";
 
 vi.mock("@/app/lib/authz", () => ({
   requireAdmin: vi.fn(),
@@ -20,6 +21,8 @@ vi.mock("@/app/db/queries/site-settings", () => ({
     singletonKey: "default",
     logoUrl: null,
     logoObjectKey: null,
+    heroBgUrl: null,
+    heroBgObjectKey: null,
     heroTitle: "MCEME",
     heroDescription: "desc",
     commandersSectionTitle: "Commander's Corner",
@@ -35,6 +38,8 @@ vi.mock("@/app/db/queries/site-settings", () => ({
       singletonKey: "default",
       logoUrl: null,
       logoObjectKey: null,
+      heroBgUrl: null,
+      heroBgObjectKey: null,
       heroTitle: "MCEME",
       heroDescription: "desc",
       commandersSectionTitle: "Commander's Corner",
@@ -49,6 +54,8 @@ vi.mock("@/app/db/queries/site-settings", () => ({
       singletonKey: "default",
       logoUrl: payload.logoUrl ?? null,
       logoObjectKey: payload.logoObjectKey ?? null,
+      heroBgUrl: payload.heroBgUrl ?? null,
+      heroBgObjectKey: payload.heroBgObjectKey ?? null,
       heroTitle: payload.heroTitle ?? "MCEME",
       heroDescription: payload.heroDescription ?? "desc",
       commandersSectionTitle: payload.commandersSectionTitle ?? "Commander's Corner",
@@ -65,6 +72,8 @@ vi.mock("@/app/db/queries/site-settings", () => ({
       singletonKey: "default",
       logoUrl: "https://x/logo.png",
       logoObjectKey: "site-settings/logo/a.png",
+      heroBgUrl: null,
+      heroBgObjectKey: null,
       heroTitle: "MCEME",
       heroDescription: "desc",
       commandersSectionTitle: "Commander's Corner",
@@ -79,6 +88,8 @@ vi.mock("@/app/db/queries/site-settings", () => ({
       singletonKey: "default",
       logoUrl: null,
       logoObjectKey: null,
+      heroBgUrl: null,
+      heroBgObjectKey: null,
       heroTitle: "MCEME",
       heroDescription: "desc",
       commandersSectionTitle: "Commander's Corner",
@@ -89,12 +100,17 @@ vi.mock("@/app/db/queries/site-settings", () => ({
       updatedAt: null,
     },
   })),
+  withReadableSiteSettingsImageUrls: vi.fn(async (settings: any) => settings),
 }));
 
 vi.mock("@/app/lib/storage", () => ({
   createPresignedUploadUrl: vi.fn(async () => "https://upload-url"),
   getPublicObjectUrl: vi.fn(() => "https://public-url"),
   deleteObject: vi.fn(async () => undefined),
+}));
+
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
 }));
 
 const adminPath = "/api/v1/admin/site-settings";
@@ -150,6 +166,7 @@ describe("Admin site settings base routes", () => {
     expect(res.status).toBe(200);
     expect(body.settings.heroTitle).toBe("New Hero Title");
     expect(siteQueries.updateSiteSettings).toHaveBeenCalledTimes(1);
+    expect(revalidatePath).toHaveBeenCalledWith("/");
   });
 });
 

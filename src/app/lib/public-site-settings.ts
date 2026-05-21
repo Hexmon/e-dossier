@@ -99,7 +99,10 @@ export async function fetchLandingSiteSettings() {
   ]);
 
   const [settings, commanders, awards, history, eventsNews, footerItem, platoons] = await Promise.all([
-    withFallback(() => siteQueries.getSiteSettingsOrDefault(), FALLBACK_PUBLIC_SITE_SETTINGS),
+    withFallback(async () => {
+      const settings = await siteQueries.getSiteSettingsOrDefault();
+      return siteQueries.withReadableSiteSettingsImageUrls(settings);
+    }, FALLBACK_PUBLIC_SITE_SETTINGS),
     withFallback(() => siteQueries.listPublicCommandersForDisplay(), []),
     withFallback(() => siteQueries.listPublicAwards(), []),
     withFallback(() => siteQueries.listPublicHistory("asc"), []),

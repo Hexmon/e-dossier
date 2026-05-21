@@ -25,7 +25,7 @@ const Hero = ({
   return (
     <section className="relative bg-[var(--primary)] text-primary-foreground h-screen w-full overflow-hidden flex items-center">
       {/* Background Image */}
-      <div className="absolute inset-0 opacity-20">
+      <div className="absolute inset-0">
         <SafeImage
           src={heroBgUrl}
           fallbackSrc="/images/hero-training.jpg"
@@ -48,7 +48,7 @@ const Hero = ({
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-              <Button asChild variant="link" size="lg" className="bg-warning">
+              <Button asChild variant="link" size="lg" className="bg-warning text-accent-foreground">
                 <Link href="/login?role=staff">Commander / Staff Login</Link>
               </Button>
             </div>
@@ -56,7 +56,7 @@ const Hero = ({
 
           {/* Commander Card */}
           <div className="flex justify-center lg:justify-end">
-            <Card className="w-full max-w-sm bg-white/10 backdrop-blur-sm border-white/20">
+            <Card className="w-full max-w-sm bg-accent/5 backdrop-blur-xs border-white/30">
               <CardContent className="p-6 text-center">
                 <div className="mb-4">
                   <SafeImage
@@ -68,8 +68,8 @@ const Hero = ({
                     className="w-26 h-26 rounded-full mx-auto object-fill border-4 border-accent"
                   />
                 </div>
-                <h3 className="text-xl font-semibold mb-1">{commanderName}</h3>
-                <p className="text-accent font-medium mb-2">
+                <h3 className="text-xl text-background font-semibold mb-1">{commanderName}</h3>
+                <p className="text-accent-foreground font-medium mb-2">
                   {commanderRank}
                 </p>
                 {/* <p className="text-sm text-primary-foreground/80">

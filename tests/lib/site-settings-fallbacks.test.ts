@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/app/db/queries/site-settings", () => ({
   getSiteSettingsOrDefault: mocks.getSiteSettingsOrDefault,
+  withReadableSiteSettingsImageUrls: vi.fn(async (settings: any) => settings),
   listPublicCommandersForDisplay: mocks.listPublicCommandersForDisplay,
   listPublicAwards: mocks.listPublicAwards,
   listPublicHistory: mocks.listPublicHistory,

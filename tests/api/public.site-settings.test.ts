@@ -13,12 +13,16 @@ import * as siteQueries from "@/app/db/queries/site-settings";
 vi.mock("@/app/db/queries/site-settings", () => ({
   getSiteSettingsOrDefault: vi.fn(async () => ({
     logoUrl: null,
+    logoObjectKey: null,
+    heroBgUrl: null,
+    heroBgObjectKey: null,
     heroTitle: "MCEME",
     heroDescription: "desc",
     commandersSectionTitle: "Commander's Corner",
     awardsSectionTitle: "Gallantry Awards",
     historySectionTitle: "Our History",
   })),
+  withReadableSiteSettingsImageUrls: vi.fn(async (settings: any) => settings),
   listPublicCommandersForDisplay: vi.fn(async () => [
     {
       id: "1",

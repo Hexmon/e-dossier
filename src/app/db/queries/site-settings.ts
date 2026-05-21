@@ -234,6 +234,34 @@ export async function clearSiteHeroBg(actorUserId: string) {
   };
 }
 
+export async function withReadableSiteSettingsImageUrls<
+  T extends {
+    logoObjectKey?: string | null;
+    logoUrl?: string | null;
+    heroBgObjectKey?: string | null;
+    heroBgUrl?: string | null;
+  },
+>(row: T): Promise<T> {
+  const [logoUrl, heroBgUrl] = await Promise.all([
+    row.logoObjectKey
+      ? createPresignedGetUrl({ key: row.logoObjectKey, expiresInSeconds: 3600 }).catch(
+          () => row.logoUrl ?? null
+        )
+      : Promise.resolve(row.logoUrl ?? null),
+    row.heroBgObjectKey
+      ? createPresignedGetUrl({ key: row.heroBgObjectKey, expiresInSeconds: 3600 }).catch(
+          () => row.heroBgUrl ?? null
+        )
+      : Promise.resolve(row.heroBgUrl ?? null),
+  ]);
+
+  return {
+    ...row,
+    logoUrl,
+    heroBgUrl,
+  };
+}
+
 async function getNextSortOrderForCommanders() {
   const [row] = await db
     .select({
