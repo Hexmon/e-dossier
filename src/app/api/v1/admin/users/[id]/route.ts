@@ -14,7 +14,11 @@ import argon2 from 'argon2';
 import { IdSchema } from '@/app/lib/apiClient';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
-import { assertCanManageUser } from '@/app/lib/admin-boundaries';
+import {
+  assertCanDeleteManagedUser,
+  assertCanEditManagedUser,
+} from '@/app/lib/admin-boundaries';
+import { activationRequiresPassword } from '@/app/lib/users/credential-policy';
 
 type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?: string } };
 
@@ -84,12 +88,11 @@ async function GETHandler(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const adminCtx = await requireAdmin(req);
+    await requireAdmin(req);
 
     const { id: raw } = await params;
     const rawId = decodeURIComponent((raw ?? '')).trim();
     const { id } = IdSchema.parse({ id: rawId });
-    await assertCanManageUser(adminCtx, id);
 
     const row = await selectEnrichedUserById(id);
     if (!row) throw new ApiError(404, 'User not found', 'not_found');
@@ -112,7 +115,7 @@ async function PATCHHandler(
     const { id: raw } = await params;
     const rawId = decodeURIComponent((raw ?? '')).trim();
     const { id } = IdSchema.parse({ id: rawId });
-    await assertCanManageUser(adminCtx, id);
+    await assertCanEditManagedUser(id);
 
     const body = await req.json();
     const parsed = userUpdateSchema.safeParse(body);
@@ -138,6 +141,30 @@ async function PATCHHandler(
       .limit(1);
 
     if (!previous) throw new ApiError(404, 'User not found', 'not_found');
+
+    let existingCredential = false;
+    if (d.isActive === true) {
+      const [credential] = await db
+        .select({ userId: credentialsLocal.userId })
+        .from(credentialsLocal)
+        .where(eq(credentialsLocal.userId, id))
+        .limit(1);
+      existingCredential = Boolean(credential?.userId);
+
+      if (activationRequiresPassword({
+        nextIsActive: d.isActive,
+        hasCredential: existingCredential,
+        password: d.password,
+      })) {
+        return json.badRequest('Password is required before activating this user.', {
+          issues: {
+            fieldErrors: {
+              password: ['Set or reset this user password before activating the account.'],
+            },
+          },
+        });
+      }
+    }
 
     const updates: Partial<typeof users.$inferInsert> = {};
     if (d.username !== undefined) updates.username = d.username.trim();
@@ -237,6 +264,7 @@ async function DELETEHandler(
     const { id: raw } = await params;
     const rawId = decodeURIComponent((raw ?? '')).trim();
     const { id } = IdSchema.parse({ id: rawId });
+    await assertCanDeleteManagedUser(id);
 
     // Block delete if the user currently holds any ACTIVE appointment
     const [{ count }] = await db

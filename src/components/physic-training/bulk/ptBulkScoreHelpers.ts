@@ -35,6 +35,15 @@ export type PTBulkTaskSelection = {
 
 export type PTBulkTaskSelectionMap = Record<string, Record<string, PTBulkTaskSelection>>;
 
+export function resolvePTBulkDisplayedSelection(args: {
+  initialSelection?: PTBulkTaskSelection | null;
+  draftSelection?: PTBulkTaskSelection | null;
+  isCleared?: boolean;
+}): PTBulkTaskSelection | null {
+  if (args.isCleared) return null;
+  return args.draftSelection ?? args.initialSelection ?? null;
+}
+
 function resolvePTBulkSelectionMarks(
   attemptCode: string,
   maxMarks: number,

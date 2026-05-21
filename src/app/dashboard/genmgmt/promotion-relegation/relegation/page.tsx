@@ -5,11 +5,8 @@ import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import RelegationManagementCard from "@/components/genmgmt/promotion-relegation/RelegationManagementCard";
-import { usePromotionRelegationCourses } from "@/hooks/usePromotionRelegationMgmt";
 
 export default function RelegationManagementPage() {
-  const { courses } = usePromotionRelegationCourses();
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -32,7 +29,7 @@ export default function RelegationManagementPage() {
             />
 
             <div className="mt-6">
-              <RelegationManagementCard courses={courses} />
+              <RelegationManagementCard />
             </div>
           </main>
         </div>

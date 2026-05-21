@@ -1,6 +1,5 @@
 // src/app/api/v1/admin/appointments/[id]/transfer/route.ts
 import { json, handleApiError, ApiError } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
 import { appointmentTransferBody } from '@/app/lib/validators';
 import { transferAppointment } from '@/app/db/queries/appointment-transfer';
 import { IdSchema } from '@/app/lib/apiClient';
@@ -8,7 +7,7 @@ import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAdmin } from '@/app/lib/authz';
-import { assertCanManageAppointmentRecord, assertCanManageUser } from '@/app/lib/admin-boundaries';
+import { assertCanManageUser, assertCanTransferAppointmentRecord } from '@/app/lib/admin-boundaries';
 
 export const runtime = 'nodejs';
 
@@ -22,7 +21,7 @@ async function POSTHandler(
 
         const { id: raw } = await params;
         const { id } = IdSchema.parse({ id: decodeURIComponent((raw ?? '')).trim() });
-        await assertCanManageAppointmentRecord(adminCtx, id);
+        await assertCanTransferAppointmentRecord(adminCtx, id);
 
         // Parse body safely
         let body: unknown;

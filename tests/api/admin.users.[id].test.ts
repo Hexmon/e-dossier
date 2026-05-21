@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DELETE as deleteUserRoute } from "@/app/api/v1/admin/users/[id]/route";
+import { PATCH as patchUserRoute, DELETE as deleteUserRoute } from "@/app/api/v1/admin/users/[id]/route";
 import { createRouteContext, makeJsonRequest } from "../utils/next";
+import { ApiError } from "@/app/lib/http";
 
 const { selectMock, updateMock } = vi.hoisted(() => ({
   selectMock: vi.fn(),
@@ -36,6 +37,8 @@ vi.mock("@/app/lib/authz", () => ({
 }));
 
 vi.mock("@/app/lib/admin-boundaries", () => ({
+  assertCanDeleteManagedUser: vi.fn(async () => undefined),
+  assertCanEditManagedUser: vi.fn(async () => undefined),
   assertCanManageUser: vi.fn(async () => undefined),
 }));
 
@@ -46,11 +49,63 @@ vi.mock("@/app/db/client", () => ({
   },
 }));
 
+import {
+  assertCanDeleteManagedUser,
+  assertCanEditManagedUser,
+} from "@/app/lib/admin-boundaries";
+
 beforeEach(() => {
   vi.clearAllMocks();
 });
 
 describe("DELETE /api/v1/admin/users/[id]", () => {
+  it("blocks protected ADMIN/SUPER_ADMIN user deletes before active appointment checks", async () => {
+    (assertCanDeleteManagedUser as any).mockRejectedValueOnce(
+      new ApiError(
+        403,
+        "Protected ADMIN/SUPER_ADMIN users cannot be deleted from User Management.",
+        "protected_user_forbidden",
+      ),
+    );
+
+    const req = makeJsonRequest({
+      method: "DELETE",
+      path: "/api/v1/admin/users/11111111-1111-4111-8111-111111111111",
+    });
+
+    const res = await deleteUserRoute(
+      req as any,
+      createRouteContext({ id: "11111111-1111-4111-8111-111111111111" }),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.error).toBe("protected_user_forbidden");
+    expect(body.message).toBe("Protected ADMIN/SUPER_ADMIN users cannot be deleted from User Management.");
+    expect(selectMock).not.toHaveBeenCalled();
+  });
+
+  it("blocks SUPER_ADMIN deletes with a specific message", async () => {
+    (assertCanDeleteManagedUser as any).mockRejectedValueOnce(
+      new ApiError(403, "SUPER_ADMIN users cannot be deleted.", "protected_user_forbidden"),
+    );
+
+    const req = makeJsonRequest({
+      method: "DELETE",
+      path: "/api/v1/admin/users/11111111-1111-4111-8111-111111111111?hard=true",
+    });
+
+    const res = await deleteUserRoute(
+      req as any,
+      createRouteContext({ id: "11111111-1111-4111-8111-111111111111" }),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.error).toBe("protected_user_forbidden");
+    expect(body.message).toBe("SUPER_ADMIN users cannot be deleted.");
+  });
+
   it("returns 409 when the user still has an appointment active through a future endsAt", async () => {
     selectMock.mockImplementationOnce(() => ({
       from: vi.fn(() => ({
@@ -108,5 +163,35 @@ describe("DELETE /api/v1/admin/users/[id]", () => {
         target: { type: "user", id: "user-1" },
       }),
     );
+  });
+});
+
+describe("PATCH /api/v1/admin/users/[id]", () => {
+  it("blocks protected ADMIN/SUPER_ADMIN user edits", async () => {
+    (assertCanEditManagedUser as any).mockRejectedValueOnce(
+      new ApiError(
+        403,
+        "Protected ADMIN/SUPER_ADMIN users cannot be edited from User Management.",
+        "protected_user_forbidden",
+      ),
+    );
+
+    const req = makeJsonRequest({
+      method: "PATCH",
+      path: "/api/v1/admin/users/11111111-1111-4111-8111-111111111111",
+      body: { name: "Edited Admin" },
+    });
+
+    const res = await patchUserRoute(
+      req as any,
+      createRouteContext({ id: "11111111-1111-4111-8111-111111111111" }),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(403);
+    expect(body.error).toBe("protected_user_forbidden");
+    expect(body.message).toBe("Protected ADMIN/SUPER_ADMIN users cannot be edited from User Management.");
+    expect(selectMock).not.toHaveBeenCalled();
+    expect(updateMock).not.toHaveBeenCalled();
   });
 });

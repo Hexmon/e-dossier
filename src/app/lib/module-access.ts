@@ -75,15 +75,6 @@ function normalizeSettingsRecord(
   };
 }
 
-function hasWorkflowAssignment(
-  assignments: WorkflowAssignment[],
-  module: MarksWorkflowModule
-): boolean {
-  return assignments.some(
-    (assignment) => assignment.module === module && assignment.actorTypes.length > 0
-  );
-}
-
 export function buildSectionAccessMap(
   roleGroup: SidebarRoleGroup,
   options: {
@@ -95,7 +86,7 @@ export function buildSectionAccessMap(
   return {
     dashboard: true,
     admin: roleGroup === "ADMIN" || roleGroup === "SUPER_ADMIN",
-    settings: true,
+    settings: roleGroup === "ADMIN" || roleGroup === "SUPER_ADMIN",
     dossier: roleGroup === "SUPER_ADMIN" ? true : options.canAccessDossier,
     bulk_upload: roleGroup === "SUPER_ADMIN" ? true : options.canAccessBulkUpload,
     reports: roleGroup === "SUPER_ADMIN" ? true : options.canAccessReports,
@@ -148,28 +139,41 @@ export async function resolveModuleAccessForUser(
   }
 
   if (roleGroup === "ADMIN") {
-    const canAccessAcademicsBulk =
-      settings.adminCanAccessBulkUpload ||
-      hasWorkflowAssignment(workflowAssignments, "ACADEMICS_BULK");
-    const canAccessPtBulk =
-      settings.adminCanAccessBulkUpload || hasWorkflowAssignment(workflowAssignments, "PT_BULK");
-    const canAccessBulkUpload = canAccessAcademicsBulk || canAccessPtBulk;
-
     return {
       roleGroup,
       isAdmin,
       isSuperAdmin,
       settings,
       workflowAssignments,
-      canAccessDossier: settings.adminCanAccessDossier,
-      canAccessReports: settings.adminCanAccessReports,
-      canAccessBulkUpload,
-      canAccessAcademicsBulk,
-      canAccessPtBulk,
+      canAccessDossier: false,
+      canAccessReports: true,
+      canAccessBulkUpload: false,
+      canAccessAcademicsBulk: false,
+      canAccessPtBulk: false,
       sections: buildSectionAccessMap(roleGroup, {
-        canAccessDossier: settings.adminCanAccessDossier,
-        canAccessBulkUpload,
-        canAccessReports: settings.adminCanAccessReports,
+        canAccessDossier: false,
+        canAccessBulkUpload: false,
+        canAccessReports: true,
+      }),
+    };
+  }
+
+  if (roleGroup === "PLATOON_COMMANDER") {
+    return {
+      roleGroup,
+      isAdmin,
+      isSuperAdmin,
+      settings,
+      workflowAssignments,
+      canAccessDossier: true,
+      canAccessReports: true,
+      canAccessBulkUpload: false,
+      canAccessAcademicsBulk: false,
+      canAccessPtBulk: false,
+      sections: buildSectionAccessMap(roleGroup, {
+        canAccessDossier: true,
+        canAccessBulkUpload: false,
+        canAccessReports: true,
       }),
     };
   }
@@ -207,6 +211,25 @@ export function hasResolvedSectionAccess(
   sectionKey: SidebarSectionKey
 ) {
   return access.sections[sectionKey];
+}
+
+export function resolveSidebarSectionForDashboardPath(
+  pathname: string
+): SidebarSectionKey | null {
+  if (pathname === "/dashboard") return "dashboard";
+  if (pathname.startsWith("/dashboard/help")) return "help";
+  if (pathname.startsWith("/dashboard/genmgmt")) return "admin";
+  if (pathname.startsWith("/dashboard/settings")) return "settings";
+  if (pathname.startsWith("/dashboard/reports")) return "reports";
+  if (
+    pathname.startsWith("/dashboard/bulk-upload") ||
+    pathname.startsWith("/dashboard/manage-marks") ||
+    pathname.startsWith("/dashboard/manage-pt-marks")
+  ) {
+    return "bulk_upload";
+  }
+  if (/^\/dashboard\/[^/]+\/milmgmt(?:\/|$)/.test(pathname)) return "dossier";
+  return null;
 }
 
 export function canAccessModule(
@@ -268,7 +291,7 @@ export async function assertModuleApiAccessByPath(
   if (!requirement) return;
 
   const access = await resolveModuleAccessForUser(principal);
-  if (!access.isAdmin || access.isSuperAdmin) {
+  if (access.isSuperAdmin) {
     return;
   }
 
@@ -281,7 +304,7 @@ export async function assertModuleApiAccessByPath(
     if (!allowed) {
       throw new ApiError(
         403,
-        "Bulk Upload access is disabled for ADMIN by module access settings.",
+        "Bulk Upload access is not available for this account.",
         "module_access_denied",
         { module: requirement.module, path: pathname }
       );
@@ -292,7 +315,7 @@ export async function assertModuleApiAccessByPath(
   if (!canAccessModule(access, requirement.module)) {
     throw new ApiError(
       403,
-      `${requirement.module.replace(/_/g, " ")} access is disabled for ADMIN by module access settings.`,
+      `${requirement.module.replace(/_/g, " ")} access is not available for this account.`,
       "module_access_denied",
       { module: requirement.module, path: pathname }
     );

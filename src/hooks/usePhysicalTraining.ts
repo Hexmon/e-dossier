@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { apiRequest } from "@/app/lib/apiClient";
 
 export interface PhysicalTrainingScore {
+  id?: string;
   attemptCode: string;
   gradeCode: string;
   ptTaskScoreId: string;
@@ -252,6 +253,7 @@ export function usePhysicalTraining(ocId: string, courseId?: string | null): Use
           }
 
           return {
+            id: score.id,
             ptTaskScoreId: score.ptTaskScoreId,
             marksScored: score.marksScored,
             attemptCode: templateRow?.attemptCode || "",
@@ -305,6 +307,7 @@ export function usePhysicalTraining(ocId: string, courseId?: string | null): Use
             if (templateRow) break;
           }
           return {
+            id: score.id,
             ptTaskScoreId: score.ptTaskScoreId,
             marksScored: score.marksScored,
             attemptCode: templateRow?.attemptCode || "",
@@ -357,6 +360,7 @@ export function usePhysicalTraining(ocId: string, courseId?: string | null): Use
             if (templateRow) break;
           }
           return {
+            id: score.id,
             ptTaskScoreId: score.ptTaskScoreId,
             marksScored: score.marksScored,
             attemptCode: templateRow?.attemptCode || "",

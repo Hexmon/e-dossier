@@ -39,6 +39,8 @@ describe("getSetupStatus runtime fallback", () => {
       [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
       [],
       []
     );
@@ -56,6 +58,8 @@ describe("getSetupStatus runtime fallback", () => {
       Object.assign(new Error("Failed query: select count(*)::int from appointments"), {
         cause: new Error('column "users"."is_active" does not exist'),
       }),
+      [{ count: 0 }],
+      [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],
@@ -85,6 +89,8 @@ describe("getSetupStatus runtime fallback", () => {
       [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],
+      [{ count: 0 }],
+      [{ count: 0 }],
       [],
       []
     );
@@ -97,9 +103,35 @@ describe("getSetupStatus runtime fallback", () => {
     expect(status.counts.activeSuperAdmins).toBe(0);
   });
 
+  it("returns degraded setup status when the database connection is unavailable", async () => {
+    queryQueue.push(
+      Object.assign(new Error("Failed query: select count(*)::int from positions"), {
+        cause: Object.assign(new Error("connect ECONNREFUSED 127.0.0.1:5432"), {
+          code: "ECONNREFUSED",
+          address: "127.0.0.1",
+          port: 5432,
+        }),
+      })
+    );
+
+    const { getSetupStatus } = await import("@/app/lib/setup-status");
+    const status = await getSetupStatus();
+
+    expect(status.availability).toMatchObject({
+      ok: false,
+      code: "database_unavailable",
+      retryable: true,
+    });
+    expect(status.bootstrapRequired).toBe(false);
+    expect(status.setupComplete).toBe(false);
+    expect(status.nextStep).toBeNull();
+  });
+
   it("still rethrows unexpected database failures", async () => {
     queryQueue.push(
       Object.assign(new Error("connection lost"), { code: "57P01" }),
+      [{ count: 0 }],
+      [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],
       [{ count: 0 }],

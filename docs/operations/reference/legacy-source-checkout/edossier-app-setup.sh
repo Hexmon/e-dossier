@@ -96,6 +96,11 @@ prompt_default  DB_PORT "DB port" "5432"
 prompt_default  DB_NAME "DB name" "e_dossier_v2"
 prompt_default  DB_USER "DB user" "edossier_app"
 prompt_secret   DB_PASS "DB password (same as on DB VM)"
+prompt_required ACCESS_TOKEN_PRIVATE_KEY "JWT private key (escaped PKCS#8 PEM)"
+prompt_required ACCESS_TOKEN_PUBLIC_KEY "JWT public key (escaped SPKI PEM)"
+prompt_secret   CSRF_SECRET "CSRF secret"
+prompt_secret   SUPERADMIN_PASSWORD "Initial super-admin password"
+prompt_secret   ADMIN_PASSWORD "Initial admin password"
 
 prompt_default ENABLE_UFW       "Configure UFW? (y/n)" "y"
 prompt_default RESET_DRIZZLE    "Reset drizzle/ folder & generate migrations for FRESH DB? (y/n)" "y"
@@ -175,18 +180,19 @@ cat > "$APP_DIR/.env" <<EOF
 DATABASE_URL=${DATABASE_URL}
 NODE_ENV=production
 PORT=${APP_PORT}
-ACCESS_TOKEN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIKsoxAMJEZLV+A9pJF/1+A0vkGdjaKTQGVSlKHn7LBXw\n-----END PRIVATE KEY-----"
-ACCESS_TOKEN_PUBLIC_KEY="-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAX/+LJjlZfaHoN38xoH2VrDSmzcKUmySLHLrtI6nw7a4=\n-----END PUBLIC KEY-----"
+ACCESS_TOKEN_PRIVATE_KEY="${ACCESS_TOKEN_PRIVATE_KEY}"
+ACCESS_TOKEN_PUBLIC_KEY="${ACCESS_TOKEN_PUBLIC_KEY}"
+CSRF_SECRET="${CSRF_SECRET}"
 ACCESS_TOKEN_TTL_SECONDS=1000
-EXPOSE_TOKENS_IN_DEV=true
+EXPOSE_TOKENS_IN_DEV=false
 SUPERADMIN_USERNAME=superadmin
-SUPERADMIN_PASSWORD=ChangeMe!123
+SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD}
 SUPERADMIN_EMAIL=superadmin@example.com
 SUPERADMIN_PHONE=+910000000000
 SUPERADMIN_NAME=Super Admin
 SUPERADMIN_RANK=SUPER
 ADMIN_USERNAME=admin
-ADMIN_PASSWORD=ChangeMe!123
+ADMIN_PASSWORD=${ADMIN_PASSWORD}
 ADMIN_EMAIL=admin@example.com
 ADMIN_PHONE=+910000000001
 ADMIN_NAME=Admin

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET as getSettings, PUT as putSettings } from "@/app/api/v1/admin/site-settings/route";
 import { DELETE as deleteLogo } from "@/app/api/v1/admin/site-settings/logo/route";
+import { POST as presignHeroBg } from "@/app/api/v1/admin/site-settings/hero-bg/presign/route";
 import { POST as presignLogo } from "@/app/api/v1/admin/site-settings/logo/presign/route";
 import { ApiError } from "@/app/lib/http";
 import { makeJsonRequest, createRouteContext } from "../utils/next";
@@ -195,6 +196,64 @@ describe("Admin site settings logo routes", () => {
     expect(res.status).toBe(200);
     expect(body.uploadUrl).toBe("https://upload-url");
     expect(body.publicUrl).toBe("https://public-url");
+  });
+
+  it("POST presign returns storage 503 when upload signing fails", async () => {
+    vi.mocked(storage.createPresignedUploadUrl).mockRejectedValueOnce(
+      Object.assign(new Error("File storage is unavailable. Check MinIO/storage configuration."), {
+        name: "StorageUnavailableError",
+        service: "storage",
+        retryable: true,
+      })
+    );
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: `${adminPath}/logo/presign`,
+      body: { contentType: "image/png", sizeBytes: 1024 },
+    });
+
+    const res = await presignLogo(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(503);
+    expect(body).toMatchObject({
+      ok: false,
+      status: 503,
+      error: "service_unavailable",
+      service: "storage",
+      retryable: true,
+      message: "File storage is unavailable. Check MinIO/storage configuration.",
+    });
+  });
+
+  it("POST hero background presign returns storage 503 when upload signing fails", async () => {
+    vi.mocked(storage.createPresignedUploadUrl).mockRejectedValueOnce(
+      Object.assign(new Error("File storage is unavailable. Check MinIO/storage configuration."), {
+        name: "StorageUnavailableError",
+        service: "storage",
+        retryable: true,
+      })
+    );
+
+    const req = makeJsonRequest({
+      method: "POST",
+      path: `${adminPath}/hero-bg/presign`,
+      body: { contentType: "image/png", sizeBytes: 1024 },
+    });
+
+    const res = await presignHeroBg(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(503);
+    expect(body).toMatchObject({
+      ok: false,
+      status: 503,
+      error: "service_unavailable",
+      service: "storage",
+      retryable: true,
+      message: "File storage is unavailable. Check MinIO/storage configuration.",
+    });
   });
 
   it("POST presign rejects unsupported content type", async () => {

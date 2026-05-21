@@ -1,5 +1,5 @@
 import { handleApiError, json } from "@/app/lib/http";
-import { listImmediateNextCourses } from "@/app/db/queries/relegation";
+import { listRelegationTargetCourses } from "@/app/db/queries/relegation";
 import { relegationCoursesQuerySchema } from "@/app/lib/validators.relegation";
 import { getRelegationAccessContext } from "@/app/lib/relegation-auth";
 import {
@@ -18,13 +18,14 @@ async function GETHandler(req: AuditNextRequest) {
     const searchParams = new URL(req.url).searchParams;
     const parsed = relegationCoursesQuerySchema.safeParse({
       currentCourseId: searchParams.get("currentCourseId") ?? undefined,
+      mode: searchParams.get("mode") ?? undefined,
     });
 
     if (!parsed.success) {
       return json.badRequest("Validation failed.", { issues: parsed.error.flatten() });
     }
 
-    const items = await listImmediateNextCourses(parsed.data.currentCourseId);
+    const items = await listRelegationTargetCourses(parsed.data.currentCourseId, parsed.data.mode);
 
     await req.audit.log({
       action: AuditEventType.API_REQUEST,
@@ -32,14 +33,15 @@ async function GETHandler(req: AuditNextRequest) {
       actor: { type: "user", id: access.userId },
       target: { type: AuditResourceType.API, id: "admin:relegation:courses:read" },
       metadata: {
-        description: "Immediate next courses for relegation retrieved.",
+        description: "Target courses for relegation retrieved.",
         currentCourseId: parsed.data.currentCourseId,
+        mode: parsed.data.mode,
         count: items.length,
       },
     });
 
     return json.ok({
-      message: "Immediate next courses retrieved successfully.",
+      message: "Target courses retrieved successfully.",
       items,
     });
   } catch (error) {

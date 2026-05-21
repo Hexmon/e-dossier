@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
 
 vi.mock("next/navigation", () => ({
   redirect: vi.fn((path: string) => {
@@ -8,6 +9,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/app/lib/setup-status", () => ({
   getSetupStatus: vi.fn(),
+  isSetupStatusUnavailable: (status: any) => status.availability?.ok === false,
 }));
 
 vi.mock("@/app/lib/server-page-auth", () => ({
@@ -24,8 +26,19 @@ describe("/setup page", () => {
     vi.clearAllMocks();
   });
 
-  it("redirects non-admin authenticated users back to the dashboard", async () => {
+  it("renders setup access guidance for non-admin users while setup is incomplete", async () => {
     (getSetupStatus as any).mockResolvedValueOnce({ setupComplete: false });
+    (getOptionalDashboardAccess as any).mockResolvedValueOnce({
+      roleGroup: "OTHER_USERS",
+    });
+
+    const element = await SetupPage();
+    expect(element).toBeTruthy();
+    expect(redirect).not.toHaveBeenCalled();
+  });
+
+  it("redirects non-admin authenticated users back to the dashboard after setup is complete", async () => {
+    (getSetupStatus as any).mockResolvedValueOnce({ setupComplete: true });
     (getOptionalDashboardAccess as any).mockResolvedValueOnce({
       roleGroup: "OTHER_USERS",
     });
@@ -51,6 +64,8 @@ describe("/setup page", () => {
       nextStep: "superAdmin",
       counts: {
         activeSuperAdmins: 0,
+        availableAppointmentPositions: 0,
+        activeOperationalAppointments: 0,
         activePlatoons: 0,
         activeCourses: 0,
         activeOfferings: 0,
@@ -62,6 +77,7 @@ describe("/setup page", () => {
       steps: {
         superAdmin: { status: "pending", complete: false },
         platoons: { status: "blocked", complete: false },
+        appointments: { status: "blocked", complete: false },
         hierarchy: { status: "blocked", complete: false },
         courses: { status: "blocked", complete: false },
         offerings: { status: "blocked", complete: false },
@@ -72,5 +88,25 @@ describe("/setup page", () => {
 
     const element = await SetupPage();
     expect(element).toBeTruthy();
+  });
+
+  it("renders database unavailable UI instead of setup actions", async () => {
+    (getSetupStatus as any).mockResolvedValueOnce({
+      bootstrapRequired: false,
+      setupComplete: false,
+      nextStep: null,
+      availability: {
+        ok: false,
+        code: "database_unavailable",
+        message: "Database is temporarily unavailable. Please try again after the service is restored.",
+        retryable: true,
+      },
+    });
+
+    const html = renderToStaticMarkup(await SetupPage());
+
+    expect(html).toContain("Database service unavailable");
+    expect(html).toContain("PostgreSQL/Docker database service");
+    expect(getOptionalDashboardAccess).not.toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserCheck, ShieldAlert, Ban, Trash2, Edit3, Eye } from "lucide-react";
@@ -16,6 +17,9 @@ interface UserListItemProps {
   onEdit?: (id?: string) => void;
   onDelete?: (id?: string) => void;
   onClick?: () => void;
+  editDisabled?: boolean;
+  deleteDisabled?: boolean;
+  actionDisabledReason?: string | null;
 }
 
 export const UserListItem = ({
@@ -31,6 +35,9 @@ export const UserListItem = ({
   onEdit,
   onDelete,
   onClick,
+  editDisabled = false,
+  deleteDisabled = false,
+  actionDisabledReason,
 }: UserListItemProps) => {
   const getStatusIcon = () => {
     switch (status) {
@@ -98,10 +105,12 @@ export const UserListItem = ({
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
+              if (editDisabled) return;
               onEdit?.(id);
             }}
             className="text-xs px-2"
-            title="Edit"
+            disabled={editDisabled}
+            title={editDisabled ? actionDisabledReason ?? "Edit is disabled" : "Edit"}
             aria-label="Edit"
           >
             <Edit3 className="h-4 w-4" />
@@ -112,10 +121,12 @@ export const UserListItem = ({
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
+              if (deleteDisabled) return;
               onDelete?.(id);
             }}
             className="text-xs px-2 text-destructive hover:text-destructive-foreground"
-            title="Delete"
+            disabled={deleteDisabled}
+            title={deleteDisabled ? actionDisabledReason ?? "Delete is disabled" : "Delete"}
             aria-label="Delete"
           >
             <Trash2 className="h-4 w-4" />

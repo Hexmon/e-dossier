@@ -8,7 +8,10 @@ import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAdmin } from '@/app/lib/authz';
-import { assertCanManagePosition } from '@/app/lib/admin-boundaries';
+import {
+  assertCanDeletePositionRecord,
+  assertCanEditPositionRecord,
+} from '@/app/lib/admin-boundaries';
 
 export const runtime = 'nodejs';
 
@@ -54,7 +57,7 @@ async function PATCHHandler(req: AuditNextRequest, { params }: { params: Promise
 
     const { id: routeId } = await params;
     const rawId = decodeURIComponent(routeId ?? '').trim();
-    await assertCanManagePosition(adminCtx, rawId);
+    await assertCanEditPositionRecord(rawId);
 
     const body = await req.json();
     const parsed = positionUpdateSchema.safeParse(body);
@@ -122,7 +125,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
 
     const { id: routeId } = await params;
     const rawId = decodeURIComponent(routeId ?? '').trim();
-    await assertCanManagePosition(adminCtx, rawId);
+    await assertCanDeletePositionRecord(rawId);
 
     const [row] = await db.delete(positions).where(eq(positions.id, rawId)).returning();
     if (!row) throw new ApiError(404, 'Position not found');

@@ -103,6 +103,35 @@ function toOptionalNumber(value: string): number | undefined {
     return toNullableNumber(value) ?? undefined;
 }
 
+function hasFilledValue(value: string): boolean {
+    return value.trim() !== "";
+}
+
+function hasAnyTheoryInput(row: StudentRow): boolean {
+    return [row.phase1, row.phase2, row.tutorial, row.final].some(hasFilledValue);
+}
+
+function hasAnyPracticalInput(row: StudentRow): boolean {
+    return [
+        row.contentOfExp,
+        row.maintOfExp,
+        row.practicalExam,
+        row.viva,
+        row.practical,
+    ].some(hasFilledValue);
+}
+
+function buildTheoryPayload(row: StudentRow) {
+    if (!hasAnyTheoryInput(row)) return undefined;
+
+    return {
+        tutorial: row.tutorial.trim() || undefined,
+        phaseTest1Marks: toOptionalNumber(row.phase1),
+        phaseTest2Marks: toOptionalNumber(row.phase2),
+        finalMarks: toOptionalNumber(row.final),
+    };
+}
+
 function buildRowsFromWorkflowPayload(
     payload: AcademicsWorkflowDraftPayload,
     components: SubjectComponentFlags,
@@ -162,7 +191,7 @@ function buildWorkflowDraftPayload(
             ocNo: row.ocNo,
             name: row.name,
             branch: basePayload.items.find((item) => item.ocId === row.id)?.branch ?? null,
-            theory: components.includeTheory
+            theory: components.includeTheory && hasAnyTheoryInput(row)
                 ? {
                     phaseTest1Marks: toNullableNumber(row.phase1),
                     phaseTest2Marks: toNullableNumber(row.phase2),
@@ -170,7 +199,9 @@ function buildWorkflowDraftPayload(
                     finalMarks: toNullableNumber(row.final),
                 }
                 : undefined,
-            practical: components.includePractical ? buildPracticalPayload(row) : undefined,
+            practical: components.includePractical && hasAnyPracticalInput(row)
+                ? buildPracticalPayload(row)
+                : undefined,
         })),
     };
 }
@@ -423,21 +454,32 @@ export default function SubjectWiseStudentsTable({
     const saveLegacy = async () => {
         setSaving(true);
         try {
-            const items: BulkAcademicItem[] = rows.map((row) => ({
-                op: "upsert" as const,
-                ocId: row.id,
-                semester,
-                subjectId,
-                theory: includeTheory
-                    ? {
-                        tutorial: row.tutorial,
-                        phaseTest1Marks: toNum(row.phase1),
-                        phaseTest2Marks: toNum(row.phase2),
-                        finalMarks: toNum(row.final),
-                    }
-                    : undefined,
-                practical: includePractical ? buildPracticalPayload(row) : undefined,
-            }));
+            const items: BulkAcademicItem[] = rows.flatMap((row) => {
+                const theory = includeTheory ? buildTheoryPayload(row) : undefined;
+                const practical = includePractical && hasAnyPracticalInput(row)
+                    ? buildPracticalPayload(row)
+                    : undefined;
+
+                if (!theory && !practical) return [];
+
+                return [
+                    {
+                        op: "upsert" as const,
+                        ocId: row.id,
+                        semester,
+                        subjectId,
+                        theory,
+                        practical,
+                    },
+                ];
+            });
+
+            if (items.length === 0) {
+                toast.info("No marks to save.");
+                setLegacyEditMode(false);
+                setIsDirty(false);
+                return;
+            }
 
             const success = await saveBulkAcademics({
                 items,
@@ -450,7 +492,7 @@ export default function SubjectWiseStudentsTable({
 
             setLegacyEditMode(false);
             setIsDirty(false);
-            toast.success(`Saved marks for ${rows.length} student${rows.length > 1 ? "s" : ""}.`);
+            toast.success(`Saved marks for ${items.length} student${items.length > 1 ? "s" : ""}.`);
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Failed to save academic records.");
         } finally {

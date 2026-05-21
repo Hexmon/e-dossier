@@ -42,7 +42,7 @@ export const NAVIGATION_TREE: NavSectionConfig[] = [
                 label: "Admin Management",
                 url: "/dashboard/genmgmt",
                 icon: "Book",
-                requiredAction: "page:admin:genmgmt:view",
+                requiredAction: "page:dashboard:genmgmt:view",
                 adminBaseline: true,
             },
         ],

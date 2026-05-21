@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -9,8 +9,9 @@ import {
     updateCourse,
     deleteCourse,
     CourseResponse,
+    type GetCoursesParams,
 } from "@/app/lib/api/courseApi";
-import { ApiClientError } from "@/app/lib/apiClient";
+import { getFriendlyApiErrorMessage } from "@/app/lib/apiClient";
 
 export interface UICourse {
     id: string;
@@ -44,38 +45,49 @@ function toUICourse(course: CourseResponse): UICourse {
     };
 }
 
-function getApiErrorMessage(error: unknown, fallback: string): string {
-    if (error instanceof ApiClientError) {
-        const detail = typeof error.extras?.detail === "string" ? error.extras.detail : null;
-        return detail || error.message || fallback;
-    }
+type UseCoursesOptions = GetCoursesParams & {
+    queryScope?: string;
+};
 
-    if (error instanceof Error) {
-        return error.message || fallback;
-    }
-
-    return fallback;
-}
-
-export function useCourses() {
+export function useCourses(options: UseCoursesOptions = {}) {
     const queryClient = useQueryClient();
+    const normalizedQuery = options.q?.trim() || undefined;
+    const limit = options.limit;
+    const offset = options.offset ?? 0;
+    const includeDeleted = options.includeDeleted;
 
     const coursesQuery = useQuery({
-        queryKey: ["courses"],
-        // queryFn always returns the raw shape — this is what goes into the cache
+        queryKey: [
+            "courses",
+            options.queryScope ?? "list",
+            { q: normalizedQuery ?? "", includeDeleted: includeDeleted ?? false, limit, offset },
+        ],
         queryFn: async () => {
-            const response = await getAllCourses();
-            return response?.items ?? [];
+            return getAllCourses({
+                q: normalizedQuery,
+                includeDeleted,
+                limit,
+                offset,
+            });
         },
-        // select transforms per-consumer without touching the cache
-        select: (items: CourseResponse[]) => items.map(toUICourse),
+        placeholderData: (previous) => previous,
     });
 
-    const { data: courses = [], isLoading: loading } = coursesQuery;
+    const courses = useMemo(
+        () => (coursesQuery.data?.items ?? []).map((item: CourseResponse) => toUICourse(item)),
+        [coursesQuery.data?.items]
+    );
+    const totalCount = coursesQuery.data?.total ?? coursesQuery.data?.count ?? courses.length;
+    const { isLoading: loading, isFetching } = coursesQuery;
+
+    const fetchCourses = useCallback(
+        () => queryClient.invalidateQueries({ queryKey: ["courses"] }),
+        [queryClient]
+    );
 
     useEffect(() => {
         if (!coursesQuery.isError) return;
-        toast.error(getApiErrorMessage(coursesQuery.error, "Failed to load courses"));
+        toast.error(getFriendlyApiErrorMessage(coursesQuery.error, "Failed to load courses"));
     }, [coursesQuery.isError, coursesQuery.error]);
 
     const addCourseMutation = useMutation({
@@ -92,7 +104,7 @@ export function useCourses() {
             toast.success("Course added successfully");
         },
         onError: (error) => {
-            toast.error(getApiErrorMessage(error, "Failed to add course"));
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to add course"));
         },
     });
 
@@ -110,7 +122,7 @@ export function useCourses() {
             toast.success("Course updated successfully");
         },
         onError: (error) => {
-            toast.error(getApiErrorMessage(error, "Failed to update course"));
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to update course"));
         },
     });
 
@@ -123,14 +135,18 @@ export function useCourses() {
             toast.success("Course deleted successfully");
         },
         onError: (error) => {
-            toast.error(getApiErrorMessage(error, "Failed to delete course"));
+            toast.error(getFriendlyApiErrorMessage(error, "Failed to delete course"));
         },
     });
 
     return {
         courses,
+        totalCount,
+        pageLimit: coursesQuery.data?.limit ?? limit ?? 100,
+        pageOffset: coursesQuery.data?.offset ?? offset,
         loading,
-        fetchCourses: () => queryClient.invalidateQueries({ queryKey: ["courses"] }),
+        isFetching,
+        fetchCourses,
         addCourse: addCourseMutation.mutateAsync,
         editCourse: (id: string, data: Omit<UICourse, "id">) =>
             editCourseMutation.mutateAsync({ id, data }),

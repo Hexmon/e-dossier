@@ -5,9 +5,17 @@ import * as accountLockout from '@/app/db/queries/account-lockout';
 import * as effectiveAuthority from '@/app/lib/effective-authority';
 import * as jwt from '@/app/lib/jwt';
 import * as cookies from '@/app/lib/cookies';
+import * as ratelimit from '@/lib/ratelimit';
+import { getSetupStatus } from '@/app/lib/setup-status';
 
 vi.mock('@/lib/ratelimit', () => {
   return {
+    checkLoginRateLimit: vi.fn(async () => ({
+      success: true,
+      limit: 5,
+      remaining: 4,
+      reset: Date.now() + 900_000,
+    })),
     getClientIp: vi.fn(() => '127.0.0.1'),
   };
 });
@@ -61,6 +69,7 @@ vi.mock('@/app/db/queries/account-lockout', () => ({
   recordLoginAttempt: vi.fn(async () => {}),
   isAccountLocked: vi.fn(async () => null),
   checkAndLockAccount: vi.fn(async () => null),
+  clearFailedAttempts: vi.fn(async () => undefined),
 }));
 
 vi.mock('@/app/lib/jwt', () => ({
@@ -71,6 +80,11 @@ vi.mock('@/app/lib/cookies', () => ({
   setAccessCookie: vi.fn(),
 }));
 
+vi.mock('@/app/lib/setup-status', () => ({
+  getSetupStatus: vi.fn(),
+  isSetupStatusUnavailable: (status: any) => status.availability?.ok === false,
+}));
+
 vi.mock('argon2', () => ({
   default: {
     verify: vi.fn(async () => true),
@@ -79,18 +93,24 @@ vi.mock('argon2', () => ({
 
 const loginBody = {
   appointmentId,
-  username: 'testuser',
   password: 'password123',
 };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (getSetupStatus as any).mockResolvedValue({
+    bootstrapRequired: false,
+    setupComplete: true,
+    nextStep: null,
+  });
 });
 
 describe('POST /api/v1/auth/login', () => {
-  it('ignores prior account lockout state and allows valid credentials', async () => {
+  it('blocks login when the account is currently locked', async () => {
+    const lockedUntil = new Date(Date.now() + 30 * 60_000);
     (accountLockout.isAccountLocked as any).mockResolvedValueOnce({
-      lockedUntil: new Date(Date.now() + 30 * 60_000),
+      lockedUntil,
+      failedAttempts: 5,
     });
     const req = makeJsonRequest({
       method: 'POST',
@@ -99,10 +119,35 @@ describe('POST /api/v1/auth/login', () => {
     });
 
     const res = await postLogin(req as any, createRouteContext());
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(423);
     const body = await res.json();
-    expect(body.ok).toBe(true);
-    expect(accountLockout.isAccountLocked).not.toHaveBeenCalled();
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('ACCOUNT_LOCKED');
+    expect(body.lockedUntil).toBe(lockedUntil.toISOString());
+    expect(jwt.signAccessJWT).not.toHaveBeenCalled();
+  });
+
+  it('returns 429 when login rate limit is exceeded', async () => {
+    (ratelimit.checkLoginRateLimit as any).mockResolvedValueOnce({
+      success: false,
+      limit: 5,
+      remaining: 0,
+      reset: Date.now() + 60_000,
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: loginBody,
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(429);
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('rate_limited');
+    expect(effectiveAuthority.getAuthorityForLogin).not.toHaveBeenCalled();
   });
 
   it('returns 400 when required fields are missing', async () => {
@@ -118,8 +163,8 @@ describe('POST /api/v1/auth/login', () => {
     expect(body.ok).toBe(false);
     expect(body.error).toBe('missing_fields');
     expect(body.missing).toContain('appointmentId|delegationId');
-    expect(body.missing).toContain('username');
     expect(body.missing).toContain('password');
+    expect(body.missing).not.toContain('username');
   });
 
   it('returns 400 when body is not valid JSON', async () => {
@@ -158,9 +203,139 @@ describe('POST /api/v1/auth/login', () => {
     expect(accountLockout.recordLoginAttempt).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1', success: true }),
     );
+    expect(accountLockout.clearFailedAttempts).toHaveBeenCalledWith('testuser');
   });
 
-  it('returns 401 for an invalid password without triggering account lockout', async () => {
+  it('derives username from appointment authority and ignores legacy username input', async () => {
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: {
+        appointmentId,
+        username: 'wrong-frontend-user',
+        password: 'password123',
+      },
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.user.username).toBe('testuser');
+    expect(accountLockout.recordLoginAttempt).toHaveBeenCalledWith(
+      expect.objectContaining({ username: 'testuser', success: true }),
+    );
+    expect(accountLockout.clearFailedAttempts).toHaveBeenCalledWith('testuser');
+  });
+
+  it('logs in with a platoon-scoped appointment without frontend platoonId', async () => {
+    (effectiveAuthority.getAuthorityForLogin as any).mockResolvedValueOnce({
+      authorityKind: 'APPOINTMENT',
+      authorityId: appointmentId,
+      appointmentId,
+      delegationId: null,
+      userId: 'user-1',
+      username: 'testuser',
+      positionId: 'position-2',
+      positionKey: 'PTN_CDR',
+      positionName: 'Platoon Commander',
+      defaultScope: 'PLATOON',
+      scopeType: 'PLATOON',
+      scopeId: '33333333-3333-4333-8333-333333333333',
+      platoonKey: 'alpha',
+      platoonName: 'Alpha Platoon',
+      startsAt: new Date('2026-04-04T00:00:00.000Z'),
+      endsAt: null,
+      grantorUserId: null,
+      grantorUsername: null,
+      grantorAppointmentId: null,
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: loginBody,
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.active_appointment.scope).toEqual({
+      type: 'PLATOON',
+      id: '33333333-3333-4333-8333-333333333333',
+    });
+  });
+
+  it('blocks non-admin login while initial setup is incomplete', async () => {
+    (effectiveAuthority.getAuthorityForLogin as any).mockResolvedValueOnce({
+      authorityKind: 'APPOINTMENT',
+      authorityId: appointmentId,
+      appointmentId,
+      delegationId: null,
+      userId: 'user-1',
+      username: 'testuser',
+      positionId: 'position-2',
+      positionKey: 'TRAINING_OFFICER',
+      positionName: 'Training Officer',
+      defaultScope: 'GLOBAL',
+      scopeType: 'GLOBAL',
+      scopeId: null,
+      platoonKey: null,
+      platoonName: null,
+      startsAt: new Date('2026-04-04T00:00:00.000Z'),
+      endsAt: null,
+      grantorUserId: null,
+      grantorUsername: null,
+      grantorAppointmentId: null,
+    });
+    (getSetupStatus as any).mockResolvedValueOnce({
+      bootstrapRequired: false,
+      setupComplete: false,
+      nextStep: 'courses',
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: loginBody,
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(423);
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('setup_incomplete');
+    expect(body.nextStep).toBe('courses');
+    expect(jwt.signAccessJWT).not.toHaveBeenCalled();
+    expect(cookies.setAccessCookie).not.toHaveBeenCalled();
+  });
+
+  it('allows admin login while initial setup is incomplete', async () => {
+    (getSetupStatus as any).mockResolvedValueOnce({
+      bootstrapRequired: false,
+      setupComplete: false,
+      nextStep: 'courses',
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: loginBody,
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.roles).toContain('ADMIN');
+  });
+
+  it('returns 401 for an invalid password and evaluates lockout escalation', async () => {
     const argon2 = await import('argon2');
     vi.mocked(argon2.default.verify).mockResolvedValueOnce(false);
 
@@ -179,7 +354,31 @@ describe('POST /api/v1/auth/login', () => {
     expect(accountLockout.recordLoginAttempt).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'user-1', success: false, failureReason: 'Invalid password' }),
     );
-    expect(accountLockout.checkAndLockAccount).not.toHaveBeenCalled();
+    expect(accountLockout.checkAndLockAccount).toHaveBeenCalledWith('testuser', 'user-1', '127.0.0.1');
+  });
+
+  it('returns 423 when a failed password reaches lockout threshold', async () => {
+    const argon2 = await import('argon2');
+    const lockedUntil = new Date(Date.now() + 30 * 60_000);
+    vi.mocked(argon2.default.verify).mockResolvedValueOnce(false);
+    (accountLockout.checkAndLockAccount as any).mockResolvedValueOnce({
+      lockedUntil,
+      failedAttempts: 5,
+    });
+
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/auth/login',
+      body: loginBody,
+    });
+
+    const res = await postLogin(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(423);
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe('ACCOUNT_LOCKED');
+    expect(body.failedAttempts).toBe(5);
   });
 
   it('logs in successfully with an active delegation identity', async () => {
@@ -214,8 +413,6 @@ describe('POST /api/v1/auth/login', () => {
       path: '/api/v1/auth/login',
       body: {
         delegationId,
-        platoonId: '33333333-3333-4333-8333-333333333333',
-        username: 'delegateuser',
         password: 'password123',
       },
     });

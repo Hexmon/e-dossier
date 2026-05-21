@@ -74,6 +74,7 @@ export type PtTemplateApplyStats = {
 export type PtTemplateApplyResult = {
   module: "pt";
   profile: PtTemplateProfile;
+  courseId?: string | null;
   dryRun: boolean;
   createdCount: number;
   updatedCount: number;

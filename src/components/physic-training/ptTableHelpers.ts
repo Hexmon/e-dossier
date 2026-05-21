@@ -31,6 +31,9 @@ export interface PTTableRow {
   selectedAttempt: string;
   selectedGrade: string;
   selectedScoreId: string;
+  originalScoreRowId?: string;
+  originalScoreId?: string;
+  originalMarksScored?: number | null;
 }
 
 const FALLBACK_TASK_LABEL = "Task";
@@ -98,19 +101,6 @@ export function buildPTTableRows(
       if (selectedScoreId) break;
     }
 
-    // Otherwise default to the first available option
-    if (!selectedScoreId && attemptGroups.length > 0) {
-      const firstGroup = attemptGroups[0];
-      const firstGrade = firstGroup.grades[0];
-      if (firstGrade) {
-        selectedAttempt = firstGroup.attemptCode;
-        selectedGrade = firstGrade.gradeCode;
-        selectedScoreId = firstGrade.scoreId;
-        maxMarks = firstGrade.maxMarks;
-        marks = resolvePtDraftMarks(firstGroup.attemptCode, firstGrade.maxMarks);
-      }
-    }
-
     rows.push({
       id: `${taskTitle.replace(/\s+/g, "-").toLowerCase()}-${index}`,
       column1: index,
@@ -123,10 +113,110 @@ export function buildPTTableRows(
       selectedAttempt,
       selectedGrade,
       selectedScoreId,
+      originalScoreRowId: selectedScoreId ? scoreById.get(selectedScoreId)?.id : undefined,
+      originalScoreId: selectedScoreId || undefined,
+      originalMarksScored: selectedScoreId ? marks : undefined,
     });
   });
 
   return rows;
+}
+
+export function resolvePTTableRowAttemptChange(
+  row: PTTableRow,
+  attemptCode: string,
+  scoreById: Map<string, PhysicalTrainingScore>,
+): PTTableRow {
+  const attemptGroup = row.attemptGroups.find((group) => group.attemptCode === attemptCode);
+  const nextGrade = attemptGroup?.grades[0];
+  if (!attemptGroup || !nextGrade) return row;
+
+  const marks = resolvePtDraftMarks(
+    attemptCode,
+    nextGrade.maxMarks,
+    scoreById.get(nextGrade.scoreId)?.marksScored ?? null,
+  );
+
+  return {
+    ...row,
+    selectedAttempt: attemptCode,
+    column4: attemptCode,
+    selectedGrade: nextGrade.gradeCode,
+    column5: nextGrade.gradeCode,
+    selectedScoreId: nextGrade.scoreId,
+    column3: nextGrade.maxMarks,
+    column6: marks,
+  };
+}
+
+export function resolvePTTableRowGradeChange(
+  row: PTTableRow,
+  gradeCode: string,
+  scoreById: Map<string, PhysicalTrainingScore>,
+): PTTableRow {
+  const attemptGroup = row.attemptGroups.find((group) => group.attemptCode === row.selectedAttempt);
+  const grade = attemptGroup?.grades.find((item) => item.gradeCode === gradeCode);
+  if (!grade) return row;
+
+  const marks = resolvePtDraftMarks(
+    row.selectedAttempt,
+    grade.maxMarks,
+    scoreById.get(grade.scoreId)?.marksScored ?? null,
+  );
+
+  return {
+    ...row,
+    selectedGrade: gradeCode,
+    column5: gradeCode,
+    selectedScoreId: grade.scoreId,
+    column3: grade.maxMarks,
+    column6: marks,
+  };
+}
+
+export function buildPTUpdatePayloadFromRows(rows: PTTableRow[]): {
+  scores: PhysicalTrainingScore[];
+  deleteScoreIds: string[];
+} {
+  const scores: PhysicalTrainingScore[] = [];
+  const deleteScoreIds = new Set<string>();
+
+  for (const row of rows) {
+    const hasSavedScore = Boolean(row.originalScoreRowId && row.originalScoreId);
+    const hasCurrentScore = Boolean(row.selectedScoreId && !row.selectedScoreId.startsWith("virtual:"));
+    const hasMarks = row.column6 !== null && row.column6 !== undefined;
+
+    if (!hasCurrentScore || !hasMarks) {
+      if (hasSavedScore && row.originalScoreRowId) {
+        deleteScoreIds.add(row.originalScoreRowId);
+      }
+      continue;
+    }
+
+    const marksScored = Math.trunc(row.column6 ?? 0);
+    const changedScore = row.originalScoreId !== row.selectedScoreId;
+    const changedMarks = row.originalMarksScored !== marksScored;
+
+    if (hasSavedScore && !changedScore && !changedMarks) {
+      continue;
+    }
+
+    if (hasSavedScore && changedScore && row.originalScoreRowId) {
+      deleteScoreIds.add(row.originalScoreRowId);
+    }
+
+    scores.push({
+      ptTaskScoreId: row.selectedScoreId,
+      marksScored,
+      attemptCode: row.selectedAttempt,
+      gradeCode: row.selectedGrade,
+    });
+  }
+
+  return {
+    scores,
+    deleteScoreIds: Array.from(deleteScoreIds),
+  };
 }
 
 export interface ResolvedTemplateType {
@@ -209,7 +299,6 @@ function buildResolvedType(
     rows,
   };
 }
-
 
 
 

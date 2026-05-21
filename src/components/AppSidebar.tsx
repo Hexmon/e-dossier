@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Shield,
   ChevronRight,
@@ -39,7 +39,8 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { useMe } from "@/hooks/useMe";
 import OCSelectModal from "@/components/modals/OCSelectModal";
-import { useNavigation, NavItem } from "@/hooks/useNavigation";
+import { useNavigation, type NavItem } from "@/hooks/useNavigation";
+import { useSetupStatus } from "@/hooks/useSetupStatus";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildCurrentDossierRoot, isDossierManagementRoute } from "@/lib/dossier-route";
 
@@ -60,17 +61,206 @@ const ICON_MAP: Record<string, any> = {
   LifeBuoy,
 };
 
+const SETUP_RETURN_TO = "/setup";
+
+const SETUP_DASHBOARD_PATHS = [
+  "/dashboard/genmgmt/platoon-management",
+  "/dashboard/genmgmt/usersmgmt",
+  "/dashboard/genmgmt/appointmentmgmt",
+  "/dashboard/genmgmt/hierarchy",
+  "/dashboard/genmgmt/coursemgmt",
+  "/dashboard/genmgmt/subjectmgmt",
+  "/dashboard/genmgmt/ocmgmt",
+  "/dashboard/help/setup-guide",
+];
+
+const SETUP_SIDEBAR_ITEMS = [
+  { key: "setup", label: "Setup Checklist", url: "/setup", icon: "Home", exact: true },
+  {
+    key: "setup-platoons",
+    label: "Platoons",
+    url: buildSetupReturnHref("/dashboard/genmgmt/platoon-management"),
+    icon: "Users",
+  },
+  {
+    key: "setup-users",
+    label: "Users",
+    url: buildSetupReturnHref("/dashboard/genmgmt/usersmgmt"),
+    icon: "Users",
+  },
+  {
+    key: "setup-appointments",
+    label: "Appointments",
+    url: buildSetupReturnHref("/dashboard/genmgmt/appointmentmgmt"),
+    icon: "UserCheck",
+  },
+  {
+    key: "setup-hierarchy",
+    label: "Hierarchy",
+    url: buildSetupReturnHref("/dashboard/genmgmt/hierarchy"),
+    icon: "Activity",
+  },
+  {
+    key: "setup-courses",
+    label: "Courses",
+    url: buildSetupReturnHref("/dashboard/genmgmt/coursemgmt"),
+    icon: "BookOpen",
+  },
+  {
+    key: "setup-subjects",
+    label: "Subjects",
+    url: buildSetupReturnHref("/dashboard/genmgmt/subjectmgmt"),
+    icon: "NotebookPen",
+  },
+  {
+    key: "setup-ocs",
+    label: "Officer Cadets",
+    url: buildSetupReturnHref("/dashboard/genmgmt/ocmgmt"),
+    icon: "UserCheck",
+  },
+  {
+    key: "setup-guide",
+    label: "Setup Guide",
+    url: buildSetupReturnHref("/dashboard/help/setup-guide"),
+    icon: "LifeBuoy",
+  },
+];
+
+function buildSetupReturnHref(pathname: string) {
+  const params = new URLSearchParams();
+  params.set("returnTo", SETUP_RETURN_TO);
+  return `${pathname}?${params.toString()}`;
+}
+
+function isSetupDashboardPath(pathname: string | null) {
+  return Boolean(
+    pathname &&
+      SETUP_DASHBOARD_PATHS.some(
+        (path) => pathname === path || pathname.startsWith(`${path}/`)
+      )
+  );
+}
+
+function getSetupItemActive(pathname: string | null, item: (typeof SETUP_SIDEBAR_ITEMS)[number]) {
+  if (!pathname) {
+    return false;
+  }
+
+  if (item.exact) {
+    return pathname === item.url;
+  }
+
+  const itemPath = item.url.split("?")[0];
+  if (item.key === "setup-courses") {
+    return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+  }
+
+  return pathname === itemPath;
+}
+
+function SetupOnlySidebar({
+  collapsed,
+  pathname,
+  position,
+}: {
+  collapsed: boolean;
+  pathname: string | null;
+  position: string;
+}) {
+  return (
+    <Sidebar className={collapsed ? "w-16" : "w-64"} collapsible="icon">
+      <SidebarContent className="bg-card border-r border-border">
+        <div className="p-4 border-b border-border">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/images/eme_logo.jpeg"
+              alt="MCEME Logo"
+              width={18}
+              height={18}
+              className="h-8 w-8 object-contain rounded"
+            />
+            {!collapsed && (
+              <div>
+                <h3 className="font-semibold text-primary">MCEME CTW</h3>
+                <p className="text-xs text-muted-foreground">Initial Setup</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {!collapsed && (
+          <div className="p-4 border-b border-border">
+            <Badge className="w-full justify-center bg-primary text-primary-foreground">
+              <Shield className="h-3 w-3 mr-1" />
+              {position || "SETUP"}
+            </Badge>
+          </div>
+        )}
+
+        <div className="flex h-full flex-1 flex-col p-2">
+          <SidebarGroup>
+            {!collapsed && (
+              <SidebarGroupLabel className="text-xs font-medium text-muted-foreground">
+                Setup Only
+              </SidebarGroupLabel>
+            )}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {SETUP_SIDEBAR_ITEMS.map((item) => {
+                  const IconComponent = ICON_MAP[item.icon] || Home;
+                  const active = getSetupItemActive(pathname, item);
+                  return (
+                    <SidebarMenuItem key={item.key}>
+                      <SidebarMenuButton asChild>
+                        <Link
+                          href={item.url}
+                          className={`flex items-center gap-2 px-[var(--density-sidebar-link-px)] py-[var(--density-sidebar-link-py)] rounded-md ${
+                            active ? "bg-primary text-primary-foreground" : "hover:bg-accent/50"
+                          }`}
+                        >
+                          <IconComponent className="h-4 w-4" />
+                          {!collapsed && <span>{item.label}</span>}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {!collapsed ? (
+            <div className="mt-auto border-t border-border p-3 text-xs text-muted-foreground">
+              Complete the setup checklist before using the rest of the dashboard.
+            </div>
+          ) : null}
+        </div>
+      </SidebarContent>
+    </Sidebar>
+  );
+}
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const pathname = usePathname();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [openGroups, setOpenGroups] = useState<string[]>(["Interview"]);
   const [modalOpen, setModalOpen] = useState(false);
 
+  const setupStatusQuery = useSetupStatus();
+  const returnToSetup = searchParams.get("returnTo") === SETUP_RETURN_TO;
+  const setupPath = isSetupDashboardPath(pathname);
+  const setupIncomplete = setupStatusQuery.data?.setupComplete === false;
+  const setupSidebarActive = returnToSetup || setupIncomplete;
+  const waitingForSetupStatus = setupPath && !returnToSetup && !setupStatusQuery.data;
+
   const { data: meData } = useMe();
-  const { data: navData, isLoading: navLoading, error: navError } = useNavigation();
+  const { data: navData, isLoading: navLoading, error: navError } = useNavigation({
+    enabled: !setupSidebarActive && !waitingForSetupStatus,
+  });
 
   // User info
   const { apt = {} } = meData ?? {};
@@ -136,7 +326,11 @@ export function AppSidebar() {
     return <IconComponent className="h-4 w-4" />;
   };
 
-  if (navLoading) {
+  if (setupSidebarActive) {
+    return <SetupOnlySidebar collapsed={collapsed} pathname={pathname} position={position} />;
+  }
+
+  if (waitingForSetupStatus || navLoading) {
     return (
       <Sidebar className={collapsed ? "w-16" : "w-64"} collapsible="icon">
         <SidebarContent className="bg-card border-r border-border p-4 space-y-4">

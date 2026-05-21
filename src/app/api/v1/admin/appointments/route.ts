@@ -13,6 +13,10 @@ import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { requireAdmin } from '@/app/lib/authz';
 import { assertCanAssignAppointment } from '@/app/lib/admin-boundaries';
 import { deriveSidebarRoleGroup } from '@/lib/sidebar-visibility';
+import {
+    appointmentOverlapConflictDetails,
+    findOverlappingPrimaryAppointment,
+} from '@/app/db/queries/appointment-overlap';
 
 export const runtime = 'nodejs';
 
@@ -175,56 +179,28 @@ async function POSTHandler(req: AuditNextRequest) {
             throw new ApiError(400, 'startsAt must be earlier than endsAt', 'bad_request');
         }
 
-        // --- SLOT EXCLUSIVITY CHECK (one active holder per (positionId, scopeType, scopeId)) ---
-        // Overlap condition (without relying on generated range column):
-        //   existing.starts_at <= COALESCE(new.ends_at, 'infinity')
-        //   AND (existing.ends_at IS NULL OR existing.ends_at >= new.starts_at)
-        //   AND existing.deleted_at IS NULL
-        //   AND existing.assignment = 'PRIMARY'
-        const overlap = await db
-            .select({
-                id: appointments.id,
-                userId: appointments.userId,
-                username: users.username,
-                startsAt: appointments.startsAt,
-                endsAt: appointments.endsAt,
+        const conflicting = p.assignment === 'PRIMARY'
+            ? await findOverlappingPrimaryAppointment({
+                db,
+                positionId,
+                scopeType: p.scopeType,
+                scopeId: p.scopeType === 'PLATOON' ? p.scopeId ?? null : null,
+                startsAt: p.startsAt,
+                endsAt: p.endsAt ?? null,
             })
-            .from(appointments)
-            .innerJoin(users, eq(users.id, appointments.userId))
-            .where(and(
-                eq(appointments.positionId, positionId),
-                eq(appointments.scopeType, p.scopeType),
-                (p.scopeType === 'PLATOON' && p.scopeId)
-                    ? eq(appointments.scopeId, p.scopeId)
-                    : sql`${appointments.scopeId} IS NULL`,
-                isNull(users.deletedAt),
-                eq(appointments.assignment, 'PRIMARY'),
-                sql`${appointments.deletedAt} IS NULL`,
-                // starts_at <= COALESCE(newEnd, 'infinity')
-                sql`${appointments.startsAt} <= COALESCE(${p.endsAt ?? null}, 'infinity'::timestamptz)`,
-                // (ends_at IS NULL OR ends_at >= newStart)
-                sql`(${appointments.endsAt} IS NULL OR ${appointments.endsAt} >= ${p.startsAt})`,
-            ))
-            .limit(1);
+            : null;
 
-        if (overlap.length) {
-            const conflicting = overlap[0];
+        if (conflicting) {
             throw new ApiError(
                 409,
                 'Another active/overlapping appointment already exists for this position & scope',
                 'conflict',
-                {
+                appointmentOverlapConflictDetails({
                     positionId,
                     scopeType: p.scopeType,
-                    scopeId: p.scopeId ?? null,
-                    conflictingAppointment: {
-                        id: conflicting.id,
-                        userId: conflicting.userId,
-                        username: conflicting.username,
-                        startsAt: conflicting.startsAt,
-                        endsAt: conflicting.endsAt,
-                    },
-                }
+                    scopeId: p.scopeType === 'PLATOON' ? p.scopeId ?? null : null,
+                    conflictingAppointment: conflicting,
+                })
             );
         }
 

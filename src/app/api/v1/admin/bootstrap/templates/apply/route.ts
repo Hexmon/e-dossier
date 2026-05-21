@@ -20,6 +20,7 @@ async function POSTHandler(req: AuditNextRequest) {
       const result = await applyPtTemplateProfile({
         profile: body.profile ?? 'default',
         dryRun: body.dryRun ?? false,
+        ...(body.courseId ? { courseId: body.courseId } : {}),
         actorUserId: authCtx.userId,
       });
 

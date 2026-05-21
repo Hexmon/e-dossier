@@ -10,6 +10,7 @@ import GlobalTabs from "@/components/Tabs/GlobalTabs";
 import { TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 import { ocTabs } from "@/config/app.config";
 import UserFormDialog from "@/components/users/UserFormDialog";
@@ -18,6 +19,11 @@ import UserFilters from "@/components/users/UserFilters";
 import { useUsers } from "@/hooks/useUsers";
 import type { User } from "@/app/lib/api/userApi";
 import { useDebouncedValue } from "@/app/lib/debounce";
+import {
+  activeUserCreateRequiresPassword,
+  passwordConfirmationError,
+} from "@/app/lib/users/credential-policy";
+import { getUserManagementProtectionReason } from "@/lib/protected-admin";
 
 export default function UserManagement() {
   const { users, loading, addUser, editUser, removeUser } = useUsers();
@@ -59,10 +65,30 @@ export default function UserManagement() {
   /** SAVE USER */
   const onSubmit = async (data: User) => {
     try {
+      const confirmationError = passwordConfirmationError({
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+      });
+      if (confirmationError) {
+        toast.error(confirmationError);
+        return;
+      }
+
+      if (!editingUser && activeUserCreateRequiresPassword({ isActive: data.isActive, password: data.password })) {
+        toast.error("Set an initial password before creating an active user.");
+        return;
+      }
+
+      const { confirmPassword: _confirmPassword, password, ...rest } = data;
+      const payload: User = {
+        ...rest,
+        ...(password?.trim() ? { password } : {}),
+      };
+
       if (editingUser && editingUser.id) {
-        await editUser(editingUser.id, data);
+        await editUser(editingUser.id, payload);
       } else {
-        await addUser(data);
+        await addUser(payload);
       }
 
       reset();
@@ -77,7 +103,7 @@ export default function UserManagement() {
   /** EDIT HANDLER */
   const handleEdit = (user: User) => {
     setEditingUser(user);
-    reset(user);
+    reset({ ...user, password: "", confirmPassword: "" });
     setOpen(true);
   };
 
@@ -121,7 +147,7 @@ export default function UserManagement() {
                   <h2 className="text-2xl font-bold">User List</h2>
                   <Button
                     onClick={() => {
-                      reset({ isActive: true });
+                      reset({ isActive: true, phone: "", password: "", confirmPassword: "" });
                       setEditingUser(null);
                       setOpen(true);
                     }}
@@ -156,11 +182,11 @@ export default function UserManagement() {
                         username = "N/A",
                         name = "Unknown",
                         email = "N/A",
-                        phone = "N/A",
                         rank = "N/A",
                         appointId = "N/A",
                         isActive = false,
                       } = u;
+                      const protectedReason = getUserManagementProtectionReason(u);
 
                       return (
                         <UserListItem
@@ -173,6 +199,9 @@ export default function UserManagement() {
                           unit={appointId ?? undefined}
                           role={rank}
                           status={isActive ? "active" : "disabled"}
+                          editDisabled={Boolean(protectedReason)}
+                          deleteDisabled={Boolean(protectedReason)}
+                          actionDisabledReason={protectedReason}
                           onEdit={() => handleEdit(u)}
                           onView={() => handleView(u)}
                           onDelete={() => handleDelete(u)}
@@ -197,6 +226,7 @@ export default function UserManagement() {
         editingUser={editingUser}
         isActive={watch("isActive") ?? true}
         usernameValue={watch("username") ?? ""}
+        phoneValue={watch("phone") ?? ""}
       />
 
       {/* View Dialog */}

@@ -8,6 +8,7 @@ import {
   canAccessBulkWorkflowModule,
   canAccessModule,
   hasResolvedSectionAccess,
+  resolveSidebarSectionForDashboardPath,
   resolveModuleAccessForUser,
   type ModuleAccessKey,
   type ResolvedModuleAccess,
@@ -15,10 +16,18 @@ import {
 import { assertActiveAuthorityFromPayload } from "@/app/lib/active-authority";
 import { db } from "@/app/db/client";
 import { ocCadets } from "@/app/db/schema/training/oc";
+import { getSetupStatus, isSetupStatusUnavailable } from "@/app/lib/setup-status";
+import {
+  isSetupDashboardPath,
+  isSetupManagerRoleGroup,
+} from "@/app/lib/setup-gate";
 import { hasScopeAccess } from "@/lib/authorization";
 import { canManageCadetAppointments } from "@/lib/platoon-commander-access";
+import { isAuthzV2Enabled } from "@/app/lib/acx/feature-flag";
+import { resolvePageAction } from "@/app/lib/acx/action-map";
+import { getEffectivePermissionBundleCached } from "@/app/db/queries/authz-permissions";
 import { and, eq, isNull } from "drizzle-orm";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 type AdminPageAuthContext = {
@@ -29,6 +38,8 @@ type AdminPageAuthContext = {
   scopeType: string | null;
   scopeId: string | null;
   moduleAccess: ResolvedModuleAccess;
+  permissions: string[];
+  deniedPermissions: string[];
 };
 
 async function buildDashboardAuthContext(
@@ -61,11 +72,20 @@ async function buildDashboardAuthContext(
   const scopeId =
     (payload as any).apt?.scope?.id == null ? null : String((payload as any).apt.scope.id);
   const roleGroup = deriveSidebarRoleGroup({ roles, position });
-  const moduleAccess = await resolveModuleAccessForUser({
-    userId,
-    roles,
-    position,
-  });
+  const [moduleAccess, authzBundle] = await Promise.all([
+    resolveModuleAccessForUser({
+      userId,
+      roles,
+      position,
+    }),
+    isAuthzV2Enabled()
+      ? getEffectivePermissionBundleCached({
+          userId,
+          roles,
+          apt: (payload as any).apt,
+        })
+      : Promise.resolve(null),
+  ]);
 
   return {
     userId,
@@ -75,6 +95,8 @@ async function buildDashboardAuthContext(
     scopeType,
     scopeId,
     moduleAccess,
+    permissions: authzBundle?.permissions ?? [],
+    deniedPermissions: authzBundle?.deniedPermissions ?? [],
   };
 }
 
@@ -85,6 +107,25 @@ export async function getOptionalDashboardAccess(): Promise<AdminPageAuthContext
   return buildDashboardAuthContext(accessToken);
 }
 
+async function getCurrentPathname(): Promise<string | null> {
+  const headerStore = await headers();
+  return headerStore.get("x-pathname") ?? headerStore.get("x-next-pathname") ?? null;
+}
+
+async function enforceInitialSetupDashboardGate(authContext: AdminPageAuthContext) {
+  const setupStatus = await getSetupStatus();
+
+  if (setupStatus.setupComplete || isSetupStatusUnavailable(setupStatus)) {
+    return;
+  }
+
+  const pathname = await getCurrentPathname();
+
+  if (!isSetupManagerRoleGroup(authContext.roleGroup) || !isSetupDashboardPath(pathname)) {
+    redirect("/setup");
+  }
+}
+
 export async function requireDashboardAccess(): Promise<AdminPageAuthContext> {
   const authContext = await getOptionalDashboardAccess();
 
@@ -92,15 +133,57 @@ export async function requireDashboardAccess(): Promise<AdminPageAuthContext> {
     redirect("/login");
   }
 
+  await enforceInitialSetupDashboardGate(authContext);
+  await enforceDashboardPagePermission(authContext);
+
   return authContext;
 }
 
+async function enforceDashboardPagePermission(authContext: AdminPageAuthContext) {
+  if (!isAuthzV2Enabled()) return;
+
+  const pathname = await getCurrentPathname();
+  if (!pathname) {
+    redirect("/dashboard");
+  }
+  if (pathname === "/dashboard") return;
+
+  const page = resolvePageAction(pathname);
+  if (!page) {
+    redirect("/dashboard");
+  }
+
+  if (authContext.roleGroup === "SUPER_ADMIN") return;
+
+  const sectionKey = resolveSidebarSectionForDashboardPath(pathname);
+  if (sectionKey && !hasResolvedSectionAccess(authContext.moduleAccess, sectionKey)) {
+    redirect("/dashboard");
+  }
+
+  const permissions = new Set(authContext.permissions);
+  const deniedPermissions = new Set(authContext.deniedPermissions);
+  if (permissions.has("*")) return;
+  if (deniedPermissions.has(page.action)) {
+    redirect("/dashboard");
+  }
+  if (!permissions.has(page.action)) {
+    redirect("/dashboard");
+  }
+}
+
 export async function requireAdminDashboardAccess(): Promise<AdminPageAuthContext> {
+  if (isAuthzV2Enabled()) {
+    return requireDashboardAccess();
+  }
   return requireDashboardSectionAccess("admin");
 }
 
 export async function requireSuperAdminDashboardAccess(): Promise<AdminPageAuthContext> {
   const authContext = await requireDashboardAccess();
+
+  if (isAuthzV2Enabled()) {
+    return authContext;
+  }
 
   if (authContext.roleGroup !== "SUPER_ADMIN") {
     redirect("/dashboard");
@@ -124,6 +207,10 @@ export async function requireDashboardSectionAccess(
 ): Promise<AdminPageAuthContext> {
   const authContext = await requireDashboardAccess();
 
+  if (isAuthzV2Enabled()) {
+    return authContext;
+  }
+
   if (!hasResolvedSectionAccess(authContext.moduleAccess, sectionKey)) {
     redirect("/dashboard");
   }
@@ -135,6 +222,10 @@ export async function requireDashboardModuleAccess(
   moduleKey: ModuleAccessKey
 ): Promise<AdminPageAuthContext> {
   const authContext = await requireDashboardAccess();
+
+  if (isAuthzV2Enabled()) {
+    return authContext;
+  }
 
   if (!canAccessModule(authContext.moduleAccess, moduleKey)) {
     redirect("/dashboard");
@@ -151,6 +242,10 @@ export async function requireDashboardBulkWorkflowAccess(
   workflowModule: "ACADEMICS_BULK" | "PT_BULK"
 ): Promise<AdminPageAuthContext> {
   const authContext = await requireDashboardAccess();
+
+  if (isAuthzV2Enabled()) {
+    return authContext;
+  }
 
   if (!canAccessBulkWorkflowModule(authContext.moduleAccess, workflowModule)) {
     redirect("/dashboard");

@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('@/lib/audit', () => ({
+    withAuditRoute: (_method: string, handler: any) => handler,
+}));
+
 import { GET } from '@/app/api/v1/me/navigation/route';
 import { NextRequest } from 'next/server';
 
@@ -61,19 +66,19 @@ describe('GET /api/v1/me/navigation', () => {
         expect(data.sections.find((s: any) => s.key === 'help')).toBeDefined();
     });
 
-    it('should return correct view for OTHER roles', async () => {
+    it('should return correct view for platoon commanders', async () => {
         mockResolveModuleAccess.mockResolvedValue({
             sections: {
                 dashboard: true,
                 admin: false,
-                settings: true,
+                settings: false,
                 dossier: true,
-                bulk_upload: true,
+                bulk_upload: false,
                 reports: true,
                 help: true,
             },
             canAccessDossier: true,
-            canAccessBulkUpload: true,
+            canAccessBulkUpload: false,
             canAccessReports: true,
         });
 
@@ -88,69 +93,21 @@ describe('GET /api/v1/me/navigation', () => {
         const dossierSection = data.sections.find((s: any) => s.key === 'dossier');
         expect(dossierSection).toBeDefined();
 
-        // Bulk upload visible
-        expect(data.sections.find((s: any) => s.key === 'bulk_upload')).toBeDefined();
-        expect(data.sections.find((s: any) => s.key === 'academics')).toBeUndefined();
-        expect(data.sections.find((s: any) => s.key === 'pt')).toBeUndefined();
-        expect(data.sections.find((s: any) => s.key === 'reports')).toBeDefined();
-        expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
-        expect(data.sections.find((s: any) => s.key === 'help')).toBeDefined();
-
-        const settingsSection = data.sections.find((s: any) => s.key === 'settings');
-        expect(settingsSection.items.some((i: any) => i.label === 'Device Site Settings')).toBe(true);
-    });
-
-    it('should return correct view for ADMIN (No Dossier/Bulk Upload/Reports)', async () => {
-        mockRequireAuth.mockResolvedValue({
-            userId: 'admin-1',
-            roles: ['ADMIN'],
-            apt: { position: 'ADMIN' },
-        });
-        mockResolveModuleAccess.mockResolvedValue({
-            sections: {
-                dashboard: true,
-                admin: true,
-                settings: true,
-                dossier: false,
-                bulk_upload: false,
-                reports: false,
-                help: true,
-            },
-            canAccessDossier: false,
-            canAccessBulkUpload: false,
-            canAccessReports: false,
-        });
-
-        const req = new NextRequest('http://localhost/api/v1/me/navigation');
-        const res = await GET(req);
-        const data = await res.json();
-
-        // Admin Visible (via baseline or policy)
-        expect(data.sections.find((s: any) => s.key === 'admin')).toBeDefined();
-
-        // Dossier Hidden (Goal!)
-        expect(data.sections.find((s: any) => s.key === 'dossier')).toBeUndefined();
-
-        // Bulk upload / Reports Hidden
+        // Bulk upload hidden for platoon commanders
         expect(data.sections.find((s: any) => s.key === 'bulk_upload')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'academics')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'pt')).toBeUndefined();
-        expect(data.sections.find((s: any) => s.key === 'reports')).toBeUndefined();
-        expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'reports')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'settings')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'help')).toBeDefined();
     });
 
-    it('shows dossier, bulk upload, and reports for ADMIN when backend policy enables them', async () => {
-        mockRequireAuth.mockResolvedValue({
-            userId: 'admin-1',
-            roles: ['ADMIN'],
-            apt: { position: 'ADMIN' },
-        });
+    it('should return correct view for other users', async () => {
         mockResolveModuleAccess.mockResolvedValue({
             sections: {
                 dashboard: true,
-                admin: true,
-                settings: true,
+                admin: false,
+                settings: false,
                 dossier: true,
                 bulk_upload: true,
                 reports: true,
@@ -165,9 +122,51 @@ describe('GET /api/v1/me/navigation', () => {
         const res = await GET(req);
         const data = await res.json();
 
-        expect(data.sections.find((s: any) => s.key === 'admin')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'admin')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'dossier')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'settings')).toBeUndefined();
         expect(data.sections.find((s: any) => s.key === 'bulk_upload')).toBeDefined();
         expect(data.sections.find((s: any) => s.key === 'reports')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'help')).toBeDefined();
+    });
+
+    it('should return correct view for ADMIN', async () => {
+        mockRequireAuth.mockResolvedValue({
+            userId: 'admin-1',
+            roles: ['ADMIN'],
+            apt: { position: 'ADMIN' },
+        });
+        mockResolveModuleAccess.mockResolvedValue({
+            sections: {
+                dashboard: true,
+                admin: true,
+                settings: true,
+                dossier: false,
+                bulk_upload: false,
+                reports: true,
+                help: true,
+            },
+            canAccessDossier: false,
+            canAccessBulkUpload: false,
+            canAccessReports: true,
+        });
+
+        const req = new NextRequest('http://localhost/api/v1/me/navigation');
+        const res = await GET(req);
+        const data = await res.json();
+
+        // Admin Visible (via baseline or policy)
+        expect(data.sections.find((s: any) => s.key === 'admin')).toBeDefined();
+
+        // Dossier Hidden (Goal!)
+        expect(data.sections.find((s: any) => s.key === 'dossier')).toBeUndefined();
+
+        // Bulk upload hidden; reports visible
+        expect(data.sections.find((s: any) => s.key === 'bulk_upload')).toBeUndefined();
+        expect(data.sections.find((s: any) => s.key === 'academics')).toBeUndefined();
+        expect(data.sections.find((s: any) => s.key === 'pt')).toBeUndefined();
+        expect(data.sections.find((s: any) => s.key === 'reports')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'settings')).toBeDefined();
+        expect(data.sections.find((s: any) => s.key === 'help')).toBeDefined();
     });
 });

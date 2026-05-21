@@ -22,6 +22,7 @@ type Props = {
   onBulkUploadSelected: (selectedIndexes: number[]) => void;
   onClear: () => void;
   onUpdateRow: (index: number, patch: Partial<UploadedPreviewRow>) => void;
+  onUpdateRawRow: (index: number, nextRawRow: RawRow) => void;
   onDeleteRow: (index: number) => void;
   onValidateAll?: () => void;
   validateResult?: BulkResult | null;
@@ -38,6 +39,7 @@ export default function UploadPreviewTable({
   onBulkUploadSelected,
   onClear,
   onUpdateRow,
+  onUpdateRawRow,
   onDeleteRow,
   onValidateAll,
   validateResult,
@@ -48,7 +50,8 @@ export default function UploadPreviewTable({
   const [selected, setSelected] = useState<Record<number, boolean>>({});
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<UploadedPreviewRow | null>(null);
-  const [viewMode, setViewMode] = useState<"quick" | "raw">("quick");
+  const [rawDraft, setRawDraft] = useState<RawRow | null>(null);
+  const [viewMode, setViewMode] = useState<"quick" | "raw">("raw");
   const tableViewportRef = useRef<HTMLDivElement | null>(null);
   const topScrollbarRef = useRef<HTMLDivElement | null>(null);
   const [topScrollbarWidth, setTopScrollbarWidth] = useState<number>(0);
@@ -59,6 +62,7 @@ export default function UploadPreviewTable({
       setSelected({});
       setEditingIndex(null);
       setDraft(null);
+      setRawDraft(null);
     }
   }, [rows.length]);
 
@@ -72,7 +76,8 @@ export default function UploadPreviewTable({
     setSelected(next);
     setEditingIndex(null);
     setDraft(null);
-    setViewMode("quick");
+    setRawDraft(null);
+    setViewMode("raw");
   }, [previewSession, rows.length]);
 
   const selectedIndexes = useMemo(
@@ -129,15 +134,28 @@ export default function UploadPreviewTable({
   const startEdit = (index: number) => {
     setEditingIndex(index);
     setDraft({ ...rows[index] });
+    setRawDraft({ ...(rawRows[index] ?? {}) });
   };
 
   const cancelEdit = () => {
     setEditingIndex(null);
     setDraft(null);
+    setRawDraft(null);
   };
 
   const saveEdit = () => {
-    if (editingIndex === null || !draft) return;
+    if (editingIndex === null) return;
+
+    if (viewMode === "raw") {
+      if (!rawDraft) return;
+      onUpdateRawRow(editingIndex, rawDraft);
+      setEditingIndex(null);
+      setDraft(null);
+      setRawDraft(null);
+      return;
+    }
+
+    if (!draft) return;
     const current = rows[editingIndex];
     if (!current) return;
 
@@ -154,6 +172,7 @@ export default function UploadPreviewTable({
     }
     setEditingIndex(null);
     setDraft(null);
+    setRawDraft(null);
   };
 
   const toggleAll = (checked: boolean) => {
@@ -231,7 +250,7 @@ export default function UploadPreviewTable({
                   variant={viewMode === "quick" ? "default" : "outline"}
                   onClick={() => setViewMode("quick")}
                 >
-                  Quick Review
+                  Summary
                 </Button>
                 <Button
                   type="button"
@@ -239,7 +258,7 @@ export default function UploadPreviewTable({
                   variant={viewMode === "raw" ? "default" : "outline"}
                   onClick={() => setViewMode("raw")}
                 >
-                  Full Raw Columns
+                  All Upload Columns
                 </Button>
               </div>
 
@@ -406,26 +425,88 @@ export default function UploadPreviewTable({
                         {rawHeaders.map((header) => (
                           <th key={header} className="px-3 py-2 border-b whitespace-nowrap">{header}</th>
                         ))}
+                        <th className="px-3 py-2 border-b whitespace-nowrap">Verify</th>
+                        <th className="px-3 py-2 border-b whitespace-nowrap">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {rawRows.map((rawRow, idx) => (
-                        <tr key={idx} className="border-t border-border/50 align-top">
-                          <td className="px-3 py-2">
-                            <input
-                              type="checkbox"
-                              checked={!!selected[idx]}
-                              onChange={(e) => toggleOne(idx, e.target.checked)}
-                            />
-                          </td>
-                          <td className="px-3 py-2 whitespace-nowrap">{idx + 1}</td>
-                          {rawHeaders.map((header) => (
-                            <td key={`${idx}-${header}`} className="px-3 py-2 whitespace-nowrap">
-                              {toCellValue((rawRow as Record<string, unknown>)[header])}
+                      {rawRows.map((rawRow, idx) => {
+                        const isEditing = editingIndex === idx;
+                        const value = rowValidations[idx];
+                        return (
+                          <tr key={idx} className="border-t border-border/50 align-top">
+                            <td className="px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={!!selected[idx]}
+                                onChange={(e) => toggleOne(idx, e.target.checked)}
+                              />
                             </td>
-                          ))}
-                        </tr>
-                      ))}
+                            <td className="px-3 py-2 whitespace-nowrap">{idx + 1}</td>
+                            {rawHeaders.map((header) => (
+                              <td key={`${idx}-${header}`} className="px-3 py-2 whitespace-nowrap">
+                                {isEditing ? (
+                                  <Input
+                                    className="min-w-[180px]"
+                                    value={toCellValue((rawDraft as Record<string, unknown> | null)?.[header])}
+                                    onChange={(event) =>
+                                      setRawDraft((prev) => ({
+                                        ...(prev ?? {}),
+                                        [header]: event.target.value,
+                                      }))
+                                    }
+                                  />
+                                ) : (
+                                  toCellValue((rawRow as Record<string, unknown>)[header])
+                                )}
+                              </td>
+                            ))}
+                            <td className="px-3 py-2 min-w-[220px]">
+                              <div className="flex items-center gap-2">
+                                {onValidateRow && (
+                                  <Button variant="outline" size="sm" onClick={() => onValidateRow(idx)}>
+                                    <ShieldCheck className="mr-1 h-3 w-3" />
+                                    Check
+                                  </Button>
+                                )}
+                                {value && (
+                                  <span className={`text-xs ${value === "ok" ? "text-emerald-600" : "text-destructive"}`}>
+                                    {value === "ok" ? (
+                                      <>
+                                        <CircleCheck className="inline h-3 w-3 mr-1" />
+                                        OK
+                                      </>
+                                    ) : (
+                                      value
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 min-w-[220px]">
+                              <div className="flex items-center gap-2">
+                                {isEditing ? (
+                                  <>
+                                    <Button size="sm" onClick={saveEdit}>Save</Button>
+                                    <Button size="sm" variant="outline" onClick={cancelEdit}>Cancel</Button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Button size="sm" variant="outline" onClick={() => startEdit(idx)}>
+                                      <Pencil className="mr-1 h-3 w-3" />
+                                      Edit
+                                    </Button>
+                                    <Button size="sm" variant="destructive" onClick={() => onDeleteRow(idx)}>
+                                      <Trash2 className="mr-1 h-3 w-3" />
+                                      Delete
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}

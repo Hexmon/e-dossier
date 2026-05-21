@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { IndiaPhoneInput } from "@/components/ui/india-phone-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -45,16 +46,15 @@ export default function InstructorForm({
 
     useEffect(() => {
         if (instructor) {
-            const { id, createdAt, updatedAt, deletedAt, ...rest } = instructor;
             setFormData({
-                name: rest.name || "",
-                email: rest.email || "",
-                phone: rest.phone || "",
-                affiliation: rest.affiliation || "",
-                experience: rest.experience || "",
-                qualification: rest.qualification || "",
-                subjectIds: rest.subjectIds || [],
-                notes: rest.notes || "",
+                name: instructor.name || "",
+                email: instructor.email || "",
+                phone: instructor.phone || "",
+                affiliation: instructor.affiliation || "",
+                experience: instructor.experience || "",
+                qualification: instructor.qualification || "",
+                subjectIds: instructor.subjectIds || [],
+                notes: instructor.notes || "",
             });
         } else {
             setFormData({
@@ -131,12 +131,14 @@ export default function InstructorForm({
             {/* Phone */}
             <div className="space-y-2">
                 <Label htmlFor="phone">Phone *</Label>
-                <Input
+                <IndiaPhoneInput
                     id="phone"
-                    type="tel"
                     value={formData.phone}
-                    onChange={(e) => handleChange("phone", e.target.value)}
-                    placeholder="e.g., +1-555-0102"
+                    onValueChange={(value) => handleChange("phone", value)}
+                    placeholder="9876543210"
+                    autoComplete="tel-national"
+                    minLength={10}
+                    pattern="[0-9]{10}"
                     required
                 />
             </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { fetchOCByIdFull, OCRecord } from "@/app/lib/api/ocApi";
+import { fetchOCByIdFull, type OCRecord } from "@/app/lib/api/ocApi";
 
 type Props = {
   open: boolean;
@@ -158,7 +158,7 @@ export default function OCDetailsModal({ open, ocId, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[98vw] max-w-[1700px] max-h-[95vh] overflow-y-auto">
+      <DialogContent className="w-[96vw] sm:!max-w-[96vw] lg:!max-w-[1280px] xl:!max-w-[1500px] max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>OC Details</DialogTitle>
         </DialogHeader>
@@ -167,7 +167,7 @@ export default function OCDetailsModal({ open, ocId, onOpenChange }: Props) {
         {!loading && !oc && <p className="text-sm text-muted-foreground">Not found.</p>}
         {!loading && oc && (
           <div className="space-y-6 text-sm">
-            <section className="grid grid-cols-2 gap-4">
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <div><div className="font-medium">Name</div><div>{oc.name}</div></div>
               <div><div className="font-medium">OC No</div><div>{oc.ocNo}</div></div>
               <div><div className="font-medium">JNU Enrollment No</div><div>{oc.jnuEnrollmentNo ?? "-"}</div></div>

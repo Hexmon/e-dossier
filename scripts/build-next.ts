@@ -17,7 +17,9 @@ const staleBuildArtifacts = [
   'app-path-routes-manifest.json',
   'build-manifest.json',
   'package.json',
+  'prerender-manifest.json',
   'react-loadable-manifest.json',
+  'routes-manifest.json',
   'trace',
 ];
 

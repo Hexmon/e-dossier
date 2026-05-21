@@ -12,6 +12,7 @@ export const endpoints = {
         login: "/api/v1/auth/login",
         signup: "/api/v1/auth/signup",
         logout: "/api/v1/auth/logout",
+        changePassword: "/api/v1/auth/change-password",
     },
     admin: {
         approval: "/api/v1/admin/signup-requests",
@@ -64,6 +65,7 @@ export const endpoints = {
             nextCourses: "/api/v1/admin/relegation/courses",
             history: "/api/v1/admin/relegation/history",
             presign: "/api/v1/admin/relegation/presign",
+            pendingPdfCleanup: "/api/v1/admin/relegation/pending-pdf/cleanup",
             transfer: "/api/v1/admin/relegation/transfer",
             exception: "/api/v1/admin/relegation/exception",
             promoteCourse: "/api/v1/admin/relegation/promote-course",

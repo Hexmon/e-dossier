@@ -6,6 +6,7 @@ import { json, handleApiError } from '@/app/lib/http';
 import { ocCadets, ocPersonal } from '@/app/db/schema/training/oc';
 import { courses } from '@/app/db/schema/training/courses';
 import { platoons } from '@/app/db/schema/auth/platoons';
+import { createOcWithLifecycle } from '@/app/db/queries/oc-lifecycle';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { checkApiRateLimit, getClientIp, getRateLimitHeaders } from '@/lib/ratelimit';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
@@ -114,19 +115,29 @@ async function resolvePlatoonId(plText: string): Promise<string | null> {
 async function existsOcNo(ocNo: string): Promise<boolean> {
   const canonical = ocNo.replace(/\s+/g, '').toUpperCase();
   const rows = await db
-    .select({ id: ocCadets.id })
+    .select({ id: ocCadets.id, deletedAt: ocCadets.deletedAt })
     .from(ocCadets)
-    .where(sql`upper(regexp_replace(${ocCadets.ocNo}, '\\s+', '', 'g')) = ${canonical}`)
+    .where(
+      and(
+        isNull(ocCadets.deletedAt),
+        sql`upper(regexp_replace(${ocCadets.ocNo}, '\\s+', '', 'g')) = ${canonical}`
+      )
+    )
     .limit(1);
-  return !!rows[0];
+  return rows.some((row) => row.deletedAt == null);
 }
 
 async function existsPersonalField<K extends keyof typeof ocPersonal['_']['columns']>(
   col: (typeof ocPersonal)[K],
   value: string
 ): Promise<boolean> {
-  const rows = await db.select({ ocId: ocPersonal.ocId }).from(ocPersonal).where(eq(col as any, value)).limit(1);
-  return !!rows[0];
+  const rows = await db
+    .select({ ocId: ocPersonal.ocId, deletedAt: ocCadets.deletedAt })
+    .from(ocPersonal)
+    .innerJoin(ocCadets, eq(ocCadets.id, ocPersonal.ocId))
+    .where(and(isNull(ocCadets.deletedAt), eq(col as any, value)))
+    .limit(1);
+  return rows.some((row) => row.deletedAt == null);
 }
 
 // ---------- Handler ----------
@@ -212,8 +223,12 @@ async function POSTHandler(req: AuditNextRequest) {
       const swimmerText = pick(row, ['Swimmer/Non Swimmer', 'Swimmer Status']);
       const languages = pick(row, ['Language', 'Languages']);
 
-      // NEW: platoon (optional)
-      const platoonText = pick(row, ['Platoon', 'PlatoonId', 'Platoon Id', 'PL', 'Pl']);
+      // Platoon is stored canonically on oc_cadets. Legacy TES sheets often
+      // use "PI" for the same platoon value, so use it only when no explicit
+      // Platoon column is present. The PI value is still preserved in personal.
+      const explicitPlatoonText = pick(row, ['Platoon', 'PlatoonId', 'Platoon Id', 'PL', 'Pl']);
+      const platoonText = explicitPlatoonText ?? pi;
+      const platoonSource = explicitPlatoonText == null ? 'PI' : 'Platoon';
 
       // --- Required fields check ---
       const missing: string[] = [];
@@ -248,7 +263,7 @@ async function POSTHandler(req: AuditNextRequest) {
       if (platoonText != null && String(platoonText).trim() !== '') {
         platoonId = await resolvePlatoonId(String(platoonText));
         if (!platoonId) {
-          errors.push({ row: i + 1, error: `Platoon not found: ${String(platoonText)}` });
+          errors.push({ row: i + 1, error: `${platoonSource} platoon not found: ${String(platoonText)}` });
           continue;
         }
       }
@@ -356,59 +371,55 @@ async function POSTHandler(req: AuditNextRequest) {
       // --- Insert (single transaction per row) ---
       try {
         const inserted = await db.transaction(async (tx) => {
-          const uid = `UID-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-          const [oc] = await tx
-            .insert(ocCadets)
-            .values({
+          const { oc } = await createOcWithLifecycle(
+            {
               name: String(name).trim(),
               ocNo,
-              uid,
               courseId,
-              // branch could be parsed if you want; left as-is from original route
               platoonId: platoonId ?? null,
               arrivalAtUniversity,
-            })
-            .returning({ id: ocCadets.id });
-
-          await tx.insert(ocPersonal).values({
-            ocId: oc.id,
-            visibleIdentMarks: visibleIdentMarks ? String(visibleIdentMarks) : undefined,
-            pi: pi ? String(pi) : undefined,
-            dob: dobDate,
-            placeOfBirth: placeOfBirth ? String(placeOfBirth) : undefined,
-            domicile: domicile ? String(domicile) : undefined,
-            religion: religion ? String(religion) : undefined,
-            nationality: nationality ? String(nationality) : undefined,
-            bloodGroup: bloodGroup ? String(bloodGroup) : undefined,
-            identMarks: identMarks ? String(identMarks) : undefined,
-            mobileNo,
-            email: emailStr || undefined,
-            passportNo: passportNo ? String(passportNo) : undefined,
-            panNo: panStr || undefined,
-            aadhaarNo: aadhaarStr || undefined,
-            fatherName: fatherName ? String(fatherName) : undefined,
-            fatherMobile: fatherMobile ? String(fatherMobile) : undefined,
-            fatherAddrPerm: fatherAddress ? String(fatherAddress) : undefined,
-            fatherProfession: fatherProfession ? String(fatherProfession) : undefined,
-            guardianName: guardianName ? String(guardianName) : undefined,
-            guardianAddress: guardianAddress ? String(guardianAddress) : undefined,
-            monthlyIncome: monthlyIncomeNum,
-            nokDetails: nokDetails ? String(nokDetails) : undefined,
-            nokAddrPerm,
-            nokAddrPresent,
-            nearestRailwayStation: nearestRailwayStation ? String(nearestRailwayStation) : undefined,
-            familyInSecunderabad: familyInSecunderabad ? String(familyInSecunderabad) : undefined,
-            relativeInArmedForces: relativeInArmedForces ? String(relativeInArmedForces) : undefined,
-            govtFinancialAssistance,
-            bankDetails: bankDetails ? String(bankDetails) : undefined,
-            idenCardNo: idenCardNo ? String(idenCardNo) : undefined,
-            upscRollNo: upscStr || undefined,
-            ssbCentre: ssbCentre ? String(ssbCentre) : undefined,
-            games: games ? String(games) : undefined,
-            hobbies: hobbies ? String(hobbies) : undefined,
-            swimmer: swimmer,
-            languages: languages ? String(languages) : undefined,
-          });
+              actorUserId: authCtx.userId,
+              personal: {
+                visibleIdentMarks: visibleIdentMarks ? String(visibleIdentMarks) : undefined,
+                pi: pi ? String(pi) : undefined,
+                dob: dobDate,
+                placeOfBirth: placeOfBirth ? String(placeOfBirth) : undefined,
+                domicile: domicile ? String(domicile) : undefined,
+                religion: religion ? String(religion) : undefined,
+                nationality: nationality ? String(nationality) : undefined,
+                bloodGroup: bloodGroup ? String(bloodGroup) : undefined,
+                identMarks: identMarks ? String(identMarks) : undefined,
+                mobileNo,
+                email: emailStr || undefined,
+                passportNo: passportNo ? String(passportNo) : undefined,
+                panNo: panStr || undefined,
+                aadhaarNo: aadhaarStr || undefined,
+                fatherName: fatherName ? String(fatherName) : undefined,
+                fatherMobile: fatherMobile ? String(fatherMobile) : undefined,
+                fatherAddrPerm: fatherAddress ? String(fatherAddress) : undefined,
+                fatherProfession: fatherProfession ? String(fatherProfession) : undefined,
+                guardianName: guardianName ? String(guardianName) : undefined,
+                guardianAddress: guardianAddress ? String(guardianAddress) : undefined,
+                monthlyIncome: monthlyIncomeNum,
+                nokDetails: nokDetails ? String(nokDetails) : undefined,
+                nokAddrPerm,
+                nokAddrPresent,
+                nearestRailwayStation: nearestRailwayStation ? String(nearestRailwayStation) : undefined,
+                familyInSecunderabad: familyInSecunderabad ? String(familyInSecunderabad) : undefined,
+                relativeInArmedForces: relativeInArmedForces ? String(relativeInArmedForces) : undefined,
+                govtFinancialAssistance,
+                bankDetails: bankDetails ? String(bankDetails) : undefined,
+                idenCardNo: idenCardNo ? String(idenCardNo) : undefined,
+                upscRollNo: upscStr || undefined,
+                ssbCentre: ssbCentre ? String(ssbCentre) : undefined,
+                games: games ? String(games) : undefined,
+                hobbies: hobbies ? String(hobbies) : undefined,
+                swimmer: swimmer,
+                languages: languages ? String(languages) : undefined,
+              },
+            },
+            tx,
+          );
 
           return {
             ocId: oc.id,

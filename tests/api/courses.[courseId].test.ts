@@ -219,6 +219,36 @@ describe('PATCH /api/v1/courses/[courseId]', () => {
     expect(body.course.id).toBe(courseId);
     expect(body.course.title).toBe('Updated Course');
   });
+
+  it('normalizes sequence course codes before updating a course', async () => {
+    (authz.requireAuth as any).mockResolvedValueOnce({ userId: 'admin-1', roles: ['ADMIN'] });
+    (coursesQueries.getCourse as any).mockResolvedValueOnce({
+      id: courseId,
+      code: 'TES-50',
+      title: 'Old Title',
+      notes: null,
+    });
+    (coursesQueries.updateCourse as any).mockResolvedValueOnce({
+      id: courseId,
+      code: 'TES-51',
+      title: 'Old Title',
+      notes: null,
+    });
+
+    const req = makeJsonRequest({
+      method: 'PATCH',
+      path: `${basePath}/${courseId}`,
+      body: { code: 'tes=051' },
+    });
+    const ctx = { params: Promise.resolve({ courseId }) } as any;
+
+    const res = await patchCourse(req as any, ctx);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.course.code).toBe('TES-51');
+    expect(coursesQueries.updateCourse).toHaveBeenCalledWith(courseId, { code: 'TES-51' });
+  });
 });
 
 describe('DELETE /api/v1/courses/[courseId]', () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useState } from "react";
 import { Appointment } from "@/app/lib/api/appointmentApi";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getAppointmentManagementPolicy } from "@/lib/protected-admin";
 
 interface AppointmentTableProps {
   appointments: Appointment[];
@@ -27,6 +29,7 @@ interface AppointmentTableProps {
   onDelete: (appointmentId: string) => Promise<any>;
   users: any[];
   loading: boolean;
+  actorIsSuperAdmin?: boolean;
 }
 
 export function AppointmentTable({
@@ -36,6 +39,7 @@ export function AppointmentTable({
   onDelete,
   users,
   loading,
+  actorIsSuperAdmin = false,
 }: AppointmentTableProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -49,6 +53,8 @@ export function AppointmentTable({
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleEditClick = (appointment: Appointment) => {
+    const policy = getAppointmentManagementPolicy(appointment, { actorIsSuperAdmin });
+    if (!policy.canEdit) return;
     setSelectedAppointment(appointment);
     setEditFormData({
       userId: appointment.userId,
@@ -77,6 +83,8 @@ export function AppointmentTable({
   };
 
   const handleDeleteClick = (appointment: Appointment) => {
+    const policy = getAppointmentManagementPolicy(appointment, { actorIsSuperAdmin });
+    if (!policy.canDelete) return;
     setSelectedAppointment(appointment);
     setIsDeleteDialogOpen(true);
   };
@@ -122,43 +130,54 @@ export function AppointmentTable({
           </thead>
 
           <tbody>
-            {appointments.map((appointment) => (
-              <tr key={appointment.id} className="border-t">
-                <td className="px-4 py-2 font-medium">
-                  {appointment.positionName || "N/A"}
-                </td>
+            {appointments.map((appointment) => {
+              const policy = getAppointmentManagementPolicy(appointment, { actorIsSuperAdmin });
+              return (
+                <tr key={appointment.id} className="border-t">
+                  <td className="px-4 py-2 font-medium">
+                    {appointment.positionName || "N/A"}
+                  </td>
 
-                <td className="px-4 py-2">{appointment.username || "Unknown"}</td>
+                  <td className="px-4 py-2">{appointment.username || "Unknown"}</td>
 
-                <td className="px-4 py-2">
-                  {new Date(appointment.startsAt).toLocaleDateString()}
-                </td>
+                  <td className="px-4 py-2">
+                    {new Date(appointment.startsAt).toLocaleDateString()}
+                  </td>
 
-                <td className="px-4 py-2 text-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onHandover(appointment)}
-                  >
-                    Handing Over
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditClick(appointment)}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteClick(appointment)}
-                  >
-                    Delete
-                  </Button>
-                </td>
-              </tr>
-            ))}
+                  <td className="px-4 py-2 text-center space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (policy.canHandover) onHandover(appointment);
+                      }}
+                      disabled={!policy.canHandover}
+                      title={policy.handoverReason ?? "Handing Over"}
+                    >
+                      Handing Over
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditClick(appointment)}
+                      disabled={!policy.canEdit}
+                      title={policy.editReason ?? "Edit"}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteClick(appointment)}
+                      disabled={!policy.canDelete}
+                      title={policy.deleteReason ?? "Delete"}
+                    >
+                      Delete
+                    </Button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </section>

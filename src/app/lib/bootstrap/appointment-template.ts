@@ -202,7 +202,6 @@ async function upsertAssignment(
 
   const userId = await resolveUserId(tx, assignment.username);
   if (!userId) {
-    ctx.warnings.push(`Skipped assignment for "${assignment.username}" because user does not exist.`);
     markSkipped(ctx.stats.assignments);
     return;
   }
@@ -245,7 +244,7 @@ async function upsertAssignment(
           : sql`${appointments.scopeId} IS NULL`,
         eq(appointments.assignment, "PRIMARY"),
         isNull(appointments.deletedAt),
-        sql`(${appointments.endsAt} IS NULL OR ${appointments.endsAt} >= ${ctx.now})`
+        sql`(${appointments.endsAt} IS NULL OR ${appointments.endsAt} > ${ctx.now})`
       )
     )
     .orderBy(asc(appointments.startsAt))
@@ -266,6 +265,18 @@ async function upsertAssignment(
       updatedAt: ctx.now,
     });
     markCreated(ctx.stats.assignments);
+    return;
+  }
+
+  if (existingSlot.userId !== userId) {
+    const scopeLabel =
+      assignment.scopeType === "PLATOON"
+        ? `PLATOON scope "${assignment.platoonKey ?? scopeId}"`
+        : "GLOBAL scope";
+    ctx.warnings.push(
+      `Skipped assignment for "${assignment.username}" because position "${normalizedPositionKey}" already has an active or scheduled holder for ${scopeLabel}.`
+    );
+    markSkipped(ctx.stats.assignments);
     return;
   }
 
@@ -331,4 +342,3 @@ export async function applyAppointmentTemplateProfile(
 
   return toResult(ctx, profile);
 }
-

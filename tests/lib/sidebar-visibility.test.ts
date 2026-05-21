@@ -30,10 +30,17 @@ describe("deriveSidebarRoleGroup", () => {
     expect(deriveSidebarRoleGroup({ roles: ["COMMANDANT"], position: null })).toBe("ADMIN");
   });
 
-  it("returns OTHER_USERS for non-admin roles", () => {
+  it("returns PLATOON_COMMANDER for platoon commander roles and appointments", () => {
     expect(
       deriveSidebarRoleGroup({ roles: ["PLATOON_COMMANDER"], position: "PLATOON_COMMANDER" })
-    ).toBe("OTHER_USERS");
+    ).toBe("PLATOON_COMMANDER");
+    expect(deriveSidebarRoleGroup({ roles: ["ARJUNPLCDR"], position: "PTN_CDR" })).toBe(
+      "PLATOON_COMMANDER"
+    );
+  });
+
+  it("returns OTHER_USERS for non-admin, non-platoon roles", () => {
+    expect(deriveSidebarRoleGroup({ roles: ["guest"], position: "HOAT" })).toBe("OTHER_USERS");
   });
 });
 
@@ -54,26 +61,43 @@ describe("sidebar visibility matrix", () => {
   }
 
   it("defines ADMIN sections in required order", () => {
-    expect(sectionKeysFor("ADMIN")).toEqual(["dashboard", "admin", "settings", "help"]);
+    expect(sectionKeysFor("ADMIN")).toEqual([
+      "dashboard",
+      "admin",
+      "settings",
+      "reports",
+      "help",
+    ]);
   });
 
   it("uses unrestricted mode for SUPER_ADMIN", () => {
     expect(sectionKeysFor("SUPER_ADMIN")).toBeNull();
   });
 
+  it("defines PLATOON_COMMANDER sections in required order", () => {
+    expect(sectionKeysFor("PLATOON_COMMANDER")).toEqual([
+      "dashboard",
+      "dossier",
+      "reports",
+      "help",
+    ]);
+  });
+
   it("defines OTHER_USERS sections in required order", () => {
     expect(sectionKeysFor("OTHER_USERS")).toEqual([
       "dashboard",
       "dossier",
-      "bulk_upload",
       "reports",
-      "settings",
+      "bulk_upload",
       "help",
     ]);
   });
 
   it("filters sections by role group and preserves matrix order", () => {
     const adminVisible = filterSidebarSectionsForRoleGroup(sections, "ADMIN").map(
+      (section) => section.key
+    );
+    const platoonVisible = filterSidebarSectionsForRoleGroup(sections, "PLATOON_COMMANDER").map(
       (section) => section.key
     );
     const superAdminVisible = filterSidebarSectionsForRoleGroup(sections, "SUPER_ADMIN").map(
@@ -83,7 +107,8 @@ describe("sidebar visibility matrix", () => {
       (section) => section.key
     );
 
-    expect(adminVisible).toEqual(["dashboard", "admin", "settings", "help"]);
+    expect(adminVisible).toEqual(["dashboard", "admin", "settings", "reports", "help"]);
+    expect(platoonVisible).toEqual(["dashboard", "dossier", "reports", "help"]);
     expect(superAdminVisible).toEqual([
       "dashboard",
       "admin",
@@ -97,9 +122,8 @@ describe("sidebar visibility matrix", () => {
     expect(otherVisible).toEqual([
       "dashboard",
       "dossier",
-      "bulk_upload",
       "reports",
-      "settings",
+      "bulk_upload",
       "help",
     ]);
   });
@@ -119,8 +143,13 @@ describe("sidebar visibility matrix", () => {
   it("answers section access checks using the same role-group matrix", () => {
     expect(hasSidebarSectionAccess("SUPER_ADMIN", "admin")).toBe(true);
     expect(hasSidebarSectionAccess("ADMIN", "admin")).toBe(true);
-    expect(hasSidebarSectionAccess("ADMIN", "reports")).toBe(false);
+    expect(hasSidebarSectionAccess("ADMIN", "reports")).toBe(true);
+    expect(hasSidebarSectionAccess("ADMIN", "bulk_upload")).toBe(false);
+    expect(hasSidebarSectionAccess("PLATOON_COMMANDER", "dossier")).toBe(true);
+    expect(hasSidebarSectionAccess("PLATOON_COMMANDER", "bulk_upload")).toBe(false);
+    expect(hasSidebarSectionAccess("OTHER_USERS", "dossier")).toBe(true);
     expect(hasSidebarSectionAccess("OTHER_USERS", "reports")).toBe(true);
+    expect(hasSidebarSectionAccess("OTHER_USERS", "bulk_upload")).toBe(true);
     expect(hasSidebarSectionAccess("OTHER_USERS", "admin")).toBe(false);
   });
 });
