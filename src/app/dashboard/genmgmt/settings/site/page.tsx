@@ -1282,6 +1282,11 @@ export default function AdminSiteSettingsPage() {
                     placeholder="Enter footer text"
                   />
                 </div>
+                <div className="rounded-md border bg-primary px-4 py-5 text-center text-primary-foreground">
+                  <p className="whitespace-pre-line break-words text-sm leading-relaxed text-shadow-md">
+                    {footerForm.trim() || "Footer preview"}
+                  </p>
+                </div>
                 <div className="flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={cancelFooterEditor}>
                     Cancel
