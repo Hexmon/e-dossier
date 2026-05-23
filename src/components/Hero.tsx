@@ -69,7 +69,7 @@ const Hero = ({
                   />
                 </div>
                 <h3 className="text-xl text-background font-semibold mb-1">{commanderName}</h3>
-                <p className="text-accent-foreground font-medium mb-2">
+                <p className="text-background font-medium mb-2">
                   {commanderRank}
                 </p>
                 {/* <p className="text-sm text-primary-foreground/80">
