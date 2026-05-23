@@ -84,21 +84,24 @@ export function useAdminSiteSettings(sort: "asc" | "desc") {
 
   const updateSettingsMutation = useMutation({
     mutationFn: siteSettingsAdminApi.updateSettings,
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      queryClient.setQueryData(SITE_SETTINGS_QUERY_KEYS.settings, data);
       await queryClient.invalidateQueries({ queryKey: SITE_SETTINGS_QUERY_KEYS.settings });
     },
   });
 
   const deleteLogoMutation = useMutation({
     mutationFn: siteSettingsAdminApi.deleteLogo,
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      queryClient.setQueryData(SITE_SETTINGS_QUERY_KEYS.settings, data);
       await queryClient.invalidateQueries({ queryKey: SITE_SETTINGS_QUERY_KEYS.settings });
     },
   });
 
   const deleteHeroBgMutation = useMutation({
     mutationFn: siteSettingsAdminApi.deleteHeroBg,
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      queryClient.setQueryData(SITE_SETTINGS_QUERY_KEYS.settings, data);
       await queryClient.invalidateQueries({ queryKey: SITE_SETTINGS_QUERY_KEYS.settings });
     },
   });

@@ -1,4 +1,7 @@
-import { getSiteSettingsOrDefault } from "@/app/db/queries/site-settings";
+import {
+  getSiteSettingsOrDefault,
+  withReadableSiteSettingsImageUrls,
+} from "@/app/db/queries/site-settings";
 import { handleApiError, json } from "@/app/lib/http";
 import { withAuditRoute, type AuditNextRequest } from "@/lib/audit";
 
@@ -10,7 +13,7 @@ const CACHE_HEADERS = {
 
 async function GETHandler(_req: AuditNextRequest) {
   try {
-    const settings = await getSiteSettingsOrDefault();
+    const settings = await withReadableSiteSettingsImageUrls(await getSiteSettingsOrDefault());
 
     return json.ok(
       {

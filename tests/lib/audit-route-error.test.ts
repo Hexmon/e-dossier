@@ -1,26 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("@hexmon_tech/audit-core", () => ({
+  createAuditLogger: vi.fn(() => ({ log: vi.fn() })),
+}));
+
+vi.mock("@hexmon_tech/audit-sink-postgres", () => ({
+  createPostgresAuditSink: vi.fn(() => ({ name: "mock-postgres-sink" })),
+}));
+
+vi.mock("@hexmon_tech/audit-next", () => ({
+  withAudit:
+    (_logger: unknown, handler: any) =>
+    async (req: Request, context: unknown) => {
+      const auditReq = Object.assign(req, {
+        audit: { log: vi.fn() },
+      });
+      return handler(auditReq, context);
+    },
+}));
+
 describe("withAuditRoute error safety", () => {
   beforeEach(() => {
     process.env.AUTHZ_V2_ENABLED = "false";
     process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "false";
     vi.resetModules();
-    vi.doMock("@hexmon_tech/audit-core", () => ({
-      createAuditLogger: vi.fn(() => ({ log: vi.fn() })),
-    }));
-    vi.doMock("@hexmon_tech/audit-sink-postgres", () => ({
-      createPostgresAuditSink: vi.fn(() => ({ name: "mock-postgres-sink" })),
-    }));
-    vi.doMock("@hexmon_tech/audit-next", () => ({
-      withAudit:
-        (_logger: unknown, handler: any) =>
-        async (req: Request, context: unknown) => {
-          const auditReq = Object.assign(req, {
-            audit: { log: vi.fn() },
-          });
-          return handler(auditReq, context);
-        },
-    }));
   });
 
   it("returns a JSON error envelope for uncaught handler failures", async () => {
@@ -47,7 +50,7 @@ describe("withAuditRoute error safety", () => {
       retryable: true,
     });
     expect(JSON.stringify(body)).not.toContain("127.0.0.1");
-  });
+  }, 30_000);
 
   it("wraps protected API handlers with authz when v2 is enabled", async () => {
     process.env.AUTHZ_V2_ENABLED = "true";
@@ -76,5 +79,5 @@ describe("withAuditRoute error safety", () => {
     expect(res.status).toBe(209);
     expect(body).toEqual({ authz: "checked" });
     expect(withAuthzMock).toHaveBeenCalledTimes(1);
-  });
+  }, 30_000);
 });

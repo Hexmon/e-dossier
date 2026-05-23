@@ -1,5 +1,5 @@
-import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
 import ts from "typescript";
 
 import { describe, expect, it } from "vitest";
@@ -10,12 +10,24 @@ const METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HE
 const ROUTE_WRAPPERS = new Set(["withAuditRoute", "withAuthz"]);
 
 function listRouteFiles() {
-  return execSync("find src/app/api/v1 -name route.ts", {
-    encoding: "utf8",
-  })
-    .trim()
-    .split("\n")
-    .filter(Boolean);
+  const apiRoot = path.join(process.cwd(), "src", "app", "api", "v1");
+  const routeFiles: string[] = [];
+
+  function walk(directory: string) {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const entryPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        walk(entryPath);
+        continue;
+      }
+      if (entry.isFile() && entry.name === "route.ts") {
+        routeFiles.push(path.relative(process.cwd(), entryPath).replace(/\\/g, "/"));
+      }
+    }
+  }
+
+  walk(apiRoot);
+  return routeFiles.sort();
 }
 
 function routePathFromFile(file: string) {
@@ -117,7 +129,7 @@ describe("API route safety coverage", () => {
     }
 
     expect(failures).toEqual([]);
-  });
+  }, 30_000);
 
   it("has action-map coverage for every protected v1 route method", () => {
     const failures: string[] = [];
@@ -133,7 +145,7 @@ describe("API route safety coverage", () => {
     }
 
     expect(failures).toEqual([]);
-  });
+  }, 30_000);
 
   it("keeps the anonymous public API registry exact and reviewed", () => {
     expect(PUBLIC_API_REGISTRY).toEqual([

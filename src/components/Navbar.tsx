@@ -6,7 +6,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { navItems } from "@/config/app.config";
-import Image from "next/image";
 import SafeImage from "@/components/site-settings/SafeImage";
 
 type NavbarProps = {
@@ -71,12 +70,13 @@ const Navbar = ({
               <Link href="/signup">Sign Up</Link>
             </Button>
 
-            <Image
-              src="/images/eme_logo.jpeg"
+            <SafeImage
+              src={logoUrl}
+              fallbackSrc="/images/eme_logo.jpeg"
               alt="MCEME Logo"
               width={50}
-              height={10}
-              className="object-contain"
+              height={50}
+              className="h-10 w-10 object-contain"
             />
           </div>
 

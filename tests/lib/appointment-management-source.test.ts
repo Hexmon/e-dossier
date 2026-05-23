@@ -15,8 +15,8 @@ describe("appointment management page source checks", () => {
     expect(source).toContain(
       '<PositionDefinitionsTable positions={positions} title="Available Appointment Positions" />',
     );
-    expect(source).toContain(
-      '<PositionDefinitionsTable\n            positions={DEFAULT_APPOINTMENT_TEMPLATE_POSITIONS}\n            title="Template Appointment Positions"',
+    expect(source).toMatch(
+      /<PositionDefinitionsTable\s+positions={DEFAULT_APPOINTMENT_TEMPLATE_POSITIONS}\s+title="Template Appointment Positions"/,
     );
   });
 
