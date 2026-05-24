@@ -63,7 +63,7 @@ describe("LandingFooter", () => {
     const footerText = container.querySelector("p");
     expect(footer?.getAttribute("data-footer-state")).toBe("pinned");
     expect(footer?.className).toContain("fixed");
-    expect(footer?.className).toContain("py-5");
+    expect(footer?.className).toContain("py-3");
     expect(footerText?.className).toContain("whitespace-pre-line");
     expect(footerText?.textContent).toBe("Landing footer text\nSecond line");
 
