@@ -1,7 +1,12 @@
 import { requireAdmin } from "@/app/lib/authz";
 import { handleApiError, json } from "@/app/lib/http";
 import { siteSettingsUpdateSchema } from "@/app/lib/validators.site-settings";
-import { getOrCreateSiteSettings, updateSiteSettings } from "@/app/db/queries/site-settings";
+import {
+  getOrCreateSiteSettings,
+  updateSiteSettings,
+  withReadableSiteSettingsImageUrls,
+} from "@/app/db/queries/site-settings";
+import { revalidatePath } from "next/cache";
 import {
   AuditEventType,
   AuditResourceType,
@@ -28,7 +33,10 @@ async function GETHandler(req: AuditNextRequest) {
       },
     });
 
-    return json.ok({ message: "Site settings retrieved successfully.", settings });
+    return json.ok({
+      message: "Site settings retrieved successfully.",
+      settings: await withReadableSiteSettingsImageUrls(settings),
+    });
   } catch (error) {
     return handleApiError(error);
   }
@@ -45,6 +53,7 @@ async function PUTHandler(req: AuditNextRequest) {
 
     const { before, after } = await updateSiteSettings(parsed.data, auth.userId);
     const { changedFields, diff } = computeDiff(before as any, after as any);
+    revalidatePath("/");
 
     await req.audit.log({
       action: AuditEventType.USER_UPDATED,
@@ -59,7 +68,10 @@ async function PUTHandler(req: AuditNextRequest) {
       },
     });
 
-    return json.ok({ message: "Site settings updated successfully.", settings: after });
+    return json.ok({
+      message: "Site settings updated successfully.",
+      settings: await withReadableSiteSettingsImageUrls(after),
+    });
   } catch (error) {
     return handleApiError(error);
   }

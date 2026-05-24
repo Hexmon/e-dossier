@@ -287,9 +287,22 @@ describe("admin appointments and positions access", () => {
     expect(body.data[0].reason).toBe("Initial assignment");
   });
 
-  it("denies unauthenticated GET /api/v1/admin/positions", async () => {
+  it("allows unauthenticated GET /api/v1/admin/positions for selector data", async () => {
     (requireAuth as any).mockRejectedValueOnce(
       new ApiError(401, "Unauthorized", "unauthorized")
+    );
+    selectMock.mockImplementationOnce(() =>
+      buildPositionsSelectResult([
+        {
+          id: "position-1",
+          key: "TRAINING_OFFICER",
+          displayName: "Training Officer",
+          defaultScope: "GLOBAL",
+          singleton: true,
+          description: null,
+          createdAt: "2026-04-04T00:00:00.000Z",
+        },
+      ])
     );
 
     const req = makeJsonRequest({
@@ -299,8 +312,9 @@ describe("admin appointments and positions access", () => {
     const res = await getPositionsRoute(req as any, createRouteContext());
     const body = await res.json();
 
-    expect(res.status).toBe(401);
-    expect(body.error).toBe("unauthorized");
+    expect(res.status).toBe(200);
+    expect(body.data[0].key).toBe("TRAINING_OFFICER");
+    expect(auditLogMock).not.toHaveBeenCalled();
   });
 
   it("allows admin GET /api/v1/admin/positions", async () => {

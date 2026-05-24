@@ -4,7 +4,7 @@ export const runtime = 'nodejs';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { users } from '@/app/db/schema/auth/users';
 import { credentialsLocal } from '@/app/db/schema/auth/credentials';
-import { json, handleApiError, ApiError } from '@/app/lib/http';
+import { json, handleApiError } from '@/app/lib/http';
 import { hasAdminRole, requireAdmin, requireAuth } from '@/app/lib/authz';
 import { userQuerySchema, userCreateSchema } from '@/app/lib/validators';
 import argon2 from 'argon2';
@@ -17,8 +17,9 @@ import { activeUserCreateRequiresPassword } from '@/app/lib/users/credential-pol
 
 type PgErr = { code?: string; detail?: string; cause?: { code?: string; detail?: string } };
 
-// GET /api/v1/admin/users (ADMIN)
-async function GETHandler(req: AuditNextRequest) {
+type UserReadMode = 'privileged' | 'public';
+
+async function getUserReadMode(req: AuditNextRequest): Promise<UserReadMode> {
     try {
         const authCtx = await requireAuth(req);
         const position =
@@ -29,25 +30,57 @@ async function GETHandler(req: AuditNextRequest) {
             typeof (authCtx.claims as any)?.apt?.scope?.type === 'string'
                 ? String((authCtx.claims as any).apt.scope.type)
                 : null;
-        if (
-            !hasAdminRole(authCtx.roles) &&
-            !isBroadScopedPlatoonCommander({ roles: authCtx.roles, position, scopeType })
-        ) {
-            throw new ApiError(403, 'Admin or platoon commander privileges required', 'forbidden');
-        }
 
+        return hasAdminRole(authCtx.roles) ||
+            isBroadScopedPlatoonCommander({ roles: authCtx.roles, position, scopeType })
+            ? 'privileged'
+            : 'public';
+    } catch {
+        return 'public';
+    }
+}
+
+function toPublicUser(row: Awaited<ReturnType<typeof listUsersWithActiveAppointments>>[number]) {
+    const activeAppointments = Array.isArray(row.activeAppointments) ? row.activeAppointments : [];
+
+    return {
+        id: row.id,
+        username: row.username,
+        name: row.name,
+        rank: row.rank,
+        isActive: row.isActive,
+        hasActiveAppointment: row.hasActiveAppointment,
+        activeAppointments: activeAppointments.map((appointment: any) => ({
+            id: appointment.id,
+            positionId: appointment.positionId,
+            positionKey: appointment.positionKey,
+            positionName: appointment.positionName,
+            scopeType: appointment.scopeType,
+            scopeId: appointment.scopeId,
+            startsAt: appointment.startsAt,
+        })),
+    };
+}
+
+// GET /api/v1/admin/users
+async function GETHandler(req: AuditNextRequest) {
+    try {
+        const readMode = await getUserReadMode(req);
         const { searchParams } = new URL(req.url);
         const qp = userQuerySchema.parse({
             q: searchParams.get('q') ?? undefined,
             isActive: searchParams.get('isActive') ?? undefined,
-            includeDeleted: searchParams.get('includeDeleted') ?? undefined,
+            includeDeleted: readMode === 'privileged'
+                ? searchParams.get('includeDeleted') ?? undefined
+                : 'false',
             scopeType: searchParams.get('scopeType') ?? undefined,
             limit: searchParams.get('limit') ?? undefined,
             offset: searchParams.get('offset') ?? undefined,
         });
 
         const rows = await listUsersWithActiveAppointments(qp as UserListQuery);
-        return json.ok({ message: 'Users retrieved successfully.', items: rows, count: rows.length });
+        const items = readMode === 'privileged' ? rows : rows.map(toPublicUser);
+        return json.ok({ message: 'Users retrieved successfully.', items, count: items.length });
     } catch (err) {
         return handleApiError(err);
     }

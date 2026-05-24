@@ -5,7 +5,7 @@ import path from 'node:path';
 const standalone = process.argv.includes('--standalone');
 const env = {
   ...process.env,
-  ...(standalone ? { NEXT_BUILD_STANDALONE: 'true' } : {}),
+  NEXT_BUILD_STANDALONE: standalone ? 'true' : 'false',
 };
 
 const nextDir = path.join(process.cwd(), '.next');

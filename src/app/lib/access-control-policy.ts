@@ -16,6 +16,11 @@ const PUBLIC_API_METHOD_RULES: Readonly<Record<string, readonly PathRule[]>> = {
     // Login needs active appointment identities before a user has a token.
     // The route handler forces anonymous callers into active-only public projection mode.
     { path: "/api/v1/admin/appointments", exact: true },
+    // Dossier inspection and appointment selectors need user/position lookups across roles.
+    // Route handlers return dropdown-safe public projections for non-privileged callers.
+    { path: "/api/v1/admin/positions", exact: true },
+    { path: "/api/v1/admin/users", exact: true },
+    { path: "/api/v1/platoons" },
     { path: "/api/v1/site-settings" },
     { path: "/api/v1/setup/status", exact: true },
   ],
@@ -36,8 +41,6 @@ const SHARED_AUTHENTICATED_ADMIN_METHOD_RULES: Readonly<Record<string, readonly 
     // current runtime. These read-only course lookups must stay reachable to authenticated
     // users even though they live under /api/v1/admin/*.
     { path: "/api/v1/admin/courses" },
-    { path: "/api/v1/admin/positions", exact: true },
-    { path: "/api/v1/admin/users", exact: true },
     // PL CDR flows read shared admin-owned configuration and template data from these modules.
     // Keep only GET shared; write methods remain admin-protected.
     { path: "/api/v1/admin/interview" },

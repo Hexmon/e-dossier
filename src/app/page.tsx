@@ -3,6 +3,7 @@ import Hero from "@/components/Hero";
 import GallantryAwards from "@/components/GallantryAwards";
 import PlatoonsSection from "@/components/PlatoonsSection";
 import EventsNews from "@/components/EventsNews";
+import LandingFooter from "@/components/LandingFooter";
 import SafeImage from "@/components/site-settings/SafeImage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users2 } from "lucide-react";
@@ -129,11 +130,7 @@ export default async function Home() {
         <EventsNews items={data.eventsNews} />
       </main>
 
-      <footer className="bg-primary text-primary-foreground py-8">
-        <section className="container mx-auto px-4 text-center">
-          <p className="text-sm">{data.footer}</p>
-        </section>
-      </footer>
+      <LandingFooter footer={data.footer} />
     </div>
   );
 }

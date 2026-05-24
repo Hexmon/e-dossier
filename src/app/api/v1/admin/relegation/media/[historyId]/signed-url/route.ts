@@ -1,4 +1,4 @@
-import { createPresignedGetUrl } from "@/app/lib/storage";
+import { createPresignedGetUrl, getObjectBytes, getObjectKeyFromPublicUrl } from "@/app/lib/storage";
 import { getRelegationMediaReference } from "@/app/db/queries/relegation";
 import { handleApiError, json } from "@/app/lib/http";
 import { getRelegationAccessContext } from "@/app/lib/relegation-auth";
@@ -29,9 +29,44 @@ async function GETHandler(req: AuditNextRequest, context: RouteContext) {
     }
 
     const media = await getRelegationMediaReference(parsed.data.historyId, access.scopePlatoonId);
+    const objectKey = media.pdfObjectKey ?? (media.pdfUrl ? getObjectKeyFromPublicUrl(media.pdfUrl) : null);
+    const inlineView = new URL(req.url).searchParams.get("inline") === "1";
 
-    const signedUrl = media.pdfObjectKey
-      ? await createPresignedGetUrl({ key: media.pdfObjectKey, expiresInSeconds: 900 })
+    if (inlineView) {
+      if (!objectKey) {
+        return json.notFound("No embeddable PDF media is attached to this history record.");
+      }
+
+      const object = await getObjectBytes(objectKey);
+
+      await req.audit.log({
+        action: AuditEventType.API_REQUEST,
+        outcome: "SUCCESS",
+        actor: { type: "user", id: access.userId },
+        target: { type: AuditResourceType.API, id: "admin:relegation:media:signed-url:read" },
+        metadata: {
+          description: "Relegation media PDF streamed for inline viewing.",
+          historyId: parsed.data.historyId,
+          hasObjectKey: true,
+        },
+      });
+
+      const body = new ArrayBuffer(object.bytes.byteLength);
+      new Uint8Array(body).set(object.bytes);
+
+      return new Response(body, {
+        status: 200,
+        headers: {
+          "Content-Type": object.contentType || "application/pdf",
+          "Content-Disposition": 'inline; filename="relegation-document.pdf"',
+          "Cache-Control": "private, max-age=300",
+          ...(object.contentLength != null ? { "Content-Length": String(object.contentLength) } : {}),
+        },
+      });
+    }
+
+    const signedUrl = objectKey
+      ? await createPresignedGetUrl({ key: objectKey, expiresInSeconds: 900 })
       : media.pdfUrl;
 
     await req.audit.log({
@@ -42,7 +77,7 @@ async function GETHandler(req: AuditNextRequest, context: RouteContext) {
       metadata: {
         description: "Relegation media signed URL generated.",
         historyId: parsed.data.historyId,
-        hasObjectKey: Boolean(media.pdfObjectKey),
+        hasObjectKey: Boolean(objectKey),
       },
     });
 
@@ -50,7 +85,7 @@ async function GETHandler(req: AuditNextRequest, context: RouteContext) {
       message: "Signed URL generated successfully.",
       historyId: media.historyId,
       signedUrl,
-      expiresInSeconds: media.pdfObjectKey ? 900 : null,
+      expiresInSeconds: objectKey ? 900 : null,
     });
   } catch (error) {
     return handleApiError(error);
