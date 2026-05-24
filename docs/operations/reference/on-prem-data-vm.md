@@ -37,7 +37,16 @@ Expose images through VM-1 (reverse proxy) instead of public MinIO:
 - Configure Nginx on VM-1 to proxy `/media/` to `http://<VM-2-IP>:9000`.
 - Set `MINIO_ENDPOINT=http://<VM-1-IP>/media` in the app so presigned upload URLs stay on the app origin.
 - Set `MINIO_PUBLIC_URL=http://<VM-1-IP>/media` in the app.
+- Set `MINIO_BROWSER_ORIGINS=http://<VM-1-IP>` in the app build/deployment env.
 - CDN can cache `https://your-domain/media/<bucket>/<key>`.
 
-## CSP Note
-If images are served from a different domain than the app, update `next.config.ts` CSP `img-src` to include that domain.
+## Direct MinIO Without VM-1 Proxy
+If VM-1 does not run a reverse proxy, browser uploads go directly to MinIO:
+- Set `MINIO_ENDPOINT=<VM-2-IP>`.
+- Set `MINIO_PORT=9000`.
+- Set `MINIO_PUBLIC_URL=http://<VM-2-IP>:9000`.
+- Set `MINIO_BROWSER_ORIGINS=http://<VM-2-IP>:9000`.
+- Configure MinIO CORS to allow the browser app origin, for example `http://<VM-1-IP>:3000`.
+- Ensure clients can reach `<VM-2-IP>:9000`; otherwise direct browser uploads cannot work.
+
+`MINIO_BROWSER_ORIGINS` is used by the production Content Security Policy for image display and browser PUT uploads. It must be present when building the deployed app bundle if CSP headers are generated during build.

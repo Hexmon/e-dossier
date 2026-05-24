@@ -66,4 +66,4 @@ oc/{ocId}/{kind}/<uuid>.<ext>
 ## Notes
 - `sessionalMarks`/`totalMarks` are not relevant here.
 - Images are size‑restricted to keep storage small and predictable.
-- If images are served from a different domain, update CSP `img-src` in `next.config.ts`.
+- If images are served or uploaded through a different browser origin, set `MINIO_BROWSER_ORIGINS` for the deployed build so CSP allows image display and browser PUT uploads.

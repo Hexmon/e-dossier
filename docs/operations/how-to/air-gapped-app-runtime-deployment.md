@@ -94,12 +94,13 @@ Set at least:
 - `NEXT_PUBLIC_API_BASE_URL=http://<VM1-IP>`
 - `MINIO_ENDPOINT=http://<VM1-IP>/media`
 - `MINIO_PUBLIC_URL=http://<VM1-IP>/media`
+- `MINIO_BROWSER_ORIGINS=http://<VM1-IP>`
 - `MINIO_ACCESS_KEY`
 - `MINIO_SECRET_KEY`
 - `CSRF_SECRET`
 - admin/superadmin credentials
 
-Using the VM1 `/media` proxy for both `MINIO_ENDPOINT` and `MINIO_PUBLIC_URL` keeps browser uploads and downloads on the same origin, which matches the production CSP.
+Using the VM1 `/media` proxy for both `MINIO_ENDPOINT` and `MINIO_PUBLIC_URL` keeps browser uploads and downloads on the app origin. If you deploy without a VM1 proxy, set `MINIO_ENDPOINT=<VM2-IP>`, `MINIO_PUBLIC_URL=http://<VM2-IP>:9000`, and `MINIO_BROWSER_ORIGINS=http://<VM2-IP>:9000`, then configure MinIO CORS for the browser app origin.
 
 ## Deploy On VM1
 
