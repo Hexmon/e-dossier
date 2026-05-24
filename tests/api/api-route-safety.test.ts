@@ -155,13 +155,23 @@ describe("API route safety coverage", () => {
       { method: "ANY", path: "/api/v1/health", exact: true },
       { method: "ANY", path: "/api/v1/bootstrap/super-admin", exact: true },
       { method: "GET", path: "/api/v1/admin/appointments", exact: true },
+      { method: "GET", path: "/api/v1/admin/positions", exact: true },
+      { method: "GET", path: "/api/v1/admin/users", exact: true },
+      { method: "GET", path: "/api/v1/platoons" },
       { method: "GET", path: "/api/v1/site-settings" },
       { method: "GET", path: "/api/v1/setup/status", exact: true },
     ]);
-    expect(isPublicApiPath("/api/v1/platoons", "GET")).toBe(false);
+    expect(isPublicApiPath("/api/v1/platoons", "GET")).toBe(true);
+    expect(isPublicApiPath("/api/v1/platoons/ARJUN", "GET")).toBe(true);
+    expect(isPublicApiPath("/api/v1/platoons/ARJUN/commander-history", "GET")).toBe(true);
+    expect(isPublicApiPath("/api/v1/platoons", "POST")).toBe(false);
     expect(isPublicApiPath("/api/v1/admin/appointments", "GET")).toBe(true);
     expect(isPublicApiPath("/api/v1/admin/appointments/appointment-1", "GET")).toBe(false);
     expect(isPublicApiPath("/api/v1/admin/appointments", "POST")).toBe(false);
+    expect(isPublicApiPath("/api/v1/admin/positions", "GET")).toBe(true);
+    expect(isPublicApiPath("/api/v1/admin/positions", "POST")).toBe(false);
+    expect(isPublicApiPath("/api/v1/admin/users", "GET")).toBe(true);
+    expect(isPublicApiPath("/api/v1/admin/users", "POST")).toBe(false);
     expect(isPublicApiPath("/api/v1/admin/users/check-username", "GET")).toBe(false);
     expect(isPublicApiPath("/api/v1/site-settings/awards", "GET")).toBe(true);
   });

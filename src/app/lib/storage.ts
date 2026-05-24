@@ -303,6 +303,32 @@ export function getPublicObjectUrl(objectKey: string) {
     return `${config.publicBaseUrl}/${config.bucket}/${objectKey}`;
 }
 
+export function getObjectKeyFromPublicUrl(publicUrl: string): string | null {
+    const config = getStorageConfig();
+    let parsed: URL;
+    try {
+        parsed = new URL(publicUrl);
+    } catch {
+        return null;
+    }
+
+    const path = decodeURIComponent(parsed.pathname).replace(/^\/+/, '');
+    const bucketPrefix = `${config.bucket}/`;
+    const bucketIndex = path.indexOf(bucketPrefix);
+    if (bucketIndex >= 0) {
+        const key = path.slice(bucketIndex + bucketPrefix.length);
+        return key || null;
+    }
+
+    const relegationIndex = path.toLowerCase().indexOf('relegation/');
+    if (relegationIndex >= 0) {
+        const key = path.slice(relegationIndex);
+        return key || null;
+    }
+
+    return null;
+}
+
 export async function createPresignedUploadUrl(params: {
     key: string;
     contentType: string;
@@ -351,6 +377,35 @@ export async function createPresignedGetUrl(params: {
         });
     } catch (error) {
         throw toStorageError(error, config, 'presign_get_object');
+    }
+}
+
+export async function getObjectBytes(key: string) {
+    const config = getStorageConfig();
+    const client = createStorageClient();
+    const command = new GetObjectCommand({
+        Bucket: config.bucket,
+        Key: key,
+    });
+    try {
+        const result = await client.send(command);
+        const body = result.Body;
+        if (!body || typeof body.transformToByteArray !== 'function') {
+            throw new StorageUnavailableError(STORAGE_UNAVAILABLE_MESSAGE, {
+                diagnostics: { operation: 'get_object', key },
+            });
+        }
+
+        return {
+            bytes: await body.transformToByteArray(),
+            contentType: result.ContentType,
+            contentLength: result.ContentLength,
+        };
+    } catch (error) {
+        if (error instanceof StorageUnavailableError) {
+            throw error;
+        }
+        throw toStorageError(error, config, 'get_object');
     }
 }
 

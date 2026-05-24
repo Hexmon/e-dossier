@@ -80,4 +80,31 @@ describe("withAuditRoute error safety", () => {
     expect(body).toEqual({ authz: "checked" });
     expect(withAuthzMock).toHaveBeenCalledTimes(1);
   }, 30_000);
+
+  it("does not wrap public platoon GET handlers with authz when v2 is enabled", async () => {
+    process.env.AUTHZ_V2_ENABLED = "true";
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "true";
+    const withAuthzMock = vi.fn((_handler: any) => async () => {
+      return new Response(JSON.stringify({ authz: "checked" }), { status: 209 });
+    });
+
+    vi.doMock("@/app/lib/acx/withAuthz", () => ({
+      isAuthzRouteHandler: vi.fn(() => false),
+      withAuthz: withAuthzMock,
+    }));
+
+    const { withAuditRoute } = await import("@/lib/audit");
+    const route = withAuditRoute("GET", async () => new Response(null, { status: 204 }));
+
+    const res = await route(
+      new Request("http://localhost/api/v1/platoons/ARJUN", {
+        method: "GET",
+        headers: { "x-request-id": "req-3" },
+      }) as any,
+      { params: Promise.resolve({}) }
+    );
+
+    expect(res.status).toBe(204);
+    expect(withAuthzMock).not.toHaveBeenCalled();
+  }, 30_000);
 });

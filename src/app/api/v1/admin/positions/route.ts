@@ -7,32 +7,24 @@ import { platoons } from '@/app/db/schema/auth/platoons';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
-import { hasAdminRole, requireAdmin, requireAuth } from '@/app/lib/authz';
+import { requireAdmin, requireAuth } from '@/app/lib/authz';
 import { isProtectedSystemPositionKeyValue } from '@/app/lib/admin-boundaries';
-import { isBroadScopedPlatoonCommander } from '@/lib/platoon-commander-access';
 import { applyDefaultPermissionsToPosition } from '@/app/db/queries/authz-permissions';
 
 export const runtime = 'nodejs';
 
-async function GETHandler(req: AuditNextRequest) {
+async function getPositionReadActor(req: AuditNextRequest) {
     try {
         const authCtx = await requireAuth(req);
-        const position =
-            typeof (authCtx.claims as any)?.apt?.position === 'string'
-                ? String((authCtx.claims as any).apt.position)
-                : null;
-        const scopeType =
-            typeof (authCtx.claims as any)?.apt?.scope?.type === 'string'
-                ? String((authCtx.claims as any).apt.scope.type)
-                : null;
-        if (
-            !hasAdminRole(authCtx.roles) &&
-            !isBroadScopedPlatoonCommander({ roles: authCtx.roles, position, scopeType })
-        ) {
-            throw new ApiError(403, 'Admin or platoon commander privileges required', 'forbidden');
-        }
+        return { type: 'user' as const, id: authCtx.userId };
+    } catch {
+        return null;
+    }
+}
 
-        const actor = { type: 'user' as const, id: authCtx.userId };
+async function GETHandler(req: AuditNextRequest) {
+    try {
+        const actor = await getPositionReadActor(req);
 
         const url = new URL(req.url);
         const includePlatoons =
@@ -53,17 +45,19 @@ async function GETHandler(req: AuditNextRequest) {
             .orderBy(asc(positions.key));
 
         if (!includePlatoons) {
-            await req.audit.log({
-                action: AuditEventType.API_REQUEST,
-                outcome: 'SUCCESS',
-                actor,
-                target: { type: AuditResourceType.POSITION, id: 'collection' },
-                metadata: {
-                    description: 'Positions retrieved successfully.',
-                    includePlatoons: false,
-                    count: posRows.length,
-                },
-            });
+            if (actor) {
+                await req.audit.log({
+                    action: AuditEventType.API_REQUEST,
+                    outcome: 'SUCCESS',
+                    actor,
+                    target: { type: AuditResourceType.POSITION, id: 'collection' },
+                    metadata: {
+                        description: 'Positions retrieved successfully.',
+                        includePlatoons: false,
+                        count: posRows.length,
+                    },
+                });
+            }
             return json.ok({ message: 'Positions retrieved successfully.', data: posRows });
         }
 
@@ -91,17 +85,19 @@ async function GETHandler(req: AuditNextRequest) {
             return p;
         });
 
-        await req.audit.log({
-            action: AuditEventType.API_REQUEST,
-            outcome: 'SUCCESS',
-            actor,
-            target: { type: AuditResourceType.POSITION, id: 'collection' },
-            metadata: {
-                description: 'Positions retrieved successfully.',
-                includePlatoons: true,
-                count: data.length,
-            },
-        });
+        if (actor) {
+            await req.audit.log({
+                action: AuditEventType.API_REQUEST,
+                outcome: 'SUCCESS',
+                actor,
+                target: { type: AuditResourceType.POSITION, id: 'collection' },
+                metadata: {
+                    description: 'Positions retrieved successfully.',
+                    includePlatoons: true,
+                    count: data.length,
+                },
+            });
+        }
 
         return json.ok({ message: 'Positions retrieved successfully.', data });
     } catch (err) {
