@@ -294,6 +294,10 @@ function buildExpectedSlots(mappings: ReturnType<typeof buildTemplateMappings>) 
     };
 }
 
+function hasAnyCompletedExpectedSlot<T>(slots: readonly T[], isSlotComplete: (slot: T) => boolean) {
+    return slots.length === 0 || slots.some(isSlotComplete);
+}
+
 function interviewSlotKey(params: {
     ocId: string;
     enrollmentId: string | null;
@@ -569,7 +573,7 @@ async function GETHandler(req: AuditNextRequest) {
         const items = ocRows.map((row) => {
             const enrollmentId = activeEnrollmentByOcId.get(row.id) ?? null;
 
-            const completeInitial = expected.initial.every((slot) => {
+            const isSlotComplete = (slot: ExpectedSlot) => {
                 if (!enrollmentId) return false;
                 const key = interviewSlotKey({
                     ocId: row.id,
@@ -579,19 +583,10 @@ async function GETHandler(req: AuditNextRequest) {
                 });
                 const latest = latestInterviewBySlot.get(key);
                 return !!latest && contentfulInterviewIds.has(latest.interviewId);
-            });
+            };
 
-            const completeTerms = expected.terms.every((slot) => {
-                if (!enrollmentId) return false;
-                const key = interviewSlotKey({
-                    ocId: row.id,
-                    enrollmentId,
-                    templateId: slot.templateId,
-                    semester: slot.semester,
-                });
-                const latest = latestInterviewBySlot.get(key);
-                return !!latest && contentfulInterviewIds.has(latest.interviewId);
-            });
+            const completeInitial = expected.initial.every(isSlotComplete);
+            const completeTerms = hasAnyCompletedExpectedSlot(expected.terms, isSlotComplete);
 
             const course = joinDistinctCourseDisplay(row.courseCode, row.courseTitle);
             const platoon = joinDistinctDisplayParts(row.platoonKey, row.platoonName);
