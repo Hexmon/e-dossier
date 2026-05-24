@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { relegationApi } from "@/app/lib/api/relegationApi";
 import {
@@ -16,14 +17,29 @@ type PdfViewerDialogProps = {
 };
 
 export default function PdfViewerDialog({ historyId, open, onOpenChange }: PdfViewerDialogProps) {
-  const signedUrlQuery = useQuery({
-    queryKey: ["relegation", "media", historyId],
+  const pdfQuery = useQuery({
+    queryKey: ["relegation", "media", "pdf", historyId],
     queryFn: async () => {
       if (!historyId) return null;
-      return relegationApi.getMediaSignedUrl(historyId);
+      return relegationApi.getMediaPdfBlob(historyId);
     },
     enabled: open && Boolean(historyId),
   });
+  const [viewerUrl, setViewerUrl] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (!pdfQuery.data) {
+      setViewerUrl(null);
+      return undefined;
+    }
+
+    const objectUrl = URL.createObjectURL(pdfQuery.data);
+    setViewerUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [pdfQuery.data]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -32,17 +48,17 @@ export default function PdfViewerDialog({ historyId, open, onOpenChange }: PdfVi
           <DialogTitle>Relegation Document</DialogTitle>
         </DialogHeader>
 
-        {signedUrlQuery.isLoading ? (
+        {pdfQuery.isLoading ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             Loading PDF...
           </div>
-        ) : signedUrlQuery.isError ? (
+        ) : pdfQuery.isError ? (
           <div className="flex h-full items-center justify-center text-sm text-destructive">
             Failed to load PDF.
           </div>
-        ) : signedUrlQuery.data?.signedUrl ? (
+        ) : viewerUrl ? (
           <iframe
-            src={signedUrlQuery.data.signedUrl}
+            src={viewerUrl}
             className="h-full w-full rounded-md border"
             title="Relegation PDF"
           />

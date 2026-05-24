@@ -1,7 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { isPublicApiPath } from '@/app/lib/access-control-policy';
 import { DEFAULT_REQUEST_BODY, importRouteModule, makeRouteRequest } from './api-route-flow';
 import { forceAuthFailure, resetCommonMocks } from './uncovered-route-mocks';
-import { readExportedMethods, type HttpMethod } from '../../scripts/lib/api-route-inventory';
+import { readExportedMethods, routePathFromFile, type HttpMethod } from '../../scripts/lib/api-route-inventory';
 
 type RouteMethodOverrides = Partial<Record<HttpMethod, string>>;
 type RouteBodyOverrides = Partial<Record<HttpMethod, Record<string, unknown>>>;
@@ -29,7 +30,7 @@ export type RouteFlowOverrides = Record<
 function isAuthFailureSkipped(routeFile: string, method: HttpMethod, overrides: RouteFlowOverrides) {
   const override = overrides[routeFile]?.skipAuthFailure;
   if (typeof override === 'boolean') return override;
-  return override?.[method] ?? false;
+  return override?.[method] ?? isPublicApiPath(routePathFromFile(routeFile), method);
 }
 
 function createInvocation(routeFile: string, method: HttpMethod, routeOverride?: RouteFlowOverrides[string]) {

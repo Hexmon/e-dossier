@@ -6,6 +6,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createRoot, type Root } from "react-dom/client";
 
 const mockUseRelegationHistory = vi.hoisted(() => vi.fn());
+const mockUseQuery = vi.hoisted(() => vi.fn());
+
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: (options: unknown) => mockUseQuery(options),
+}));
 
 vi.mock("@/app/lib/debounce", () => ({
   useDebouncedValue: <T,>(value: T) => value,
@@ -58,6 +63,28 @@ vi.mock("@/components/ui/select", async () => {
   };
 });
 
+vi.mock("@/components/ui/dialog", async () => {
+  const React = await import("react");
+
+  return {
+    Dialog: ({
+      children,
+      open,
+    }: {
+      children: React.ReactNode;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+    }) => (open ? React.createElement("div", { role: "dialog" }, children) : null),
+    DialogContent: ({ children }: { children: React.ReactNode }) =>
+      React.createElement("div", null, children),
+    DialogHeader: ({ children }: { children: React.ReactNode }) =>
+      React.createElement("div", null, children),
+    DialogTitle: ({ children }: { children: React.ReactNode }) =>
+      React.createElement("h2", null, children),
+  };
+});
+
+import PdfViewerDialog from "@/components/genmgmt/promotion-relegation/PdfViewerDialog";
 import PromotionRelegationCards from "@/components/genmgmt/promotion-relegation/PromotionRelegationCards";
 import RelegationHistoryTable from "@/components/genmgmt/promotion-relegation/RelegationHistoryTable";
 import RelegationManagementCard from "@/components/genmgmt/promotion-relegation/RelegationManagementCard";
@@ -78,6 +105,11 @@ describe("promotion/relegation history navigation", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseQuery.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+    });
     mockUseRelegationHistory.mockReturnValue({
       data: {
         items: [],
@@ -91,12 +123,15 @@ describe("promotion/relegation history navigation", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:relegation-pdf");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
   });
 
   afterEach(() => {
     act(() => {
       root.unmount();
     });
+    vi.restoreAllMocks();
     container.remove();
   });
 
@@ -200,6 +235,35 @@ describe("promotion/relegation history navigation", () => {
       offset: 25,
     });
     expect(container.textContent).toContain("Page 2 / 3");
+  });
+
+  it("embeds an authenticated PDF blob in the media dialog", () => {
+    mockUseQuery.mockReturnValue({
+      data: new Blob(["pdf"], { type: "application/pdf" }),
+      isLoading: false,
+      isError: false,
+    });
+
+    act(() => {
+      root.render(
+        <PdfViewerDialog
+          historyId="44444444-4444-4444-8444-444444444444"
+          open
+          onOpenChange={vi.fn()}
+        />
+      );
+    });
+
+    const iframe = container.querySelector("iframe");
+    expect(iframe?.getAttribute("src")).toBe("blob:relegation-pdf");
+    const queryOptions = mockUseQuery.mock.calls.at(-1)?.[0] as { enabled?: boolean; queryKey?: unknown[] };
+    expect(queryOptions.enabled).toBe(true);
+    expect(queryOptions.queryKey).toEqual([
+      "relegation",
+      "media",
+      "pdf",
+      "44444444-4444-4444-8444-444444444444",
+    ]);
   });
 });
 

@@ -293,6 +293,30 @@ export const relegationApi = {
       baseURL,
     }),
 
+  getMediaViewUrl: (historyId: string) =>
+    `${baseURL}${endpoints.admin.relegation.mediaSignedUrl(historyId)}?inline=1`,
+
+  getMediaPdfBlob: async (historyId: string) => {
+    const response = await fetch(relegationApi.getMediaViewUrl(historyId), {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        Accept: "application/pdf",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load PDF (${response.status})`);
+    }
+
+    const contentType = response.headers.get("Content-Type") ?? "";
+    if (!contentType.toLowerCase().includes("application/pdf")) {
+      throw new Error("The server did not return a PDF document.");
+    }
+
+    return response.blob();
+  },
+
   getEnrollments: (ocId: string) =>
     api.get<{ items: RelegationEnrollmentTimelineItem[]; count: number }>(
       endpoints.admin.relegation.enrollments(ocId),

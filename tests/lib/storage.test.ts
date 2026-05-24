@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   getStorageConfig,
+  getObjectKeyFromPublicUrl,
   normalizeStorageEndpoint,
   normalizeStoragePublicBaseUrl,
   StorageConfigError,
@@ -47,6 +48,20 @@ describe("storage config", () => {
   it("uses the endpoint as the public base URL when no public URL is set", () => {
     expect(normalizeStoragePublicBaseUrl("http://127.0.0.1:9000/", undefined)).toBe(
       "http://127.0.0.1:9000"
+    );
+  });
+
+  it("derives an object key from a stored public object URL", () => {
+    process.env = {
+      ...ORIGINAL_ENV,
+      MINIO_ENDPOINT: "127.0.0.1",
+      MINIO_ACCESS_KEY: "minioadmin",
+      MINIO_SECRET_KEY: "minioadmin",
+      MINIO_BUCKET: "edossier",
+    };
+
+    expect(getObjectKeyFromPublicUrl("http://127.0.0.1:9000/edossier/relegation/abc.pdf")).toBe(
+      "relegation/abc.pdf"
     );
   });
 

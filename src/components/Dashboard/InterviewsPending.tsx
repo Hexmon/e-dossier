@@ -65,7 +65,7 @@ export default function InterviewsPending() {
         }
 
         const pendingOnly = allRows
-          .filter((item) => !item.completeInitial || !item.completeTerms)
+          .filter((item) => !item.completeTerms)
           .map((item) => ({
             ocNo: item.ocNo,
             rankAndName: item.rankAndName,

@@ -8,6 +8,7 @@ import { POST as postPresign } from "@/app/api/v1/admin/relegation/presign/route
 import { POST as postPendingPdfCleanup } from "@/app/api/v1/admin/relegation/pending-pdf/cleanup/route";
 import { POST as postPromoteCourse } from "@/app/api/v1/admin/relegation/promote-course/route";
 import { POST as postTransfer } from "@/app/api/v1/admin/relegation/transfer/route";
+import { GET as getMediaSignedUrl } from "@/app/api/v1/admin/relegation/media/[historyId]/signed-url/route";
 
 import * as relegationQueries from "@/app/db/queries/relegation";
 import * as relegationAuth from "@/app/lib/relegation-auth";
@@ -43,6 +44,11 @@ vi.mock("@/app/db/queries/relegation", () => ({
     cleanupSummary: null,
   })),
   isRelegationPdfObjectCommitted: vi.fn(async () => false),
+  getRelegationMediaReference: vi.fn(async () => ({
+    historyId: "44444444-4444-4444-8444-444444444444",
+    pdfObjectKey: "relegation/abc.pdf",
+    pdfUrl: "https://public-url/relegation/abc.pdf",
+  })),
   promoteCourseBatch: vi.fn(async () => ({
     fromCourse: {
       courseId: "22222222-2222-4222-8222-222222222222",
@@ -79,6 +85,15 @@ vi.mock("@/app/lib/relegation-auth", () => ({
 
 vi.mock("@/app/lib/storage", () => ({
   createPresignedUploadUrl: vi.fn(async () => "https://upload-url"),
+  createPresignedGetUrl: vi.fn(async ({ key }: { key: string }) => `https://signed-url/${key}`),
+  getObjectKeyFromPublicUrl: vi.fn((url: string) =>
+    url.includes("/relegation/") ? "relegation/legacy.pdf" : null
+  ),
+  getObjectBytes: vi.fn(async () => ({
+    bytes: new Uint8Array([37, 80, 68, 70]),
+    contentType: "application/pdf",
+    contentLength: 4,
+  })),
   getPublicObjectUrl: vi.fn(() => "https://public-url"),
   deleteObject: vi.fn(async () => undefined),
 }));
@@ -89,6 +104,8 @@ const presignPath = "/api/v1/admin/relegation/presign";
 const pendingPdfCleanupPath = "/api/v1/admin/relegation/pending-pdf/cleanup";
 const promoteCoursePath = "/api/v1/admin/relegation/promote-course";
 const transferPath = "/api/v1/admin/relegation/transfer";
+const mediaSignedUrlPath =
+  "/api/v1/admin/relegation/media/44444444-4444-4444-8444-444444444444/signed-url";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -370,6 +387,63 @@ describe("Admin relegation APIs", () => {
     expect(res.status).toBe(409);
     expect(body.error).toBe("relegation_pdf_committed");
     expect(storage.deleteObject).not.toHaveBeenCalled();
+  });
+
+  it("GET /media/:historyId/signed-url returns a signed storage URL", async () => {
+    const req = makeJsonRequest({ method: "GET", path: mediaSignedUrlPath });
+    const res = await getMediaSignedUrl(
+      req as any,
+      createRouteContext({ historyId: "44444444-4444-4444-8444-444444444444" })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.signedUrl).toBe("https://signed-url/relegation/abc.pdf");
+    expect(body.expiresInSeconds).toBe(900);
+    expect(relegationQueries.getRelegationMediaReference).toHaveBeenCalledWith(
+      "44444444-4444-4444-8444-444444444444",
+      null
+    );
+    expect(storage.createPresignedGetUrl).toHaveBeenCalledWith({
+      key: "relegation/abc.pdf",
+      expiresInSeconds: 900,
+    });
+  });
+
+  it("GET /media/:historyId/signed-url?inline=1 streams the PDF through the app", async () => {
+    const req = makeJsonRequest({ method: "GET", path: `${mediaSignedUrlPath}?inline=1` });
+    const res = await getMediaSignedUrl(
+      req as any,
+      createRouteContext({ historyId: "44444444-4444-4444-8444-444444444444" })
+    );
+    const bytes = new Uint8Array(await res.arrayBuffer());
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("application/pdf");
+    expect(res.headers.get("Content-Disposition")).toBe('inline; filename="relegation-document.pdf"');
+    expect(Array.from(bytes)).toEqual([37, 80, 68, 70]);
+    expect(storage.getObjectBytes).toHaveBeenCalledWith("relegation/abc.pdf");
+    expect(storage.createPresignedGetUrl).not.toHaveBeenCalled();
+  });
+
+  it("GET /media/:historyId/signed-url?inline=1 streams legacy public URLs through storage", async () => {
+    vi.mocked(relegationQueries.getRelegationMediaReference).mockResolvedValueOnce({
+      historyId: "44444444-4444-4444-8444-444444444444",
+      pdfObjectKey: null,
+      pdfUrl: "https://public-url/edossier/relegation/legacy.pdf",
+    });
+
+    const req = makeJsonRequest({ method: "GET", path: `${mediaSignedUrlPath}?inline=1` });
+    const res = await getMediaSignedUrl(
+      req as any,
+      createRouteContext({ historyId: "44444444-4444-4444-8444-444444444444" })
+    );
+
+    expect(res.status).toBe(200);
+    expect(storage.getObjectKeyFromPublicUrl).toHaveBeenCalledWith(
+      "https://public-url/edossier/relegation/legacy.pdf"
+    );
+    expect(storage.getObjectBytes).toHaveBeenCalledWith("relegation/legacy.pdf");
   });
 
   it("POST /transfer validates payload", async () => {

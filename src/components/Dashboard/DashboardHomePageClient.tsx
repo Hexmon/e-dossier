@@ -68,7 +68,7 @@ function buildPendingCountsMarqueeData(items: InterviewPendingMarqueeRow[]): str
     if (!label) continue;
 
     const prev = pendingByPlatoon.get(label) ?? 0;
-    const next = !item.completeInitial || !item.completeTerms ? prev + 1 : prev;
+    const next = !item.completeTerms ? prev + 1 : prev;
     pendingByPlatoon.set(label, next);
   }
 

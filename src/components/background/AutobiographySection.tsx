@@ -354,8 +354,13 @@ export default function AutobiographySection({ ocId, cadet }: Props) {
             sign_pi,
         } = form;
 
+        if (!date?.trim()) {
+            toast.error("Please fill the date before saving autobiography.");
+            return;
+        }
+
         // Convert yyyy-MM-dd to ISO string for the backend
-        const filledOnISO = date ? new Date(date).toISOString() : "";
+        const filledOnISO = new Date(date).toISOString();
 
         const payload: AutoBioPayload = {
             generalSelf: general,

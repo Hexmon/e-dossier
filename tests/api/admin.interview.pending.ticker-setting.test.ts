@@ -1,12 +1,33 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { GET, POST } from "@/app/api/v1/admin/interview/pending/ticker-setting/route";
+import { GET as pendingInterviewsGET } from "@/app/api/v1/admin/interview/pending/route";
+import { GET as tickerSettingGET, POST } from "@/app/api/v1/admin/interview/pending/ticker-setting/route";
 import { makeJsonRequest, createRouteContext } from "../utils/next";
 import { ApiError } from "@/app/lib/http";
 import * as authz from "@/app/lib/authz";
+import { listOCsBasic } from "@/app/db/queries/oc";
 import * as tickerQueries from "@/app/db/queries/interview-pending-ticker-settings";
+
+const { dbSelectMock, getTemplateMatchForSemesterMock } = vi.hoisted(() => ({
+  dbSelectMock: vi.fn(),
+  getTemplateMatchForSemesterMock: vi.fn(),
+}));
+
+vi.mock("@/app/db/client", () => ({
+  db: {
+    select: dbSelectMock,
+  },
+}));
 
 vi.mock("@/app/lib/authz", () => ({
   requireAuth: vi.fn(),
+}));
+
+vi.mock("@/app/db/queries/oc", () => ({
+  listOCsBasic: vi.fn(),
+}));
+
+vi.mock("@/app/db/queries/interviewTemplates", () => ({
+  listInterviewTemplates: vi.fn(async () => []),
 }));
 
 vi.mock("@/app/db/queries/interview-pending-ticker-settings", () => ({
@@ -41,6 +62,64 @@ vi.mock("@/app/db/queries/interview-pending-ticker-settings", () => ({
   })),
 }));
 
+vi.mock("@/app/db/schema/training/oc", () => ({
+  ocCourseEnrollments: {
+    ocId: "ocId",
+    id: "id",
+    status: "status",
+  },
+}));
+
+vi.mock("@/app/db/schema/training/interviewOc", () => ({
+  ocInterviews: {
+    id: "id",
+    ocId: "ocId",
+    enrollmentId: "enrollmentId",
+    templateId: "templateId",
+    semester: "semester",
+    createdAt: "createdAt",
+    updatedAt: "updatedAt",
+  },
+  ocInterviewFieldValues: {
+    interviewId: "interviewId",
+    valueText: "valueText",
+    valueDate: "valueDate",
+    valueNumber: "valueNumber",
+    valueBool: "valueBool",
+    valueJson: "valueJson",
+  },
+  ocInterviewGroupRows: {
+    id: "id",
+    interviewId: "interviewId",
+  },
+  ocInterviewGroupValues: {
+    rowId: "rowId",
+    valueText: "valueText",
+    valueDate: "valueDate",
+    valueNumber: "valueNumber",
+    valueBool: "valueBool",
+    valueJson: "valueJson",
+  },
+}));
+
+vi.mock("@/app/db/schema/training/interviewTemplates", () => ({
+  interviewTemplateSections: {},
+  interviewTemplateGroups: {},
+  interviewTemplateFields: {},
+}));
+
+vi.mock("@/lib/interviewTemplateMatching", () => ({
+  buildTemplateMappings: vi.fn((templates: unknown) => templates),
+  getTemplateMatchForSemester: getTemplateMatchForSemesterMock,
+}));
+
+vi.mock("drizzle-orm", () => ({
+  and: vi.fn(),
+  eq: vi.fn(),
+  inArray: vi.fn(),
+  isNull: vi.fn(),
+}));
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(authz.requireAuth).mockResolvedValue({
@@ -58,6 +137,14 @@ beforeEach(() => {
   } as Awaited<ReturnType<typeof authz.requireAuth>>);
 });
 
+function queueSelectRows(rows: unknown[]) {
+  dbSelectMock.mockReturnValueOnce({
+    from: vi.fn(() => ({
+      where: vi.fn(async () => rows),
+    })),
+  });
+}
+
 describe("Admin interview pending ticker setting API", () => {
   const basePath = "/api/v1/admin/interview/pending/ticker-setting";
 
@@ -67,7 +154,7 @@ describe("Admin interview pending ticker setting API", () => {
     );
 
     const req = makeJsonRequest({ method: "GET", path: basePath });
-    const res = await GET(req as any, createRouteContext());
+    const res = await tickerSettingGET(req as any, createRouteContext());
     expect(res.status).toBe(401);
   });
 
@@ -77,7 +164,7 @@ describe("Admin interview pending ticker setting API", () => {
       path: `${basePath}?includeLogs=false`,
     });
 
-    const res = await GET(req as any, createRouteContext());
+    const res = await tickerSettingGET(req as any, createRouteContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -92,7 +179,7 @@ describe("Admin interview pending ticker setting API", () => {
       path: `${basePath}?includeLogs=true&limit=10&offset=0`,
     });
 
-    const res = await GET(req as any, createRouteContext());
+    const res = await tickerSettingGET(req as any, createRouteContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -123,7 +210,7 @@ describe("Admin interview pending ticker setting API", () => {
       path: `${basePath}?includeLogs=false`,
     });
 
-    const res = await GET(req as any, createRouteContext());
+    const res = await tickerSettingGET(req as any, createRouteContext());
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -197,6 +284,96 @@ describe("Admin interview pending ticker setting API", () => {
         days: 9,
       },
       "6ee0ee1f-dca4-4e91-90cc-d067f9a00e42"
+    );
+  });
+});
+
+describe("Admin interview pending API", () => {
+  beforeEach(() => {
+    getTemplateMatchForSemesterMock.mockImplementation((_mappings, kind: string, semester: number) => {
+      const termTemplateIds: Record<string, string> = {
+        beginning: "term-beginning-template",
+        postmid: "term-postmid-template",
+        special: "term-special-template",
+      };
+
+      if (semester !== 1 || !termTemplateIds[kind]) return null;
+      return {
+        template: {
+          id: termTemplateIds[kind],
+          semesters: [1],
+        },
+      };
+    });
+  });
+
+  it("marks terms complete when any terms sub-tab has content", async () => {
+    vi.mocked(listOCsBasic).mockResolvedValue([
+      {
+        id: "oc-pending",
+        ocNo: "101",
+        name: "Pending OC",
+        courseCode: "C1",
+        courseTitle: "Course 1",
+        platoonKey: "A",
+        platoonName: "Alpha",
+      },
+      {
+        id: "oc-complete",
+        ocNo: "102",
+        name: "Complete OC",
+        courseCode: "C1",
+        courseTitle: "Course 1",
+        platoonKey: "A",
+        platoonName: "Alpha",
+      },
+    ] as any);
+
+    queueSelectRows([
+      { ocId: "oc-pending", enrollmentId: "enrollment-pending" },
+      { ocId: "oc-complete", enrollmentId: "enrollment-complete" },
+    ]);
+    queueSelectRows([
+      {
+        id: "postmid-complete",
+        ocId: "oc-complete",
+        enrollmentId: "enrollment-complete",
+        templateId: "term-postmid-template",
+        semester: 1,
+        createdAt: new Date("2026-04-01T00:00:00.000Z"),
+        updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+      },
+    ]);
+    queueSelectRows([
+      {
+        interviewId: "postmid-complete",
+        valueText: "Filled",
+        valueDate: null,
+        valueNumber: null,
+        valueBool: null,
+        valueJson: null,
+      },
+    ]);
+    queueSelectRows([]);
+
+    const req = makeJsonRequest({
+      method: "GET",
+      path: "/api/v1/admin/interview/pending?active=true&sort=name_asc",
+    });
+    req.audit = { log: vi.fn(async () => undefined) };
+
+    const res = await (pendingInterviewsGET as any)(req);
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.items).toMatchObject([
+      { ocNo: "101", completeTerms: false },
+      { ocNo: "102", completeTerms: true },
+    ]);
+    expect(listOCsBasic).toHaveBeenCalledWith(
+      expect.objectContaining({
+        platoonId: "f008719d-531f-465f-a90c-47743cfe5031",
+      }),
     );
   });
 });
