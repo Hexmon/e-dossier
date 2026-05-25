@@ -126,19 +126,21 @@ function buildFormDataFromSources(
 }
 
 export function SSBReportForm({
-    ocId,
     report,
     savedFormData,
     onSave,
     onAutoSave,
     onClear,
+    hasUploadedPdf,
+    onViewUploadedPdf,
 }: {
-    ocId: string;
     report: SsbReport | null;
     savedFormData?: SSBFormData;
     onSave: (data: SSBFormData) => Promise<void>;
     onAutoSave?: (data: SSBFormData) => void;
     onClear?: () => void;
+    hasUploadedPdf?: boolean;
+    onViewUploadedPdf?: () => void;
 }) {
     const [isEditing, setIsEditing] = useState(false);
     const lastAutoSaveRef = useRef<string | null>(null);
@@ -397,12 +399,19 @@ export function SSBReportForm({
                 {/* BUTTONS */}
                 <div className="flex justify-center gap-3 mt-4">
                     {!isEditing ? (
-                        <Button
-                            type="button"
-                            onClick={() => setIsEditing(true)}
-                        >
-                            Edit & Add More
-                        </Button>
+                        <>
+                            <Button
+                                type="button"
+                                onClick={() => setIsEditing(true)}
+                            >
+                                Edit & Add More
+                            </Button>
+                            {hasUploadedPdf && onViewUploadedPdf ? (
+                                <Button type="button" variant="outline" onClick={onViewUploadedPdf}>
+                                    View Uploaded PDF
+                                </Button>
+                            ) : null}
+                        </>
                     ) : (
                         <>
                             <Button

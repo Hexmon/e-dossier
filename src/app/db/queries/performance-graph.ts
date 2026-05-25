@@ -1,9 +1,8 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/app/db/client";
 import {
   ocCourseEnrollments,
   ocDiscipline,
-  ocMedicalCategory,
   ocOlq,
   ocSemesterMarks,
 } from "@/app/db/schema/training/oc";
@@ -60,6 +59,107 @@ function averageSeriesByCourseCount(sumByTerm: number[], courseCadetCount: numbe
   return sumByTerm.map((sum) => round1(sum / Math.max(1, courseCadetCount)));
 }
 
+type MedicalCategoryGraphRow = {
+  enrollmentId: string | null;
+  ocId: string;
+  semester: number;
+  absence: string | null;
+  catFrom: Date | null;
+  catTo: Date | null;
+  mhFrom: Date | null;
+  mhTo: Date | null;
+};
+
+function isMissingEnrollmentColumnError(error: unknown) {
+  const cause = error && typeof error === "object" ? (error as { cause?: unknown }).cause : null;
+  const candidates = [error, cause];
+  return candidates.some((item) => {
+    if (!item || typeof item !== "object") return false;
+    const code = (item as { code?: unknown }).code;
+    const message = (item as { message?: unknown }).message;
+    return (
+      code === "42703" &&
+      typeof message === "string" &&
+      message.includes("enrollment_id")
+    );
+  });
+}
+
+async function listMedicalCategoryGraphRows(
+  courseEnrollments: Array<{ id: string; ocId: string }>,
+): Promise<MedicalCategoryGraphRow[]> {
+  const courseEnrollmentIds = Array.from(new Set(courseEnrollments.map((row) => row.id)));
+  const enrollmentIdByOcId = new Map(courseEnrollments.map((row) => [row.ocId, row.id]));
+  const courseOcIds = Array.from(enrollmentIdByOcId.keys());
+  if (!courseOcIds.length) return [];
+
+  const ocIdList = sql.join(courseOcIds.map((id) => sql`${id}::uuid`), sql`, `);
+  const enrollmentIdList = sql.join(courseEnrollmentIds.map((id) => sql`${id}::uuid`), sql`, `);
+
+  type MedicalCategorySqlRow = {
+    enrollmentId: string | null;
+    ocId: string;
+    semester: number;
+    absence: string | null;
+    catFrom: Date | null;
+    catTo: Date | null;
+    mhFrom: Date | null;
+    mhTo: Date | null;
+  };
+
+  let rows: MedicalCategorySqlRow[];
+  try {
+    const result = await db.execute<MedicalCategorySqlRow>(sql`
+      select
+        "enrollment_id" as "enrollmentId",
+        "oc_id" as "ocId",
+        "semester",
+        "absence",
+        "cat_from" as "catFrom",
+        "cat_to" as "catTo",
+        "mh_from" as "mhFrom",
+        "mh_to" as "mhTo"
+      from "oc_medical_category"
+      where (
+          "enrollment_id" in (${enrollmentIdList})
+          or "oc_id" in (${ocIdList})
+        )
+        and "deleted_at" is null
+    `);
+    rows = result.rows;
+  } catch (error) {
+    if (!isMissingEnrollmentColumnError(error)) {
+      throw error;
+    }
+
+    const result = await db.execute<Omit<MedicalCategorySqlRow, "enrollmentId">>(sql`
+      select
+        "oc_id" as "ocId",
+        "semester",
+        "absence",
+        "cat_from" as "catFrom",
+        "cat_to" as "catTo",
+        "mh_from" as "mhFrom",
+        "mh_to" as "mhTo"
+      from "oc_medical_category"
+      where "oc_id" in (${ocIdList})
+        and "deleted_at" is null
+    `);
+    rows = result.rows.map((row) => ({ ...row, enrollmentId: null }));
+  }
+
+  return rows.map((row) => ({
+    enrollmentId: row.enrollmentId ?? enrollmentIdByOcId.get(row.ocId) ?? null,
+    ocId: row.ocId,
+    semester: row.semester,
+    absence: row.absence,
+    catFrom: row.catFrom,
+    catTo: row.catTo,
+    mhFrom: row.mhFrom,
+    mhTo: row.mhTo,
+  }));
+}
+
 export async function getPerformanceGraphData(ocId: string): Promise<PerformanceGraphData> {
   const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
 
@@ -79,6 +179,14 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
   const enrollmentIdSet = new Set(activeCourseEnrollments.map((row) => row.id));
   enrollmentIdSet.add(activeEnrollment.id);
   const courseEnrollmentIds = Array.from(enrollmentIdSet);
+  const courseEnrollments = Array.from(
+    new Map(
+      [
+        ...activeCourseEnrollments,
+        { id: activeEnrollment.id, ocId: activeEnrollment.ocId },
+      ].map((row) => [row.id, row]),
+    ).values(),
+  );
 
   const courseCadetCount = Math.max(1, courseEnrollmentIds.length);
 
@@ -131,23 +239,7 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
       })
       .from(ocDiscipline)
       .where(inArray(ocDiscipline.enrollmentId, courseEnrollmentIds)),
-    db
-      .select({
-        enrollmentId: ocMedicalCategory.enrollmentId,
-        semester: ocMedicalCategory.semester,
-        absence: ocMedicalCategory.absence,
-        catFrom: ocMedicalCategory.catFrom,
-        catTo: ocMedicalCategory.catTo,
-        mhFrom: ocMedicalCategory.mhFrom,
-        mhTo: ocMedicalCategory.mhTo,
-      })
-      .from(ocMedicalCategory)
-      .where(
-        and(
-          inArray(ocMedicalCategory.enrollmentId, courseEnrollmentIds),
-          isNull(ocMedicalCategory.deletedAt),
-        ),
-      ),
+    listMedicalCategoryGraphRows(courseEnrollments),
   ]);
 
   const academicsCadet = createTermArray();
