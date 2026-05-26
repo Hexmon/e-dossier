@@ -35,7 +35,7 @@ describe("Hero", () => {
     const panel = title?.parentElement;
 
     expect(title?.textContent).toBe("MCEME");
-    expect(panel?.className).toContain("bg-primary/45");
+    expect(panel?.className).toContain("bg-primary/5");
     expect(panel?.className).toContain("backdrop-blur-xs");
     expect(panel?.className).toContain("border-primary-foreground/30");
     expect(panel?.className).toContain("rounded-lg");
