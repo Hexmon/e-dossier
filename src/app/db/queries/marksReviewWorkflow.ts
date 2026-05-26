@@ -8,7 +8,11 @@ import {
   marksWorkflowSettings,
   marksWorkflowTickets,
 } from '@/app/db/schema/training/marksReviewWorkflow';
-import type { MarksWorkflowModule } from '@/app/lib/marks-review-workflow';
+import {
+  buildPtWorkflowKey,
+  isMarksWorkflowModuleActive,
+  type MarksWorkflowModule,
+} from '@/app/lib/marks-review-workflow';
 
 type DbLike = typeof db | any;
 
@@ -72,6 +76,37 @@ export async function getWorkflowTicketRow(module: MarksWorkflowModule, workflow
     .where(and(eq(marksWorkflowTickets.module, module), eq(marksWorkflowTickets.workflowKey, workflowKey)))
     .limit(1);
   return row ?? null;
+}
+
+export async function listPublishedPtWorkflowSemesters(
+  courseId: string,
+  semesters: number[],
+  tx?: DbLike,
+) {
+  const uniqueSemesters = Array.from(new Set(semesters.filter((semester) => Number.isInteger(semester))));
+  if (!uniqueSemesters.length) return new Set<number>();
+
+  const settings = await getWorkflowSettingsRow('PT_BULK', tx);
+  if (!isMarksWorkflowModuleActive(settings)) {
+    return new Set(uniqueSemesters);
+  }
+
+  const workflowKeys = uniqueSemesters.map((semester) => buildPtWorkflowKey(courseId, semester));
+  const rows = await getExecutor(tx)
+    .select({
+      semester: marksWorkflowTickets.semester,
+    })
+    .from(marksWorkflowTickets)
+    .where(
+      and(
+        eq(marksWorkflowTickets.module, 'PT_BULK'),
+        eq(marksWorkflowTickets.courseId, courseId),
+        eq(marksWorkflowTickets.status, 'VERIFIED'),
+        inArray(marksWorkflowTickets.workflowKey, workflowKeys),
+      ),
+    );
+
+  return new Set(rows.map((row: { semester: number }) => row.semester));
 }
 
 export async function createWorkflowTicketRow(

@@ -22,7 +22,12 @@ export default function PerformanceGraphs({ data }: Props) {
         cadetTermPresence={data.academics.cadetTermPresence}
       />
       <OlqChart data={data.olq.cadet} averageData={data.olq.courseAverage} cadetTermPresence={data.olq.cadetTermPresence} />
-      <OdtChart data={data.odt.cadet} averageData={data.odt.courseAverage} cadetTermPresence={data.odt.cadetTermPresence} />
+      <OdtChart
+        data={data.odt.cadet}
+        averageData={data.odt.courseAverage}
+        cadetTermPresence={data.odt.cadetTermPresence}
+        maxMarks={data.odt.maxMarks}
+      />
       <DisciplineChart data={data.discipline.cadet} averageData={data.discipline.courseAverage} cadetTermPresence={data.discipline.cadetTermPresence} />
       <MedGraph data={data.medical.cadet} averageData={data.medical.courseAverage} cadetTermPresence={data.medical.cadetTermPresence} />
     </div>

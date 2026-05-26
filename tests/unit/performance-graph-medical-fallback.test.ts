@@ -18,11 +18,16 @@ vi.mock("@/app/db/queries/oc-enrollments", () => ({
 }));
 
 vi.mock("@/app/db/queries/physicalTraining", () => ({
-  getPtTemplateBySemester: vi.fn(),
+  getPtTemplateByCourseSemester: vi.fn(),
+}));
+
+vi.mock("@/app/db/queries/marksReviewWorkflow", () => ({
+  listPublishedPtWorkflowSemesters: vi.fn(),
 }));
 
 import { getOrCreateActiveEnrollment } from "@/app/db/queries/oc-enrollments";
-import { getPtTemplateBySemester } from "@/app/db/queries/physicalTraining";
+import { getPtTemplateByCourseSemester } from "@/app/db/queries/physicalTraining";
+import { listPublishedPtWorkflowSemesters } from "@/app/db/queries/marksReviewWorkflow";
 import { getPerformanceGraphData } from "@/app/db/queries/performance-graph";
 
 const activeEnrollment = {
@@ -61,10 +66,13 @@ beforeEach(() => {
     return makeSelectChain(item);
   });
   vi.mocked(getOrCreateActiveEnrollment).mockResolvedValue(activeEnrollment as any);
-  vi.mocked(getPtTemplateBySemester).mockResolvedValue({
+  vi.mocked(getPtTemplateByCourseSemester).mockImplementation(async (_courseId, semester) => ({
+    courseId: activeEnrollment.courseId,
+    semester,
     types: [],
     motivationFields: [],
-  } as any);
+  } as any));
+  vi.mocked(listPublishedPtWorkflowSemesters).mockResolvedValue(new Set([1, 2, 3, 4, 5, 6]));
 });
 
 describe("performance graph medical data fallback", () => {

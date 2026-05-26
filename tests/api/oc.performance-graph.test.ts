@@ -34,7 +34,12 @@ const ocId = "11111111-1111-4111-8111-111111111111";
 const graphData = {
   academics: { cadet: [0, 0, 0, 0, 0, 0], courseAverage: [0, 0, 0, 0, 0, 0], cadetTermPresence: [false, false, false, false, false, false] },
   olq: { cadet: [0, 0, 0, 0, 0, 0], courseAverage: [0, 0, 0, 0, 0, 0], cadetTermPresence: [false, false, false, false, false, false] },
-  odt: { cadet: [0, 0, 0, 0, 0, 0], courseAverage: [0, 0, 0, 0, 0, 0], cadetTermPresence: [false, false, false, false, false, false] },
+  odt: {
+    cadet: [0, 0, 0, 0, 0, 0],
+    courseAverage: [0, 0, 0, 0, 0, 0],
+    cadetTermPresence: [false, false, false, false, false, false],
+    maxMarks: [0, 0, 0, 0, 0, 0],
+  },
   discipline: { cadet: [0, 0, 0, 0, 0, 0], courseAverage: [0, 0, 0, 0, 0, 0], cadetTermPresence: [false, false, false, false, false, false] },
   medical: { cadet: [4, 0, 0, 0, 0, 0], courseAverage: [3, 0, 0, 0, 0, 0], cadetTermPresence: [true, false, false, false, false, false] },
 };
