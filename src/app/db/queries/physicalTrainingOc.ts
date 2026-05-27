@@ -11,6 +11,7 @@ import {
 import { ocPtTaskScores, ocPtMotivationAwards } from '@/app/db/schema/training/physicalTrainingOc';
 import { ocCourseEnrollments } from '@/app/db/schema/training/oc';
 import { getOrCreateActiveEnrollment } from '@/app/db/queries/oc-enrollments';
+import { listPublishedPtWorkflowSemesters } from '@/app/db/queries/marksReviewWorkflow';
 
 // Template score details for validation -------------------------------------
 export async function listTemplateScoresByIds(ids: string[]) {
@@ -57,6 +58,9 @@ export async function listMotivationFieldsByIds(ids: string[]) {
 // OC PT scores ---------------------------------------------------------------
 export async function listOcPtScores(ocId: string, semester: number) {
     const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
+    const publishedSemesters = await listPublishedPtWorkflowSemesters(activeEnrollment.courseId, [semester]);
+    if (!publishedSemesters.has(semester)) return [];
+
     return db
         .select({
             id: ocPtTaskScores.id,

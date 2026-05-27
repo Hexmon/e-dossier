@@ -44,6 +44,11 @@ export const endpoints = {
                 verify: "/api/v1/admin/reports/verification/verify",
             },
         },
+        ssbUpload: {
+            list: "/api/v1/admin/ssb-upload",
+            upload: (ocId: string) => `/api/v1/admin/ssb-upload/${ocId}`,
+            view: (ocId: string) => `/api/v1/admin/ssb-upload/${ocId}/view`,
+        },
 
         users: "/api/v1/admin/users",
         subjects: "/api/v1/admin/subjects",

@@ -344,8 +344,23 @@ export const ocSsbReports = pgTable('oc_ssb_reports', {
     ocId: uuid('oc_id').notNull().references(() => ocCadets.id, { onDelete: 'restrict' }),
     overallPredictiveRating: integer('overall_predictive_rating'),
     scopeOfImprovement: text('scope_of_improvement'),
+    ssbPdfObjectKey: varchar('ssb_pdf_object_key', { length: 512 }),
+    ssbPdfFileName: varchar('ssb_pdf_file_name', { length: 255 }),
+    ssbPdfContentType: varchar('ssb_pdf_content_type', { length: 128 }),
+    ssbPdfSizeBytes: integer('ssb_pdf_size_bytes'),
+    ssbPdfPasswordHash: text('ssb_pdf_password_hash'),
+    ssbPdfPasswordAlgo: varchar('ssb_pdf_password_algo', { length: 32 }),
+    ssbPdfSalt: varchar('ssb_pdf_salt', { length: 64 }),
+    ssbPdfIv: varchar('ssb_pdf_iv', { length: 32 }),
+    ssbPdfAuthTag: varchar('ssb_pdf_auth_tag', { length: 32 }),
+    ssbPdfUploadedAt: timestamp('ssb_pdf_uploaded_at', { withTimezone: true }),
+    ssbPdfUploadedByUserId: uuid('ssb_pdf_uploaded_by_user_id').references(() => users.id, { onDelete: 'set null' }),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
-});
+}, (t) => ({
+    idxSsbPdfOc: index('idx_oc_ssb_reports_pdf_oc')
+        .on(t.ocId)
+        .where(sql`${t.deletedAt} is null and ${t.ssbPdfObjectKey} is not null`),
+}));
 
 export const ocSsbPoints = pgTable('oc_ssb_points', {
     id: uuid('id').primaryKey().defaultRandom(),

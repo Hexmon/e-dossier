@@ -409,6 +409,26 @@ export async function getObjectBytes(key: string) {
     }
 }
 
+export async function putObjectBytes(params: {
+    key: string;
+    body: Buffer | Uint8Array;
+    contentType: string;
+}) {
+    const config = getStorageConfig();
+    const client = createStorageClient();
+    try {
+        await ensureBucketExists(client, config);
+        await client.send(new PutObjectCommand({
+            Bucket: config.bucket,
+            Key: params.key,
+            Body: params.body,
+            ContentType: params.contentType,
+        }));
+    } catch (error) {
+        throw toStorageError(error, config, 'put_object');
+    }
+}
+
 export async function deleteObject(key: string) {
     const config = getStorageConfig();
     const client = createStorageClient();

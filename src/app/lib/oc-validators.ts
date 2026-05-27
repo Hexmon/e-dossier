@@ -479,7 +479,7 @@ export const ocImageKindSchema = z.enum(['CIVIL_DRESS', 'UNIFORM']);
 export const ocImagePresignSchema = z.object({
     kind: ocImageKindSchema,
     contentType: z.enum(['image/jpeg', 'image/png', 'image/webp']),
-    sizeBytes: z.coerce.number().int().min(20 * 1024).max(200 * 1024),
+    sizeBytes: z.coerce.number().int().nonnegative().max(200 * 1024),
 });
 
 export const ocImageCompleteSchema = z.object({

@@ -224,7 +224,7 @@ async function uploadImage(ocId: string, file: File, kind: 'CIVIL_DRESS' | 'UNIF
   const contentType = head.ContentType || '';
   const etag = (head.ETag || '').replace(/"/g, '') || null;
 
-  if (sizeBytes < 20 * 1024 || sizeBytes > 200 * 1024) {
+  if (sizeBytes > 200 * 1024) {
     throw new ApiError(400, 'Image size out of allowed range.', 'bad_request');
   }
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(contentType)) {

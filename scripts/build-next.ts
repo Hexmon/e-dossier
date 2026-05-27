@@ -3,13 +3,10 @@ import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
 const standalone = process.argv.includes('--standalone');
-const env = {
-  ...process.env,
-  NEXT_BUILD_STANDALONE: standalone ? 'true' : 'false',
-};
 
-const nextDir = path.join(process.cwd(), '.next');
-const staleBuildArtifacts = [
+export const STALE_BUILD_ARTIFACTS = [
+  'cache',
+  'diagnostics',
   'server',
   'static',
   'types',
@@ -23,20 +20,35 @@ const staleBuildArtifacts = [
   'trace',
 ];
 
-for (const artifact of staleBuildArtifacts) {
-  const target = path.join(nextDir, artifact);
-  if (!existsSync(target)) continue;
-  rmSync(target, { force: true, recursive: true });
+export function cleanStaleBuildArtifacts(nextDir = path.join(process.cwd(), '.next')) {
+  for (const artifact of STALE_BUILD_ARTIFACTS) {
+    const target = path.join(nextDir, artifact);
+    if (!existsSync(target)) continue;
+    rmSync(target, { force: true, recursive: true });
+  }
 }
 
-const nextBin = require.resolve('next/dist/bin/next');
-const result = spawnSync(process.execPath, [nextBin, 'build'], {
-  stdio: 'inherit',
-  env,
-});
+export function runNextBuild() {
+  const env = {
+    ...process.env,
+    NEXT_BUILD_STANDALONE: standalone ? 'true' : 'false',
+  };
 
-if (result.error) {
-  throw result.error;
+  cleanStaleBuildArtifacts();
+
+  const nextBin = require.resolve('next/dist/bin/next');
+  const result = spawnSync(process.execPath, [nextBin, 'build'], {
+    stdio: 'inherit',
+    env,
+  });
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  return result.status ?? 1;
 }
 
-process.exit(result.status ?? 1);
+if (require.main === module) {
+  process.exit(runNextBuild());
+}

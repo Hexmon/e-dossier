@@ -69,6 +69,33 @@ export async function getAllCourses(
     });
 }
 
+export async function getAllCoursesPaged(
+    params: Omit<GetCoursesParams, "limit" | "offset"> = {}
+): Promise<GetCoursesResponse> {
+    const limit = 200;
+    let offset = 0;
+    const items: CourseResponse[] = [];
+    let total = 0;
+
+    while (true) {
+        const page = await getAllCourses({ ...params, limit, offset });
+        const pageItems = page.items ?? [];
+        items.push(...pageItems);
+        total = page.total ?? items.length;
+        offset += pageItems.length;
+
+        if (pageItems.length === 0 || pageItems.length < limit || offset >= total) break;
+    }
+
+    return {
+        items,
+        count: items.length,
+        total,
+        limit,
+        offset: 0,
+    };
+}
+
 /**
  * Search courses by query string
  * GET /api/v1/courses?includeDeleted=false&q=SEARCH

@@ -18,11 +18,20 @@ import { saveSsbForm, clearSsbForm } from "@/store/slices/ssbReportSlice";
 import { fetchOCById } from "@/app/lib/api/ocApi";
 import { fetchCourseById } from "@/app/lib/api/courseApi";
 import type { Cadet } from "@/types/cadet";
+import { getSsbUploadForOc, openSsbPdf } from "@/app/lib/api/ssbUploadApi";
+import { PasswordField } from "@/components/reports/common/PasswordField";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 export default function SsbReportsPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
     const [cadet, setCadet] = useState<Cadet | null>(null);
+    const [hasUploadedPdf, setHasUploadedPdf] = useState(false);
+    const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+    const [pdfPassword, setPdfPassword] = useState("");
+    const [openingPdf, setOpeningPdf] = useState(false);
 
     const dispatch = useDispatch();
     const savedFormData = useSelector((state: RootState) =>
@@ -34,6 +43,13 @@ export default function SsbReportsPage() {
     useEffect(() => {
         fetch();
     }, [ocId, fetch]);
+
+    useEffect(() => {
+        if (!ocId) return;
+        getSsbUploadForOc(ocId)
+            .then((res) => setHasUploadedPdf(Boolean(res.item?.hasUpload)))
+            .catch(() => setHasUploadedPdf(false));
+    }, [ocId]);
 
     useEffect(() => {
         let cancelled = false;
@@ -131,6 +147,20 @@ export default function SsbReportsPage() {
         dispatch(saveSsbForm({ ocId, data: snapshot }));
     }, [dispatch, ocId]);
 
+    const handleOpenUploadedPdf = async () => {
+        if (!pdfPassword.trim()) return;
+        setOpeningPdf(true);
+        try {
+            await openSsbPdf(ocId, pdfPassword);
+            setPdfDialogOpen(false);
+            setPdfPassword("");
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Unable to open SSB PDF");
+        } finally {
+            setOpeningPdf(false);
+        }
+    };
+
     return (
         <DashboardLayout
             title="SSB Report"
@@ -159,15 +189,38 @@ export default function SsbReportsPage() {
 
                 <div className="mt-6 max-w-5xl mx-auto">
                     <SSBReportForm
-                        ocId={ocId}
                         report={report}
                         savedFormData={savedFormData}
                         onSave={handleSave}
                         onAutoSave={handleAutoSave}
                         onClear={handleClearForm}
+                        hasUploadedPdf={hasUploadedPdf}
+                        onViewUploadedPdf={() => setPdfDialogOpen(true)}
                     />
                 </div>
             </div>
+
+            <Dialog open={pdfDialogOpen} onOpenChange={(open) => {
+                setPdfDialogOpen(open);
+                if (!open) setPdfPassword("");
+            }}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Open Uploaded SSB PDF</DialogTitle>
+                        <DialogDescription>Enter the upload password to view this OC's SSB PDF.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                        <Label>Password</Label>
+                        <PasswordField value={pdfPassword} onChange={setPdfPassword} />
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => setPdfDialogOpen(false)}>Cancel</Button>
+                        <Button type="button" disabled={!pdfPassword.trim() || openingPdf} onClick={handleOpenUploadedPdf}>
+                            {openingPdf ? "Opening..." : "Open PDF"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </DashboardLayout>
     );
 }

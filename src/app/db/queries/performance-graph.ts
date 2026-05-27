@@ -1,16 +1,16 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/app/db/client";
 import {
   ocCourseEnrollments,
   ocDiscipline,
-  ocMedicalCategory,
   ocOlq,
   ocSemesterMarks,
 } from "@/app/db/schema/training/oc";
 import { ptTaskScores } from "@/app/db/schema/training/physicalTraining";
 import { ocPtTaskScores } from "@/app/db/schema/training/physicalTrainingOc";
 import { getOrCreateActiveEnrollment } from "@/app/db/queries/oc-enrollments";
-import { getPtTemplateBySemester } from "@/app/db/queries/physicalTraining";
+import { listPublishedPtWorkflowSemesters } from "@/app/db/queries/marksReviewWorkflow";
+import { getPtTemplateByCourseSemester } from "@/app/db/queries/physicalTraining";
 import type {
   PerformanceGraphData,
 } from "@/types/performanceGraph";
@@ -60,6 +60,141 @@ function averageSeriesByCourseCount(sumByTerm: number[], courseCadetCount: numbe
   return sumByTerm.map((sum) => round1(sum / Math.max(1, courseCadetCount)));
 }
 
+type PtTemplate = Awaited<ReturnType<typeof getPtTemplateByCourseSemester>>;
+type PtTemplateType = PtTemplate["types"][number];
+type PtTemplateTask = PtTemplateType["tasks"][number];
+
+function sumTaskMaxMarks(tasks: PtTemplateTask[]) {
+  return tasks.reduce((sum, task) => sum + toFiniteNumber(task.maxMarks), 0);
+}
+
+function resolvePtTypeMaxMarks(type: PtTemplateType) {
+  const configuredMax = toFiniteNumber(type.maxTotalMarks);
+  return configuredMax > 0 ? configuredMax : sumTaskMaxMarks(type.tasks ?? []);
+}
+
+function addNestedSum(
+  sums: Map<string, Map<string, number>>,
+  enrollmentSemesterKey: string,
+  typeKey: string,
+  value: number,
+) {
+  const typeSums = sums.get(enrollmentSemesterKey) ?? new Map<string, number>();
+  typeSums.set(typeKey, (typeSums.get(typeKey) ?? 0) + value);
+  sums.set(enrollmentSemesterKey, typeSums);
+}
+
+function sumCappedPtTypeTotals(typeSums: Map<string, number>, typeMaxByKey: Map<string, number>) {
+  let total = 0;
+  for (const [typeKey, rawValue] of typeSums.entries()) {
+    const value = toFiniteNumber(rawValue);
+    const typeMax = toFiniteNumber(typeMaxByKey.get(typeKey));
+    total += typeMax > 0 ? Math.min(value, typeMax) : value;
+  }
+  return total;
+}
+
+type MedicalCategoryGraphRow = {
+  enrollmentId: string | null;
+  ocId: string;
+  semester: number;
+  absence: string | null;
+  catFrom: Date | null;
+  catTo: Date | null;
+  mhFrom: Date | null;
+  mhTo: Date | null;
+};
+
+function isMissingEnrollmentColumnError(error: unknown) {
+  const cause = error && typeof error === "object" ? (error as { cause?: unknown }).cause : null;
+  const candidates = [error, cause];
+  return candidates.some((item) => {
+    if (!item || typeof item !== "object") return false;
+    const code = (item as { code?: unknown }).code;
+    const message = (item as { message?: unknown }).message;
+    return (
+      code === "42703" &&
+      typeof message === "string" &&
+      message.includes("enrollment_id")
+    );
+  });
+}
+
+async function listMedicalCategoryGraphRows(
+  courseEnrollments: Array<{ id: string; ocId: string }>,
+): Promise<MedicalCategoryGraphRow[]> {
+  const courseEnrollmentIds = Array.from(new Set(courseEnrollments.map((row) => row.id)));
+  const enrollmentIdByOcId = new Map(courseEnrollments.map((row) => [row.ocId, row.id]));
+  const courseOcIds = Array.from(enrollmentIdByOcId.keys());
+  if (!courseOcIds.length) return [];
+
+  const ocIdList = sql.join(courseOcIds.map((id) => sql`${id}::uuid`), sql`, `);
+  const enrollmentIdList = sql.join(courseEnrollmentIds.map((id) => sql`${id}::uuid`), sql`, `);
+
+  type MedicalCategorySqlRow = {
+    enrollmentId: string | null;
+    ocId: string;
+    semester: number;
+    absence: string | null;
+    catFrom: Date | null;
+    catTo: Date | null;
+    mhFrom: Date | null;
+    mhTo: Date | null;
+  };
+
+  let rows: MedicalCategorySqlRow[];
+  try {
+    const result = await db.execute<MedicalCategorySqlRow>(sql`
+      select
+        "enrollment_id" as "enrollmentId",
+        "oc_id" as "ocId",
+        "semester",
+        "absence",
+        "cat_from" as "catFrom",
+        "cat_to" as "catTo",
+        "mh_from" as "mhFrom",
+        "mh_to" as "mhTo"
+      from "oc_medical_category"
+      where (
+          "enrollment_id" in (${enrollmentIdList})
+          or "oc_id" in (${ocIdList})
+        )
+        and "deleted_at" is null
+    `);
+    rows = result.rows;
+  } catch (error) {
+    if (!isMissingEnrollmentColumnError(error)) {
+      throw error;
+    }
+
+    const result = await db.execute<Omit<MedicalCategorySqlRow, "enrollmentId">>(sql`
+      select
+        "oc_id" as "ocId",
+        "semester",
+        "absence",
+        "cat_from" as "catFrom",
+        "cat_to" as "catTo",
+        "mh_from" as "mhFrom",
+        "mh_to" as "mhTo"
+      from "oc_medical_category"
+      where "oc_id" in (${ocIdList})
+        and "deleted_at" is null
+    `);
+    rows = result.rows.map((row) => ({ ...row, enrollmentId: null }));
+  }
+
+  return rows.map((row) => ({
+    enrollmentId: row.enrollmentId ?? enrollmentIdByOcId.get(row.ocId) ?? null,
+    ocId: row.ocId,
+    semester: row.semester,
+    absence: row.absence,
+    catFrom: row.catFrom,
+    catTo: row.catTo,
+    mhFrom: row.mhFrom,
+    mhTo: row.mhTo,
+  }));
+}
+
 export async function getPerformanceGraphData(ocId: string): Promise<PerformanceGraphData> {
   const activeEnrollment = await getOrCreateActiveEnrollment(ocId);
 
@@ -79,6 +214,14 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
   const enrollmentIdSet = new Set(activeCourseEnrollments.map((row) => row.id));
   enrollmentIdSet.add(activeEnrollment.id);
   const courseEnrollmentIds = Array.from(enrollmentIdSet);
+  const courseEnrollments = Array.from(
+    new Map(
+      [
+        ...activeCourseEnrollments,
+        { id: activeEnrollment.id, ocId: activeEnrollment.ocId },
+      ].map((row) => [row.id, row]),
+    ).values(),
+  );
 
   const courseCadetCount = Math.max(1, courseEnrollmentIds.length);
 
@@ -88,6 +231,8 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
     ptScoreRows,
     disciplineRows,
     medicalCategoryRows,
+    templateBySemester,
+    publishedPtSemesters,
   ] = await Promise.all([
     db
       .select({
@@ -131,23 +276,18 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
       })
       .from(ocDiscipline)
       .where(inArray(ocDiscipline.enrollmentId, courseEnrollmentIds)),
-    db
-      .select({
-        enrollmentId: ocMedicalCategory.enrollmentId,
-        semester: ocMedicalCategory.semester,
-        absence: ocMedicalCategory.absence,
-        catFrom: ocMedicalCategory.catFrom,
-        catTo: ocMedicalCategory.catTo,
-        mhFrom: ocMedicalCategory.mhFrom,
-        mhTo: ocMedicalCategory.mhTo,
-      })
-      .from(ocMedicalCategory)
-      .where(
-        and(
-          inArray(ocMedicalCategory.enrollmentId, courseEnrollmentIds),
-          isNull(ocMedicalCategory.deletedAt),
-        ),
+    listMedicalCategoryGraphRows(courseEnrollments),
+    Promise.all(
+      Array.from({ length: TERM_COUNT }, (_, idx) =>
+        getPtTemplateByCourseSemester(activeEnrollment.courseId, idx + 1, {
+          fallbackToLegacyGlobal: true,
+        }),
       ),
+    ),
+    listPublishedPtWorkflowSemesters(
+      activeEnrollment.courseId,
+      Array.from({ length: TERM_COUNT }, (_, idx) => idx + 1),
+    ),
   ]);
 
   const academicsCadet = createTermArray();
@@ -180,11 +320,44 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
     }
   }
 
+  const odtMaxMarks = createTermArray();
+  const ptScoreMetaById = new Map<string, { semester: number; typeKey: string }>();
+  const ptTypeMaxByKey = new Map<string, number>();
+
+  for (const template of templateBySemester) {
+    const semester = Number(template.semester);
+    if (!isValidSemester(semester)) continue;
+    const termIndex = toTermIndex(semester);
+
+    for (const type of template.types ?? []) {
+      const tasks = type.tasks ?? [];
+      if (!tasks.length) continue;
+      const typeKey = `${semester}#${type.id}`;
+      const typeMax = resolvePtTypeMaxMarks(type);
+      ptTypeMaxByKey.set(typeKey, typeMax);
+      odtMaxMarks[termIndex] += typeMax;
+
+      for (const task of tasks) {
+        for (const attempt of task.attempts ?? []) {
+          for (const grade of attempt.grades ?? []) {
+            if (grade.scoreId) {
+              ptScoreMetaById.set(grade.scoreId, { semester, typeKey });
+            }
+          }
+        }
+      }
+    }
+  }
+
   // Keep only the latest score per task for each enrollment+semester.
-  const latestPtByTask = new Map<string, { marksScored: number; updatedAtMs: number }>();
+  const latestPtByTask = new Map<
+    string,
+    { marksScored: number; ptTaskScoreId: string; updatedAtMs: number }
+  >();
 
   for (const row of ptScoreRows) {
     if (!isValidSemester(row.semester)) continue;
+    if (!publishedPtSemesters.has(row.semester)) continue;
     const enrollmentId = row.enrollmentId ?? "";
     const taskId = row.ptTaskId ?? "";
     if (!enrollmentId || !taskId) continue;
@@ -193,29 +366,37 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
     const updatedAtMs = row.updatedAt ? new Date(row.updatedAt).getTime() : 0;
     const prev = latestPtByTask.get(key);
     if (!prev || updatedAtMs >= prev.updatedAtMs) {
-      latestPtByTask.set(key, { marksScored: toFiniteNumber(row.marksScored), updatedAtMs });
+      latestPtByTask.set(key, {
+        marksScored: toFiniteNumber(row.marksScored),
+        ptTaskScoreId: row.ptTaskScoreId,
+        updatedAtMs,
+      });
     }
   }
 
-  const odtByEnrollmentTerm = new Map<string, number>();
+  const odtByEnrollmentTermType = new Map<string, Map<string, number>>();
   for (const [taskKey, row] of latestPtByTask.entries()) {
     const [enrollmentId, semesterRaw] = taskKey.split("#");
     const semester = Number(semesterRaw);
     if (!enrollmentId || !isValidSemester(semester)) continue;
     const key = `${enrollmentId}#${semester}`;
-    odtByEnrollmentTerm.set(key, (odtByEnrollmentTerm.get(key) ?? 0) + toFiniteNumber(row.marksScored));
+    const scoreMeta = ptScoreMetaById.get(row.ptTaskScoreId);
+    const typeKey = scoreMeta?.typeKey ?? `${semester}#unknown`;
+    addNestedSum(odtByEnrollmentTermType, key, typeKey, toFiniteNumber(row.marksScored));
   }
 
   const odtCadet = createTermArray();
   const odtCourseSum = createTermArray();
   const odtCadetPresence = Array.from({ length: TERM_COUNT }, () => false);
 
-  for (const [key, rawValue] of odtByEnrollmentTerm.entries()) {
+  for (const [key, typeSums] of odtByEnrollmentTermType.entries()) {
     const [enrollmentId, semesterRaw] = key.split("#");
     const semester = Number(semesterRaw);
     if (!isValidSemester(semester)) continue;
     const termIndex = toTermIndex(semester);
-    const value = toFiniteNumber(rawValue);
+    const rawValue = sumCappedPtTypeTotals(typeSums, ptTypeMaxByKey);
+    const termMax = odtMaxMarks[termIndex];
+    const value = termMax > 0 ? Math.min(rawValue, termMax) : rawValue;
     odtCourseSum[termIndex] += value;
     if (enrollmentId === activeEnrollment.id) {
       odtCadet[termIndex] = round1(value);
@@ -233,10 +414,6 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
     cadetScoresBySemester.set(row.semester, semMap);
   }
 
-  const templateBySemester = await Promise.all(
-    Array.from({ length: TERM_COUNT }, (_, idx) => getPtTemplateBySemester(idx + 1)),
-  );
-
   for (let semester = 1; semester <= TERM_COUNT; semester += 1) {
     const template = templateBySemester[semester - 1];
     const scoreById = cadetScoresBySemester.get(semester) ?? new Map<string, number>();
@@ -245,32 +422,39 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
     let hasTask = false;
 
     for (const type of template.types ?? []) {
-      for (const task of type.tasks ?? []) {
+      const tasks = type.tasks ?? [];
+      if (!tasks.length) continue;
+      const typeMax = resolvePtTypeMaxMarks(type);
+      let typeTotal = 0;
+
+      for (const task of tasks) {
         hasTask = true;
-        let selected: number | null = null;
+        let selected = 0;
 
         outer: for (const attempt of task.attempts ?? []) {
           const grades = attempt.grades ?? [];
-          if (!grades.length) {
-            if (selected === null) selected = toFiniteNumber(task.maxMarks);
-            continue;
-          }
           for (const grade of grades) {
-            const fallbackMarks = toFiniteNumber(grade.maxMarks ?? task.maxMarks);
-            if (selected === null) selected = fallbackMarks;
             if (grade.scoreId && scoreById.has(grade.scoreId)) {
-              selected = scoreById.get(grade.scoreId) ?? fallbackMarks;
+              selected = scoreById.get(grade.scoreId) ?? 0;
               break outer;
             }
           }
         }
 
-        semesterTotal += selected ?? 0;
+        typeTotal += selected;
       }
+
+      semesterTotal += typeMax > 0 ? Math.min(typeTotal, typeMax) : typeTotal;
     }
 
     const termIndex = toTermIndex(semester);
-    odtCadet[termIndex] = round1(semesterTotal);
+    const termMax = odtMaxMarks[termIndex];
+    if (!publishedPtSemesters.has(semester)) {
+      odtCadet[termIndex] = 0;
+      odtCadetPresence[termIndex] = false;
+      continue;
+    }
+    odtCadet[termIndex] = round1(termMax > 0 ? Math.min(semesterTotal, termMax) : semesterTotal);
     odtCadetPresence[termIndex] = hasTask;
   }
 
@@ -350,6 +534,7 @@ export async function getPerformanceGraphData(ocId: string): Promise<Performance
       cadet: odtCadet.map(round1),
       courseAverage: averageSeriesByCourseCount(odtCourseSum, courseCadetCount),
       cadetTermPresence: odtCadetPresence,
+      maxMarks: odtMaxMarks.map(round1),
     },
     discipline: {
       cadet: disciplineCadet.map(round1),
