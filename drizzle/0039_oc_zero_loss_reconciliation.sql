@@ -170,23 +170,148 @@ WHERE e."oc_id" = c."id"
   AND c."deleted_at" IS NULL
   AND e."course_id" IS DISTINCT FROM c."course_id";
 --> statement-breakpoint
-WITH "active_enrollment" AS (
-  SELECT "oc_id", "id" AS "enrollment_id"
-  FROM "oc_course_enrollments"
-  WHERE "status" = 'ACTIVE'
-)
-UPDATE "oc_semester_marks" t SET "enrollment_id" = a."enrollment_id"
-FROM "active_enrollment" a
-WHERE t."oc_id" = a."oc_id" AND t."enrollment_id" IS NULL;
+DO $$
+DECLARE
+  backfill_target record;
+BEGIN
+  FOR backfill_target IN
+    SELECT *
+    FROM (
+      VALUES
+        ('oc_semester_marks', 'semester', 'DUPLICATE_SEMESTER_MARKS_BACKFILL'),
+        ('oc_spr_records', 'semester', 'DUPLICATE_SPR_RECORD_BACKFILL'),
+        ('oc_camps', 'training_camp_id', 'DUPLICATE_CAMP_BACKFILL'),
+        ('oc_olq', 'semester', 'DUPLICATE_OLQ_BACKFILL'),
+        ('oc_credit_for_excellence', 'semester', 'DUPLICATE_CFE_BACKFILL'),
+        ('oc_pt_task_scores', 'pt_task_score_id', 'DUPLICATE_PT_TASK_SCORE_BACKFILL'),
+        ('oc_pt_motivation_awards', 'pt_motivation_field_id', 'DUPLICATE_PT_MOTIVATION_BACKFILL')
+    ) AS targets("table_name", "key_column", "conflict_type")
+  LOOP
+    EXECUTE format($audit$
+      WITH "active_enrollment" AS (
+        SELECT "oc_id", "id" AS "enrollment_id"
+        FROM "oc_course_enrollments"
+        WHERE "status" = 'ACTIVE'
+      ),
+      "candidate_null_rows" AS (
+        SELECT
+          t."id",
+          t."oc_id",
+          a."enrollment_id",
+          t.%1$I::text AS "key_value",
+          row_number() OVER (
+            PARTITION BY a."enrollment_id", t.%1$I::text
+            ORDER BY t."id"
+          ) AS "row_rank"
+        FROM %2$I t
+        JOIN "active_enrollment" a
+          ON a."oc_id" = t."oc_id"
+        WHERE t."enrollment_id" IS NULL
+      ),
+      "duplicate_rows" AS (
+        SELECT
+          t."id" AS "duplicate_id",
+          t."oc_id",
+          to_jsonb(t) AS "source_value",
+          COALESCE(to_jsonb(existing_row), to_jsonb(kept_row)) AS "target_value"
+        FROM "candidate_null_rows" candidate
+        JOIN %2$I t
+          ON t."id" = candidate."id"
+        LEFT JOIN %2$I existing_row
+          ON existing_row."enrollment_id" = candidate."enrollment_id"
+         AND existing_row.%1$I::text = candidate."key_value"
+        LEFT JOIN "candidate_null_rows" kept_candidate
+          ON kept_candidate."enrollment_id" = candidate."enrollment_id"
+         AND kept_candidate."key_value" = candidate."key_value"
+         AND kept_candidate."row_rank" = 1
+        LEFT JOIN %2$I kept_row
+          ON kept_row."id" = kept_candidate."id"
+        WHERE existing_row."id" IS NOT NULL
+           OR candidate."row_rank" > 1
+      )
+      INSERT INTO "oc_reconciliation_audit" (
+        "oc_id",
+        "source_table",
+        "target_table",
+        "conflict_type",
+        "field_name",
+        "source_value",
+        "target_value",
+        "resolution"
+      )
+      SELECT
+        "oc_id",
+        %3$L,
+        %3$L,
+        %4$L,
+        'enrollment_id',
+        "source_value",
+        "target_value",
+        'migration_0039_left_duplicate_null_enrollment_unmodified'
+      FROM "duplicate_rows"
+    $audit$, backfill_target."key_column", backfill_target."table_name", backfill_target."table_name", backfill_target."conflict_type");
+  END LOOP;
+END $$;
 --> statement-breakpoint
 WITH "active_enrollment" AS (
   SELECT "oc_id", "id" AS "enrollment_id"
   FROM "oc_course_enrollments"
   WHERE "status" = 'ACTIVE'
+),
+"candidate_null_rows" AS (
+  SELECT
+    t."id",
+    a."enrollment_id",
+    row_number() OVER (
+      PARTITION BY a."enrollment_id", t."semester"
+      ORDER BY t."id"
+    ) AS "row_rank"
+  FROM "oc_semester_marks" t
+  JOIN "active_enrollment" a
+    ON a."oc_id" = t."oc_id"
+  WHERE t."enrollment_id" IS NULL
 )
-UPDATE "oc_spr_records" t SET "enrollment_id" = a."enrollment_id"
-FROM "active_enrollment" a
-WHERE t."oc_id" = a."oc_id" AND t."enrollment_id" IS NULL;
+UPDATE "oc_semester_marks" t SET "enrollment_id" = candidate."enrollment_id"
+FROM "candidate_null_rows" candidate
+WHERE t."id" = candidate."id"
+  AND candidate."row_rank" = 1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "oc_semester_marks" existing_row
+    WHERE existing_row."enrollment_id" = candidate."enrollment_id"
+      AND existing_row."semester" = t."semester"
+      AND existing_row."id" <> t."id"
+  );
+--> statement-breakpoint
+WITH "active_enrollment" AS (
+  SELECT "oc_id", "id" AS "enrollment_id"
+  FROM "oc_course_enrollments"
+  WHERE "status" = 'ACTIVE'
+),
+"candidate_null_rows" AS (
+  SELECT
+    t."id",
+    a."enrollment_id",
+    row_number() OVER (
+      PARTITION BY a."enrollment_id", t."semester"
+      ORDER BY t."id"
+    ) AS "row_rank"
+  FROM "oc_spr_records" t
+  JOIN "active_enrollment" a
+    ON a."oc_id" = t."oc_id"
+  WHERE t."enrollment_id" IS NULL
+)
+UPDATE "oc_spr_records" t SET "enrollment_id" = candidate."enrollment_id"
+FROM "candidate_null_rows" candidate
+WHERE t."id" = candidate."id"
+  AND candidate."row_rank" = 1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "oc_spr_records" existing_row
+    WHERE existing_row."enrollment_id" = candidate."enrollment_id"
+      AND existing_row."semester" = t."semester"
+      AND existing_row."id" <> t."id"
+  );
 --> statement-breakpoint
 WITH "active_enrollment" AS (
   SELECT "oc_id", "id" AS "enrollment_id"
@@ -228,10 +353,31 @@ WITH "active_enrollment" AS (
   SELECT "oc_id", "id" AS "enrollment_id"
   FROM "oc_course_enrollments"
   WHERE "status" = 'ACTIVE'
+),
+"candidate_null_rows" AS (
+  SELECT
+    t."id",
+    a."enrollment_id",
+    row_number() OVER (
+      PARTITION BY a."enrollment_id", t."training_camp_id"
+      ORDER BY t."id"
+    ) AS "row_rank"
+  FROM "oc_camps" t
+  JOIN "active_enrollment" a
+    ON a."oc_id" = t."oc_id"
+  WHERE t."enrollment_id" IS NULL
 )
-UPDATE "oc_camps" t SET "enrollment_id" = a."enrollment_id"
-FROM "active_enrollment" a
-WHERE t."oc_id" = a."oc_id" AND t."enrollment_id" IS NULL;
+UPDATE "oc_camps" t SET "enrollment_id" = candidate."enrollment_id"
+FROM "candidate_null_rows" candidate
+WHERE t."id" = candidate."id"
+  AND candidate."row_rank" = 1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "oc_camps" existing_row
+    WHERE existing_row."enrollment_id" = candidate."enrollment_id"
+      AND existing_row."training_camp_id" = t."training_camp_id"
+      AND existing_row."id" <> t."id"
+  );
 --> statement-breakpoint
 WITH "active_enrollment" AS (
   SELECT "oc_id", "id" AS "enrollment_id"
@@ -264,19 +410,61 @@ WITH "active_enrollment" AS (
   SELECT "oc_id", "id" AS "enrollment_id"
   FROM "oc_course_enrollments"
   WHERE "status" = 'ACTIVE'
+),
+"candidate_null_rows" AS (
+  SELECT
+    t."id",
+    a."enrollment_id",
+    row_number() OVER (
+      PARTITION BY a."enrollment_id", t."semester"
+      ORDER BY t."id"
+    ) AS "row_rank"
+  FROM "oc_olq" t
+  JOIN "active_enrollment" a
+    ON a."oc_id" = t."oc_id"
+  WHERE t."enrollment_id" IS NULL
 )
-UPDATE "oc_olq" t SET "enrollment_id" = a."enrollment_id"
-FROM "active_enrollment" a
-WHERE t."oc_id" = a."oc_id" AND t."enrollment_id" IS NULL;
+UPDATE "oc_olq" t SET "enrollment_id" = candidate."enrollment_id"
+FROM "candidate_null_rows" candidate
+WHERE t."id" = candidate."id"
+  AND candidate."row_rank" = 1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "oc_olq" existing_row
+    WHERE existing_row."enrollment_id" = candidate."enrollment_id"
+      AND existing_row."semester" = t."semester"
+      AND existing_row."id" <> t."id"
+  );
 --> statement-breakpoint
 WITH "active_enrollment" AS (
   SELECT "oc_id", "id" AS "enrollment_id"
   FROM "oc_course_enrollments"
   WHERE "status" = 'ACTIVE'
+),
+"candidate_null_rows" AS (
+  SELECT
+    t."id",
+    a."enrollment_id",
+    row_number() OVER (
+      PARTITION BY a."enrollment_id", t."semester"
+      ORDER BY t."id"
+    ) AS "row_rank"
+  FROM "oc_credit_for_excellence" t
+  JOIN "active_enrollment" a
+    ON a."oc_id" = t."oc_id"
+  WHERE t."enrollment_id" IS NULL
 )
-UPDATE "oc_credit_for_excellence" t SET "enrollment_id" = a."enrollment_id"
-FROM "active_enrollment" a
-WHERE t."oc_id" = a."oc_id" AND t."enrollment_id" IS NULL;
+UPDATE "oc_credit_for_excellence" t SET "enrollment_id" = candidate."enrollment_id"
+FROM "candidate_null_rows" candidate
+WHERE t."id" = candidate."id"
+  AND candidate."row_rank" = 1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "oc_credit_for_excellence" existing_row
+    WHERE existing_row."enrollment_id" = candidate."enrollment_id"
+      AND existing_row."semester" = t."semester"
+      AND existing_row."id" <> t."id"
+  );
 --> statement-breakpoint
 WITH "active_enrollment" AS (
   SELECT "oc_id", "id" AS "enrollment_id"
@@ -327,19 +515,61 @@ WITH "active_enrollment" AS (
   SELECT "oc_id", "id" AS "enrollment_id"
   FROM "oc_course_enrollments"
   WHERE "status" = 'ACTIVE'
+),
+"candidate_null_rows" AS (
+  SELECT
+    t."id",
+    a."enrollment_id",
+    row_number() OVER (
+      PARTITION BY a."enrollment_id", t."pt_task_score_id"
+      ORDER BY t."id"
+    ) AS "row_rank"
+  FROM "oc_pt_task_scores" t
+  JOIN "active_enrollment" a
+    ON a."oc_id" = t."oc_id"
+  WHERE t."enrollment_id" IS NULL
 )
-UPDATE "oc_pt_task_scores" t SET "enrollment_id" = a."enrollment_id"
-FROM "active_enrollment" a
-WHERE t."oc_id" = a."oc_id" AND t."enrollment_id" IS NULL;
+UPDATE "oc_pt_task_scores" t SET "enrollment_id" = candidate."enrollment_id"
+FROM "candidate_null_rows" candidate
+WHERE t."id" = candidate."id"
+  AND candidate."row_rank" = 1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "oc_pt_task_scores" existing_row
+    WHERE existing_row."enrollment_id" = candidate."enrollment_id"
+      AND existing_row."pt_task_score_id" = t."pt_task_score_id"
+      AND existing_row."id" <> t."id"
+  );
 --> statement-breakpoint
 WITH "active_enrollment" AS (
   SELECT "oc_id", "id" AS "enrollment_id"
   FROM "oc_course_enrollments"
   WHERE "status" = 'ACTIVE'
+),
+"candidate_null_rows" AS (
+  SELECT
+    t."id",
+    a."enrollment_id",
+    row_number() OVER (
+      PARTITION BY a."enrollment_id", t."pt_motivation_field_id"
+      ORDER BY t."id"
+    ) AS "row_rank"
+  FROM "oc_pt_motivation_awards" t
+  JOIN "active_enrollment" a
+    ON a."oc_id" = t."oc_id"
+  WHERE t."enrollment_id" IS NULL
 )
-UPDATE "oc_pt_motivation_awards" t SET "enrollment_id" = a."enrollment_id"
-FROM "active_enrollment" a
-WHERE t."oc_id" = a."oc_id" AND t."enrollment_id" IS NULL;
+UPDATE "oc_pt_motivation_awards" t SET "enrollment_id" = candidate."enrollment_id"
+FROM "candidate_null_rows" candidate
+WHERE t."id" = candidate."id"
+  AND candidate."row_rank" = 1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "oc_pt_motivation_awards" existing_row
+    WHERE existing_row."enrollment_id" = candidate."enrollment_id"
+      AND existing_row."pt_motivation_field_id" = t."pt_motivation_field_id"
+      AND existing_row."id" <> t."id"
+  );
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "idx_oc_personal_oc_id" ON "oc_personal" USING btree ("oc_id");
 --> statement-breakpoint
