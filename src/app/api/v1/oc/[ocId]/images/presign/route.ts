@@ -46,7 +46,6 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
             publicUrl,
             expiresInSeconds: 300,
             maxSizeBytes: 200 * 1024,
-            minSizeBytes: 20 * 1024,
         });
     } catch (err) {
         return handleApiError(err);

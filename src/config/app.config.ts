@@ -19,7 +19,8 @@ import {
   Gavel,
   Boxes,
   Package,
-  ArrowDownCircle
+  ArrowDownCircle,
+  Upload
 } from "lucide-react";
 import type { ColorTone } from "@/lib/theme-color";
 
@@ -314,6 +315,13 @@ export const managementCard: ManagementCardConfig[] = [
     icon: Users,
     to: "/dashboard/genmgmt/platoon-management",
     color: "success"
+  },
+  {
+    title: "SSB Upload",
+    description: "Upload encrypted course-wise SSB PDFs for officer cadets",
+    icon: Upload,
+    to: "/dashboard/genmgmt/ssb-upload",
+    color: "info"
   },
   // {
   //   title: "Discipline Management",
@@ -1348,6 +1356,12 @@ export const ocTabs = [
     title: "Platoon Management",
     icon: Users,
     link: "/dashboard/genmgmt/platoon-management",
+  },
+  {
+    value: "ssb-upload",
+    title: "SSB Upload",
+    icon: Upload,
+    link: "/dashboard/genmgmt/ssb-upload",
   },
   {
     value: "report-verification",

@@ -3341,6 +3341,33 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": true
   },
   {
+    "method": "GET",
+    "path": "/api/v1/admin/ssb-upload",
+    "action": "admin:ssb-upload:list",
+    "resourceType": "admin:ssb-upload",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/ssb-upload/:ocId",
+    "action": "admin:ssb-upload:create",
+    "resourceType": "admin:ssb-upload",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/ssb-upload/:ocId/view",
+    "action": "admin:ssb-upload:view:create",
+    "resourceType": "admin:ssb-upload:view",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
     "method": "POST",
     "path": "/api/v1/admin/signup-requests/:id/approve",
     "action": "admin:signup-requests:approve:create",
@@ -4610,6 +4637,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "route": "/dashboard/genmgmt/platoon-management",
     "action": "page:dashboard:genmgmt:platoon-management:view",
     "resourceType": "page:dashboard:genmgmt:platoon-management",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
+    "route": "/dashboard/genmgmt/ssb-upload",
+    "action": "page:dashboard:genmgmt:ssb-upload:view",
+    "resourceType": "page:dashboard:genmgmt:ssb-upload",
     "category": "genmgmt",
     "adminBaseline": true
   },
