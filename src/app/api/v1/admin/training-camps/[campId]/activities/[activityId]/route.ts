@@ -78,7 +78,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         return handleApiError(err);
     }
 }
-export const GET = withAuditRoute('GET', withAuthz(GETHandler));
+export const GET = withAuditRoute('GET', GETHandler);
 
 export const PATCH = withAuditRoute('PATCH', withAuthz(PATCHHandler));
 

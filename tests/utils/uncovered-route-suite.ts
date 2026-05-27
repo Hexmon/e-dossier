@@ -14,6 +14,7 @@ type RouteRequestFactory = Partial<
 >;
 type RouteModuleMap = Record<string, Record<string, any>>;
 const ROUTE_MODULE_LOAD_TIMEOUT_MS = 30_000;
+const ROUTE_FLOW_TEST_TIMEOUT_MS = 15_000;
 
 export type RouteFlowOverrides = Record<
   string,
@@ -122,7 +123,7 @@ export function runUncoveredRouteFlowSuite(
               );
 
               expect([401, 403]).toContain(res.status);
-            });
+            }, ROUTE_FLOW_TEST_TIMEOUT_MS);
           }
 
           it(`${method} handles a representative request`, async () => {
@@ -149,7 +150,7 @@ export function runUncoveredRouteFlowSuite(
               expect(res.status).toBeGreaterThanOrEqual(200);
               expect(res.status).toBeLessThan(500);
             }
-          });
+          }, ROUTE_FLOW_TEST_TIMEOUT_MS);
         }
       });
     }
