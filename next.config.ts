@@ -3,17 +3,57 @@ import type { NextConfig } from "next";
 const isProd = process.env.NODE_ENV === "production";
 const useStandaloneOutput = process.env.NEXT_BUILD_STANDALONE === "true";
 
-const minioOrigin = process.env.MINIO_USE_SSL === 'true'
-  ? `https://${process.env.MINIO_ENDPOINT ?? '127.0.0.1'}:${process.env.MINIO_PORT ?? '443'}`
-  : `http://${process.env.MINIO_ENDPOINT ?? '127.0.0.1'}:${process.env.MINIO_PORT ?? '9000'}`;
+function toOrigin(value?: string | null) {
+  const raw = value?.trim().replace(/\/+$/, "");
+  if (!raw) return null;
+
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeMinioEndpointOrigin() {
+  const endpoint = process.env.MINIO_ENDPOINT?.trim();
+  if (!endpoint) return null;
+
+  if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+    return toOrigin(endpoint);
+  }
+
+  const useSsl = process.env.MINIO_USE_SSL === "true";
+  const protocol = useSsl ? "https" : "http";
+  const port = process.env.MINIO_PORT || (useSsl ? "443" : "9000");
+  const hasPort = /:\d+$/.test(endpoint);
+  return toOrigin(`${protocol}://${endpoint}${hasPort ? "" : `:${port}`}`);
+}
+
+function getMinioBrowserOrigins() {
+  const configuredOrigins = (process.env.MINIO_BROWSER_ORIGINS ?? "")
+    .split(/[,\s]+/)
+    .map(toOrigin)
+    .filter((origin): origin is string => Boolean(origin));
+
+  const derivedOrigins = [
+    toOrigin(process.env.MINIO_PUBLIC_URL),
+    normalizeMinioEndpointOrigin(),
+  ].filter((origin): origin is string => Boolean(origin));
+
+  return Array.from(new Set([...configuredOrigins, ...derivedOrigins]));
+}
+
+const minioBrowserOrigins = getMinioBrowserOrigins().join(" ");
+const imgSrc = ["img-src 'self' data: blob:", minioBrowserOrigins].filter(Boolean).join(" ");
+const connectSrc = ["connect-src 'self'", minioBrowserOrigins].filter(Boolean).join(" ");
 
 const prodCsp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  imgSrc,
   "font-src 'self'",
-  "connect-src 'self'",
+  connectSrc,
   "media-src 'self'",
   "object-src 'none'",
   "child-src 'self'",

@@ -65,6 +65,7 @@ Important values:
 - `NEXT_PUBLIC_API_BASE_URL=http://<VM1-IP>`
 - `MINIO_ENDPOINT=http://<VM1-IP>/media`
 - `MINIO_PUBLIC_URL=http://<VM1-IP>/media`
+- `MINIO_BROWSER_ORIGINS=http://<VM1-IP>`
 - `MINIO_ACCESS_KEY`
 - `MINIO_SECRET_KEY`
 - `CSRF_SECRET`
