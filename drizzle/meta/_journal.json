@@ -309,6 +309,13 @@
       "when": 1779193110000,
       "tag": "0043_rbac_permission_key_uniqueness",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1779666000000,
+      "tag": "0044_ssb_pdf_upload",
+      "breakpoints": true
     }
   ]
 }

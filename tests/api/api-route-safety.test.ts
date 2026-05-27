@@ -157,9 +157,12 @@ describe("API route safety coverage", () => {
       { method: "GET", path: "/api/v1/admin/appointments", exact: true },
       { method: "GET", path: "/api/v1/admin/positions", exact: true },
       { method: "GET", path: "/api/v1/admin/users", exact: true },
+      { method: "GET", path: "/api/v1/admin/interview/pending/ticker-setting", exact: true },
+      { method: "GET", path: "/api/v1/admin/ssb-upload", exact: true },
       { method: "GET", path: "/api/v1/platoons" },
       { method: "GET", path: "/api/v1/site-settings" },
       { method: "GET", path: "/api/v1/setup/status", exact: true },
+      { method: "POST", path: "/api/v1/admin/ssb-upload/:ocId/view", exact: true },
     ]);
     expect(isPublicApiPath("/api/v1/platoons", "GET")).toBe(true);
     expect(isPublicApiPath("/api/v1/platoons/ARJUN", "GET")).toBe(true);
@@ -173,6 +176,12 @@ describe("API route safety coverage", () => {
     expect(isPublicApiPath("/api/v1/admin/users", "GET")).toBe(true);
     expect(isPublicApiPath("/api/v1/admin/users", "POST")).toBe(false);
     expect(isPublicApiPath("/api/v1/admin/users/check-username", "GET")).toBe(false);
+    expect(isPublicApiPath("/api/v1/admin/interview/pending/ticker-setting", "GET")).toBe(true);
+    expect(isPublicApiPath("/api/v1/admin/interview/pending/ticker-setting", "POST")).toBe(false);
+    expect(isPublicApiPath("/api/v1/admin/ssb-upload", "GET")).toBe(true);
+    expect(isPublicApiPath("/api/v1/admin/ssb-upload", "POST")).toBe(false);
+    expect(isPublicApiPath("/api/v1/admin/ssb-upload/22222222-2222-4222-8222-222222222222/view", "POST")).toBe(true);
+    expect(isPublicApiPath("/api/v1/admin/ssb-upload/22222222-2222-4222-8222-222222222222", "POST")).toBe(false);
     expect(isPublicApiPath("/api/v1/site-settings/awards", "GET")).toBe(true);
   });
 });

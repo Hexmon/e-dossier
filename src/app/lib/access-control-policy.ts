@@ -20,19 +20,25 @@ const PUBLIC_API_METHOD_RULES: Readonly<Record<string, readonly PathRule[]>> = {
     // Route handlers return dropdown-safe public projections for non-privileged callers.
     { path: "/api/v1/admin/positions", exact: true },
     { path: "/api/v1/admin/users", exact: true },
+    { path: "/api/v1/admin/interview/pending/ticker-setting", exact: true },
+    { path: "/api/v1/admin/ssb-upload", exact: true },
     { path: "/api/v1/platoons" },
     { path: "/api/v1/site-settings" },
     { path: "/api/v1/setup/status", exact: true },
   ],
+  POST: [
+    { path: "/api/v1/admin/ssb-upload/:ocId/view", exact: true },
+  ],
 };
 
 export type PublicApiRule = PathRule & {
-  method: "ANY" | "GET";
+  method: "ANY" | "GET" | "POST";
 };
 
 export const PUBLIC_API_REGISTRY: readonly PublicApiRule[] = [
   ...PUBLIC_API_ANY_RULES.map((rule) => ({ ...rule, method: "ANY" as const })),
   ...PUBLIC_API_METHOD_RULES.GET.map((rule) => ({ ...rule, method: "GET" as const })),
+  ...PUBLIC_API_METHOD_RULES.POST.map((rule) => ({ ...rule, method: "POST" as const })),
 ];
 
 const SHARED_AUTHENTICATED_ADMIN_METHOD_RULES: Readonly<Record<string, readonly PathRule[]>> = {
@@ -51,6 +57,16 @@ const SHARED_AUTHENTICATED_ADMIN_METHOD_RULES: Readonly<Record<string, readonly 
 };
 
 export function matchPathRule(pathname: string, rule: PathRule): boolean {
+  if (rule.path.includes(":")) {
+    const pathParts = pathname.split("/").filter(Boolean);
+    const ruleParts = rule.path.split("/").filter(Boolean);
+    if (rule.exact && pathParts.length !== ruleParts.length) return false;
+    if (pathParts.length < ruleParts.length) return false;
+    return ruleParts.every((part, index) =>
+      part.startsWith(":") ? Boolean(pathParts[index]) : part === pathParts[index]
+    );
+  }
+
   if (rule.exact) {
     return pathname === rule.path;
   }

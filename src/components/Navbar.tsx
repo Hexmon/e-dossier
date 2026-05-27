@@ -33,7 +33,7 @@ const Navbar = ({
           <Link href="/" className="flex items-center space-x-3">
             <SafeImage
               src={logoUrl}
-              fallbackSrc="/images/army_logo.jpeg"
+              fallbackSrc="/images/ARTRAC_LOGO.jpeg"
               alt="Site Logo"
               width={50}
               height={50}

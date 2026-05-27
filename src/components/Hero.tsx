@@ -37,12 +37,12 @@ const Hero = ({
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Hero Content */}
-          <div className="text-center lg:text-left">
-            <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+          <div className="max-w-3xl rounded-lg border border-primary-foreground/30 bg-primary/5 p-5 text-center shadow-2xl shadow-primary/20 backdrop-blur-xs ring-1 ring-primary-foreground/10 sm:p-6 lg:text-left">
+            <h1 className="text-xl lg:text-5xl font-bold mt-0.5 leading-tight drop-shadow-sm">
               {title}
               <span className="block text-accent"></span>
             </h1>
-            <p className="text-xl mb-8 text-primary-foreground/90 max-w-2xl">
+            <p className="text-xl mb-8 text-primary-foreground/95 max-w-2xl drop-shadow-sm">
               {description}
             </p>
 
