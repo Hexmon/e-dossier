@@ -74,6 +74,31 @@ describe("admin training camps API", () => {
     });
   });
 
+  it("allows authenticated non-admin callers to list training camps", async () => {
+    vi.mocked(requireAuth).mockResolvedValueOnce({
+      userId: "user-1",
+      roles: ["TRAINING_OFFICER"],
+      claims: {
+        apt: {
+          position: "TRAINING_OFFICER",
+          scope: { type: "GLOBAL", id: null },
+        },
+      },
+    } as Awaited<ReturnType<typeof requireAuth>>);
+
+    const req = makeJsonRequest({
+      method: "GET",
+      path: "/api/v1/admin/training-camps?courseId=11111111-1111-4111-8111-111111111111",
+    });
+
+    const res = await GET(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.items).toHaveLength(1);
+    expect(requireAuth).toHaveBeenCalled();
+  });
+
   it("falls back to legacy global training camps when requested", async () => {
     vi.mocked(listTrainingCamps)
       .mockResolvedValueOnce([])
