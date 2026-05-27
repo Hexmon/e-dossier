@@ -1,32 +1,36 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const queryQueue: unknown[] = [];
-
-function createQueryChain() {
-  return {
-    innerJoin: vi.fn(() => createQueryChain()),
-    where: vi.fn(async () => {
-      const next = queryQueue.shift();
-      if (next instanceof Error) {
-        throw next;
-      }
-
-      return (next ?? []) as unknown[];
-    }),
-  };
-}
+const queryQueue = vi.hoisted((): unknown[] => []);
 
 vi.mock("@/app/db/client", () => ({
   db: {
     select: vi.fn(() => ({
-      from: vi.fn(() => createQueryChain()),
+      from: vi.fn(() => {
+        const createQueryChain = (): {
+          innerJoin: ReturnType<typeof vi.fn>;
+          where: ReturnType<typeof vi.fn>;
+        } => ({
+          innerJoin: vi.fn(() => createQueryChain()),
+          where: vi.fn(async () => {
+            const next = queryQueue.shift();
+            if (next instanceof Error) {
+              throw next;
+            }
+
+            return (next ?? []) as unknown[];
+          }),
+        });
+
+        return createQueryChain();
+      }),
     })),
   },
 }));
 
+import { getSetupStatus } from "@/app/lib/setup-status";
+
 describe("getSetupStatus runtime fallback", () => {
   beforeEach(() => {
-    vi.resetModules();
     queryQueue.length = 0;
   });
 
@@ -45,7 +49,6 @@ describe("getSetupStatus runtime fallback", () => {
       []
     );
 
-    const { getSetupStatus } = await import("@/app/lib/setup-status");
     const status = await getSetupStatus();
 
     expect(status.bootstrapRequired).toBe(true);
@@ -70,7 +73,6 @@ describe("getSetupStatus runtime fallback", () => {
       []
     );
 
-    const { getSetupStatus } = await import("@/app/lib/setup-status");
     const status = await getSetupStatus();
 
     expect(status.bootstrapRequired).toBe(true);
@@ -95,7 +97,6 @@ describe("getSetupStatus runtime fallback", () => {
       []
     );
 
-    const { getSetupStatus } = await import("@/app/lib/setup-status");
     const status = await getSetupStatus();
 
     expect(status.bootstrapRequired).toBe(true);
@@ -114,7 +115,6 @@ describe("getSetupStatus runtime fallback", () => {
       })
     );
 
-    const { getSetupStatus } = await import("@/app/lib/setup-status");
     const status = await getSetupStatus();
 
     expect(status.availability).toMatchObject({
@@ -141,8 +141,6 @@ describe("getSetupStatus runtime fallback", () => {
       [],
       []
     );
-
-    const { getSetupStatus } = await import("@/app/lib/setup-status");
 
     await expect(getSetupStatus()).rejects.toMatchObject({ code: "57P01" });
   });
