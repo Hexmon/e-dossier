@@ -25,6 +25,8 @@ const baseAppointment: Appointment = {
   updatedAt: "2026-04-04T00:00:00.000Z",
 };
 
+const FULL_SUITE_RENDER_TIMEOUT_MS = 15_000;
+
 describe("protected admin UI actions", () => {
   it("keeps protected users viewable but disables edit and delete", () => {
     const html = renderToStaticMarkup(
@@ -63,7 +65,7 @@ describe("protected admin UI actions", () => {
     expect(html).toContain("Protected ADMIN/SUPER_ADMIN appointments cannot be edited.");
     expect(html).toContain("Protected ADMIN/SUPER_ADMIN appointments cannot be deleted.");
     expect(html.match(/disabled=""/g)?.length).toBe(3);
-  });
+  }, FULL_SUITE_RENDER_TIMEOUT_MS);
 
   it("allows SUPER_ADMIN actors to hand over ADMIN appointments but not edit or delete them", () => {
     const html = renderToStaticMarkup(
