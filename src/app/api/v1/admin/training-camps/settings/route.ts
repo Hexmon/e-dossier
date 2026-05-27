@@ -63,5 +63,5 @@ async function PATCHHandler(req: AuditNextRequest) {
   }
 }
 
-export const GET = withAuditRoute('GET', withAuthz(GETHandler));
+export const GET = withAuditRoute('GET', GETHandler);
 export const PATCH = withAuditRoute('PATCH', withAuthz(PATCHHandler));
