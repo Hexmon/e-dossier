@@ -92,7 +92,7 @@ Set at least:
 
 - `DATABASE_URL`
 - `NEXT_PUBLIC_API_BASE_URL=http://<VM1-IP>`
-- `MINIO_ENDPOINT=http://<VM1-IP>/media`
+- `MINIO_ENDPOINT=http://<VM2-IP>:9000`
 - `MINIO_PUBLIC_URL=http://<VM1-IP>/media`
 - `MINIO_BROWSER_ORIGINS=http://<VM1-IP>`
 - `MINIO_ACCESS_KEY`
@@ -100,7 +100,7 @@ Set at least:
 - `CSRF_SECRET`
 - admin/superadmin credentials
 
-Using the VM1 `/media` proxy for both `MINIO_ENDPOINT` and `MINIO_PUBLIC_URL` keeps browser uploads and downloads on the app origin. If you deploy without a VM1 proxy, set `MINIO_ENDPOINT=<VM2-IP>`, `MINIO_PUBLIC_URL=http://<VM2-IP>:9000`, and `MINIO_BROWSER_ORIGINS=http://<VM2-IP>:9000`, then configure MinIO CORS for the browser app origin.
+Using the VM2 MinIO API for `MINIO_ENDPOINT` and the VM1 `/media` proxy for `MINIO_PUBLIC_URL` keeps server-side signing on the private network while browser uploads and downloads stay on the app origin. If you deploy without a VM1 proxy, set both `MINIO_ENDPOINT` and `MINIO_PUBLIC_URL` to `http://<VM2-IP>:9000`, and set `MINIO_BROWSER_ORIGINS=http://<VM2-IP>:9000`, then configure MinIO CORS for the browser app origin.
 
 ## Deploy On VM1
 

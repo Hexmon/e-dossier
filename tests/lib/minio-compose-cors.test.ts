@@ -10,6 +10,7 @@ describe("MinIO data stack CORS init", () => {
     );
 
     expect(compose).toContain("MINIO_API_CORS_ALLOW_ORIGIN");
+    expect(compose).toContain("${MINIO_API_CORS_ALLOW_ORIGIN:?");
     expect(compose).not.toContain("mc cors set");
     expect(compose).not.toContain("/tmp/minio-cors.xml");
     expect(compose).not.toContain("/tmp/minio-cors.json");
