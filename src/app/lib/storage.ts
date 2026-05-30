@@ -108,8 +108,38 @@ export function normalizeStorageEndpoint(input: {
 
 export function normalizeStoragePublicBaseUrl(endpoint: string, publicUrl?: string) {
     const explicit = publicUrl?.trim();
-    if (explicit) return explicit.replace(/\/+$/, '');
-    return endpoint.replace(/\/+$/, '');
+    const rawBaseUrl = explicit || endpoint;
+    const normalized = rawBaseUrl.replace(/\/+$/, '');
+
+    let parsed: URL;
+    try {
+        parsed = new URL(normalized);
+    } catch {
+        throw new StorageConfigError('File storage public URL is invalid. Check MINIO_PUBLIC_URL.', {
+            invalidEnv: explicit ? 'MINIO_PUBLIC_URL' : 'MINIO_ENDPOINT',
+        });
+    }
+
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new StorageConfigError('File storage public URL is invalid. Use an http(s) URL.', {
+            invalidEnv: explicit ? 'MINIO_PUBLIC_URL' : 'MINIO_ENDPOINT',
+        });
+    }
+
+    if (parsed.search || parsed.hash) {
+        throw new StorageConfigError('File storage public URL must not include query strings or fragments.', {
+            invalidEnv: explicit ? 'MINIO_PUBLIC_URL' : 'MINIO_ENDPOINT',
+        });
+    }
+
+    if (parsed.pathname.split('/').some((segment) => /:\d+$/.test(segment))) {
+        throw new StorageConfigError(
+            'File storage public URL is invalid. Put the port after the host, not inside the /media path. Use http://<VM1-IP>:3000/media for the app media proxy, http://<VM1-IP>/media for an nginx proxy, or http://<VM2-IP>:9000 for direct MinIO access.',
+            { invalidEnv: 'MINIO_PUBLIC_URL' }
+        );
+    }
+
+    return normalized;
 }
 
 function normalizedPathname(pathname: string) {
