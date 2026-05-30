@@ -240,8 +240,8 @@ Legacy source-checkout flow:
 2. `cp .env.production.example .env` and set:
    - `DATABASE_URL=postgresql://...@<VM-2-IP>:5432/...`
    - `MINIO_ENDPOINT=http://<VM-2-IP>:9000`
-   - `MINIO_PUBLIC_URL=http://<VM-1-IP>/media`
-   - `MINIO_BROWSER_ORIGINS=http://<VM-1-IP>`
+   - `MINIO_PUBLIC_URL=http://<VM-1-IP>:3000/media` when the browser opens the app directly on port `3000`, or `http://<VM-1-IP>/media` when nginx fronts VM-1 on port `80`
+   - `MINIO_BROWSER_ORIGINS=http://<VM-1-IP>:3000` when the browser opens the app directly on port `3000`, or `http://<VM-1-IP>` when nginx fronts VM-1 on port `80`
    - `MINIO_ACCESS_KEY=<same as VM2 MINIO_ROOT_USER>`
    - `MINIO_SECRET_KEY=<same as VM2 MINIO_ROOT_PASSWORD>`
    - `MINIO_BUCKET=<same as VM2 MINIO_BUCKET>`
@@ -253,10 +253,11 @@ Legacy source-checkout flow:
 ## Reverse Proxy / CDN
 - Proxy `/media/` on VM-1 to `http://<VM-2-IP>:9000/`.
 - In VM-1 app env, set `MINIO_ENDPOINT=http://<VM2-IP>:9000` for server-side signing and storage checks.
-- In VM-1 app env, set `MINIO_PUBLIC_URL=http://<VM1-IP>/media` so presigned browser upload/display URLs use the VM-1 proxy.
-- In VM-1 app env, set `MINIO_BROWSER_ORIGINS=http://<VM1-IP>` so the production CSP allows image display and browser PUT uploads.
-- In VM-2 data env, set `MINIO_API_CORS_ALLOW_ORIGIN=http://<VM1-IP>` so MinIO allows browser upload preflights.
+- In VM-1 app env, set `MINIO_PUBLIC_URL=http://<VM1-IP>:3000/media` if the browser opens the Next app directly on port `3000`; set `MINIO_PUBLIC_URL=http://<VM1-IP>/media` if nginx fronts VM-1.
+- In VM-1 app env, set `MINIO_BROWSER_ORIGINS` to the exact browser app origin, including port when present, for example `http://<VM1-IP>:3000`.
+- In VM-2 data env, set `MINIO_API_CORS_ALLOW_ORIGIN` to the exact browser app origin, including port when present, for example `http://<VM1-IP>:3000`.
 - Do not set `MINIO_ENDPOINT` to the VM-1 `/media` URL in proxy mode; that signs the wrong S3 path.
+- Do not set `MINIO_PUBLIC_URL=https://<VM2-IP>/media:9000`; that puts `:9000` in the URL path and sends browsers to VM-2 HTTPS port `443`, not MinIO port `9000`.
 - If deploying without the VM-1 proxy, set both `MINIO_ENDPOINT` and `MINIO_PUBLIC_URL` to `http://<VM2-IP>:9000`, set `MINIO_BROWSER_ORIGINS=http://<VM2-IP>:9000`, and configure MinIO CORS for the browser app origin.
 
 ## Production MinIO Readiness
@@ -264,19 +265,21 @@ MinIO image upload should work on the production two-VM topology when these setu
 
 - VM-2 runs Postgres + MinIO from `deploy/docker-compose.data.yml` with `deploy/.env.data`.
 - VM-2 `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, and `MINIO_BUCKET` match VM-1 app `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, and `MINIO_BUCKET`.
-- VM-2 `MINIO_API_CORS_ALLOW_ORIGIN` is the browser app origin exactly, including scheme and port when present, for example `https://app.example` or `http://<VM1-IP>`.
+- VM-2 `MINIO_API_CORS_ALLOW_ORIGIN` is the browser app origin exactly, including scheme and port when present, for example `https://app.example` or `http://<VM1-IP>:3000`.
 - After changing `MINIO_API_CORS_ALLOW_ORIGIN`, recreate the MinIO container:
   ```bash
   docker compose -f deploy/docker-compose.data.yml --env-file deploy/.env.data up -d --force-recreate minio
   ```
-- VM-1 nginx proxies `/media/` to `http://<VM2-IP>:9000/` and keeps the trailing slash in `proxy_pass` so `/media/<bucket>/<key>` forwards to `/<bucket>/<key>`.
-- VM-1 app env uses `MINIO_ENDPOINT=http://<VM2-IP>:9000` and `MINIO_PUBLIC_URL=http://<VM1-IP>/media`; do not use `/media` in `MINIO_ENDPOINT`.
+- VM-1 either runs nginx that proxies `/media/` to `http://<VM2-IP>:9000/`, or uses the built-in app `/media/*` proxy when the browser opens the app directly on port `3000`.
+- VM-1 app env uses `MINIO_ENDPOINT=http://<VM2-IP>:9000` and `MINIO_PUBLIC_URL=http://<VM1-IP>:3000/media` for direct app access or `http://<VM1-IP>/media` for nginx-fronted access; do not use `/media` in `MINIO_ENDPOINT`.
 - VM-1 app env `MINIO_BROWSER_ORIGINS` contains the public app origin used by the browser. Rebuild/redeploy the app after changing this value because production CSP is generated from env.
 - Firewall allows VM-1 to reach VM-2 `5432/tcp` and `9000/tcp`; MinIO console `9001/tcp` should not be public.
 - Browser users can reach VM-1 `/media/...`; they do not need direct access to VM-2 MinIO in proxy mode.
 
 Production verification:
 - On VM-2, check MinIO readiness: `curl http://127.0.0.1:9000/minio/health/ready`.
+- On VM-1, check VM-1 can reach VM-2 MinIO: `curl http://<VM2-IP>:9000/minio/health/ready`.
+- If the browser opens the app on `http://<VM1-IP>:3000`, check the built-in app media proxy: `curl http://<VM1-IP>:3000/media/minio/health/ready`.
 - On VM-1, verify the app starts with the production env and can reach VM-2.
 - From the UI, upload an OC image and confirm the browser PUT request goes to `http(s)://<VM1>/media/<bucket>/...`, not to VM-2 directly.
 - If upload fails, first check: app secret mismatch, missing `MINIO_API_CORS_ALLOW_ORIGIN`, wrong `MINIO_PUBLIC_URL`, missing nginx `/media/` proxy, or firewall blocking VM-1 to VM-2 `9000/tcp`.
@@ -287,7 +290,7 @@ Production verification:
   This creates a temporary Docker subnet with VM-1 nginx at `172.30.50.10`, VM-2 MinIO at `172.30.50.20`, and a third verifier container. The verifier signs against VM-2, uploads through VM-1 `/media`, checks CORS, and removes the test object.
 
 Extra VM setup required for production uploads:
-- VM-1 must run a reverse proxy, normally nginx from the air-gap bootstrap, with `/media/` forwarding to VM-2 MinIO.
+- VM-1 must expose `/media/` to browser users. This can be nginx from the air-gap bootstrap, or the built-in app `/media/*` proxy when users access the app directly on port `3000`.
 - VM-1 must be the only public entrypoint for browser users; users should access images through `http(s)://<VM1>/media/...`.
 - VM-2 MinIO should stay private to VM-1 on `9000/tcp`; expose the console only through an admin-only path or not at all.
 - DNS/TLS, if used, must point to VM-1. Use the same public origin in `NEXT_PUBLIC_API_BASE_URL`, `MINIO_PUBLIC_URL`, `MINIO_BROWSER_ORIGINS`, and VM-2 `MINIO_API_CORS_ALLOW_ORIGIN`.

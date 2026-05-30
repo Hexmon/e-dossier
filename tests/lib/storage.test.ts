@@ -52,6 +52,15 @@ describe("storage config", () => {
     );
   });
 
+  it("rejects public URLs that put the MinIO port inside the media path", () => {
+    expect(() =>
+      normalizeStoragePublicBaseUrl(
+        "http://172.22.128.56:9000",
+        "https://172.22.128.56/media:9000"
+      )
+    ).toThrow(StorageConfigError);
+  });
+
   it("rewrites signed storage URLs through the public media proxy", () => {
     const signedUrl =
       "http://172.22.128.56:9000/oc-images/oc/123/civil_dress/photo.png?X-Amz-SignedHeaders=host&X-Amz-Signature=abc123";
