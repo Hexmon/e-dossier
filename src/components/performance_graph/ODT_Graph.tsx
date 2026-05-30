@@ -19,6 +19,7 @@ import {
   getChartThemePalette,
   withAlpha,
 } from "@/components/performance_graph/chartTheme";
+import { formatOdtMarks, resolveOdtChartScale } from "./odtChartScale";
 
 ChartJS.register(
   CategoryScale,
@@ -36,17 +37,22 @@ export default function OdtChart({
   data: odtData,
   averageData,
   cadetTermPresence,
+  maxMarks,
 }: {
   data: number[];
   averageData: number[];
   cadetTermPresence: boolean[];
+  maxMarks?: number[];
 }) {
   const chartRef = useRef<HTMLCanvasElement | null>(null);
   const chartInstance = useRef<any>(null);
   const [stats, setStats] = useState({
+    hasData: false,
     highest: 0,
+    highestMax: 150,
     average: 0,
     lowest: null as number | null,
+    lowestMax: 150,
     highestTerm: "",
     lowestTerm: "",
   });
@@ -59,9 +65,12 @@ export default function OdtChart({
       .filter((item) => Boolean(cadetTermPresence[item.index]));
     if (!available.length) {
       setStats({
+        hasData: false,
         highest: 0,
+        highestMax: 150,
         average: 0,
         lowest: null,
+        lowestMax: 150,
         highestTerm: "-",
         lowestTerm: "-",
       });
@@ -77,14 +86,22 @@ export default function OdtChart({
         ? -1
         : available.find((item) => item.value === lowest)?.index ?? -1;
 
+    const { termMaxMarks, axisMax } = resolveOdtChartScale({
+      data: odtData,
+      averageData,
+      maxMarks,
+    });
     setStats({
+      hasData: true,
       highest,
+      highestMax: termMaxMarks[highestIndex] || axisMax,
       average,
       lowest,
+      lowestMax: lowestIndex < 0 ? axisMax : termMaxMarks[lowestIndex] || axisMax,
       highestTerm: labels[highestIndex] ?? `Term ${highestIndex + 1}`,
       lowestTerm: lowestIndex < 0 ? "-" : labels[lowestIndex] ?? `Term ${lowestIndex + 1}`,
     });
-  }, [odtData, cadetTermPresence]);
+  }, [odtData, averageData, cadetTermPresence, maxMarks]);
 
   useEffect(() => {
     const cleanup = addThemeChangedListener(() => {
@@ -114,6 +131,17 @@ export default function OdtChart({
     const gradientAvgBg = ctx.createLinearGradient(0, 0, 0, 400);
     gradientAvgBg.addColorStop(0, withAlpha(averageLineColor, 0.15));
     gradientAvgBg.addColorStop(1, withAlpha(averageLineColor, 0));
+    const { axisMax, stepSize, termMaxMarks } = resolveOdtChartScale({
+      data: odtData,
+      averageData,
+      maxMarks,
+    });
+    const chartData = odtData.map((value, index) =>
+      cadetTermPresence[index] ? value : null,
+    );
+    const averageChartData = averageData.map((value, index) =>
+      cadetTermPresence[index] ? value : null,
+    );
 
     chartInstance.current = new ChartJS(ctx as any, {
       type: "line",
@@ -122,7 +150,7 @@ export default function OdtChart({
         datasets: [
           {
             label: "Cadet PT total marks",
-            data: odtData,
+            data: chartData,
             borderColor: cadetLineColor,
             backgroundColor: gradientBg,
             borderWidth: 3,
@@ -138,7 +166,7 @@ export default function OdtChart({
           },
           {
             label: "Course Average PT total marks",
-            data: averageData,
+            data: averageChartData,
             borderColor: averageLineColor,
             backgroundColor: gradientAvgBg,
             borderWidth: 3,
@@ -181,7 +209,12 @@ export default function OdtChart({
             borderWidth: 1,
             callbacks: {
               label: function (context: any) {
-                return `${context.dataset.label}: ${context.parsed.y}/150`;
+                return `${context.dataset.label}: ${formatOdtMarks(
+                  context.parsed.y,
+                  context.dataIndex,
+                  termMaxMarks,
+                  axisMax,
+                )}`;
               },
             },
           },
@@ -197,9 +230,9 @@ export default function OdtChart({
           },
           y: {
             beginAtZero: true,
-            max: 150,
+            max: axisMax,
             ticks: {
-              stepSize: 25,
+              stepSize,
               font: { size: 11, weight: "500" as any },
               color: theme.mutedForeground,
               padding: 8,
@@ -216,7 +249,7 @@ export default function OdtChart({
         chartInstance.current = null;
       }
     };
-  }, [odtData, averageData, themeVersion]);
+  }, [odtData, averageData, cadetTermPresence, maxMarks, themeVersion]);
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6">
@@ -241,7 +274,9 @@ export default function OdtChart({
             <p className="text-xs font-semibold text-primary uppercase tracking-wide">
               Highest
             </p>
-            <p className="text-2xl font-bold text-primary mt-1">{stats.highest}/150</p>
+            <p className="text-2xl font-bold text-primary mt-1">
+              {stats.hasData ? `${stats.highest}/${stats.highestMax}` : "-"}
+            </p>
             <p className="text-xs text-primary mt-1">{stats.highestTerm}</p>
           </div>
           <div className="bg-success/10 rounded-lg p-4 border border-success/20">
@@ -249,7 +284,7 @@ export default function OdtChart({
               Average
             </p>
             <p className="text-2xl font-bold text-success mt-1">
-              {stats.average.toFixed(1)}
+              {stats.hasData ? stats.average.toFixed(1) : "-"}
             </p>
             <p className="text-xs text-success mt-1">Overall</p>
           </div>
@@ -258,7 +293,7 @@ export default function OdtChart({
               Lowest
             </p>
             <p className="text-2xl font-bold text-info mt-1">
-              {stats.lowest === null ? "-" : `${stats.lowest}/150`}
+              {!stats.hasData || stats.lowest === null ? "-" : `${stats.lowest}/${stats.lowestMax}`}
             </p>
             <p className="text-xs text-info mt-1">{stats.lowestTerm}</p>
           </div>

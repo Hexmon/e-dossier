@@ -6,7 +6,6 @@ import { getOcImage, upsertOcImage } from '@/app/db/queries/oc';
 import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 
-const MIN_BYTES = 20 * 1024;
 const MAX_BYTES = 200 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
@@ -49,10 +48,9 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
                 contentType,
             });
         }
-        if (sizeBytes < MIN_BYTES || sizeBytes > MAX_BYTES) {
+        if (sizeBytes > MAX_BYTES) {
             throw new ApiError(400, 'Image size out of allowed range.', 'bad_request', {
                 sizeBytes,
-                minBytes: MIN_BYTES,
                 maxBytes: MAX_BYTES,
             });
         }

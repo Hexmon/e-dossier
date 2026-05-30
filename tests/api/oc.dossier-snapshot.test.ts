@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   GET as getDossierSnapshot,
@@ -11,6 +11,7 @@ import * as ocChecks from "@/app/api/v1/oc/_checks";
 import { db } from "@/app/db/client";
 import * as ocQueries from "@/app/db/queries/oc";
 import * as ocLifecycle from "@/app/db/queries/oc-lifecycle";
+import * as storage from "@/app/lib/storage";
 
 const auditLogMock = vi.fn(async () => undefined);
 
@@ -46,9 +47,15 @@ vi.mock("@/app/db/client", () => ({
 }));
 
 vi.mock("@/app/lib/storage", () => ({
-  buildImageKey: vi.fn(),
-  createPresignedUploadUrl: vi.fn(),
-  headObject: vi.fn(),
+  buildImageKey: vi.fn(() => "oc/11111111-1111-4111-8111-111111111111/civil_dress/image.png"),
+  createPresignedUploadUrl: vi.fn(async () => "https://upload-url"),
+  deleteObject: vi.fn(async () => undefined),
+  getStorageConfig: vi.fn(() => ({ bucket: "edossier" })),
+  headObject: vi.fn(async () => ({
+    ContentLength: 1024,
+    ContentType: "image/png",
+    ETag: '"etag-1"',
+  })),
   createPresignedGetUrl: vi.fn(async ({ key }: { key: string }) => `https://cdn.local/${key}`),
 }));
 
@@ -89,6 +96,10 @@ beforeEach(() => {
     regtArm: "",
     postedAtt: "",
   });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 describe("PATCH /api/v1/oc/[ocId]/dossier-snapshot", () => {
@@ -204,6 +215,51 @@ describe("PATCH /api/v1/oc/[ocId]/dossier-snapshot", () => {
     const body = await res.json();
     expect(body.error).toBe("bad_request");
     expect(db.update).not.toHaveBeenCalled();
+  });
+
+  it("accepts a dossier snapshot photo below the old 20 KB lower bound", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true })));
+    vi.mocked(storage.headObject).mockResolvedValueOnce({
+      ContentLength: 1024,
+      ContentType: "image/png",
+      ETag: '"etag-1"',
+    } as any);
+    vi.mocked(ocQueries.getOcImage).mockResolvedValueOnce(null as any);
+    vi.mocked(ocQueries.upsertOcImage).mockResolvedValueOnce({ id: "image-1" } as any);
+
+    (db.select as any).mockImplementationOnce(() => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => [{
+            ocId,
+            passOutDate: null,
+            icNo: null,
+            orderOfMerit: null,
+            regimentOrArm: null,
+            postedUnit: null,
+          }],
+        }),
+      }),
+    }));
+
+    const formData = new FormData();
+    formData.append("arrivalPhoto", new File([new Uint8Array(1024)], "arrival.png", { type: "image/png" }));
+
+    const req = {
+      method: "PATCH",
+      url: `http://localhost:3000/api/v1/oc/${ocId}/dossier-snapshot`,
+      nextUrl: new URL(`/api/v1/oc/${ocId}/dossier-snapshot`, "http://localhost:3000"),
+      headers: new Headers({ "content-type": "multipart/form-data" }),
+      formData: async () => formData,
+    };
+
+    const res = await patchDossierSnapshot(req as any, createRouteContext({ ocId }));
+
+    expect(res.status).toBe(200);
+    expect(ocQueries.upsertOcImage).toHaveBeenCalledWith(ocId, "CIVIL_DRESS", expect.objectContaining({
+      contentType: "image/png",
+      sizeBytes: 1024,
+    }));
   });
 });
 

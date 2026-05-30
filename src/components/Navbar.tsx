@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
 import { navItems } from "@/config/app.config";
 import SafeImage from "@/components/site-settings/SafeImage";
+
+const DEFAULT_NAVBAR_LOGO_SRC = "/images/ARTRAC_NEW_LOGO.png";
+const DEFAULT_MCE_LOGO_SRC = "/images/eme_logo.jpeg";
 
 type NavbarProps = {
   logoUrl?: string | null;
@@ -33,7 +36,7 @@ const Navbar = ({
           <Link href="/" className="flex items-center space-x-3">
             <SafeImage
               src={logoUrl}
-              fallbackSrc="/images/army_logo.jpeg"
+              fallbackSrc={DEFAULT_NAVBAR_LOGO_SRC}
               alt="Site Logo"
               width={50}
               height={50}
@@ -72,7 +75,7 @@ const Navbar = ({
 
             <SafeImage
               src={logoUrl}
-              fallbackSrc="/images/eme_logo.jpeg"
+              fallbackSrc={DEFAULT_MCE_LOGO_SRC}
               alt="MCEME Logo"
               width={50}
               height={50}
