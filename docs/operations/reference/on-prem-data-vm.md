@@ -6,16 +6,11 @@
 
 ## Compose Files
 - `deploy/docker-compose.data.yml`
-- `deploy/.env.data.dev.example`
-- `deploy/.env.data.qa.example`
-- `deploy/.env.data.production.example`
+- `deploy/.env.data.example`
 
 ## Setup Steps
-1. Choose the env file for your environment:
-   - Dev: `deploy/.env.data.dev.example`
-   - QA: `deploy/.env.data.qa.example`
-   - Production: `deploy/.env.data.production.example`
-2. Copy and edit: `cp <env-file> deploy/.env.data`.
+1. Copy and edit: `cp deploy/.env.data.example deploy/.env.data`.
+2. Set secrets, bucket name, ports, and `MINIO_API_CORS_ALLOW_ORIGIN` for the browser-visible VM-1 app origin.
 3. Start services: `docker compose -f deploy/docker-compose.data.yml --env-file deploy/.env.data up -d`.
 4. Confirm health:
    - Postgres: `docker ps` + `pg_isready`
@@ -35,9 +30,10 @@
 ## CDN/Proxy Recommendation
 Expose images through VM-1 (reverse proxy) instead of public MinIO:
 - Configure Nginx on VM-1 to proxy `/media/` to `http://<VM-2-IP>:9000`.
-- Set `MINIO_ENDPOINT=http://<VM-1-IP>/media` in the app so presigned upload URLs stay on the app origin.
-- Set `MINIO_PUBLIC_URL=http://<VM-1-IP>/media` in the app.
+- Set `MINIO_ENDPOINT=http://<VM-2-IP>:9000` in the app so signing and server-side checks use the private MinIO API.
+- Set `MINIO_PUBLIC_URL=http://<VM-1-IP>/media` in the app so presigned browser URLs are returned through the VM-1 proxy.
 - Set `MINIO_BROWSER_ORIGINS=http://<VM-1-IP>` in the app build/deployment env.
+- Set `MINIO_API_CORS_ALLOW_ORIGIN=http://<VM-1-IP>` in the VM-2 data env so browser upload preflights are allowed.
 - CDN can cache `https://your-domain/media/<bucket>/<key>`.
 
 ## Direct MinIO Without VM-1 Proxy

@@ -5,6 +5,7 @@ import {
   getObjectKeyFromPublicUrl,
   normalizeStorageEndpoint,
   normalizeStoragePublicBaseUrl,
+  rewriteStorageUrlToPublicBase,
   StorageConfigError,
 } from "@/app/lib/storage";
 
@@ -48,6 +49,20 @@ describe("storage config", () => {
   it("uses the endpoint as the public base URL when no public URL is set", () => {
     expect(normalizeStoragePublicBaseUrl("http://127.0.0.1:9000/", undefined)).toBe(
       "http://127.0.0.1:9000"
+    );
+  });
+
+  it("rewrites signed storage URLs through the public media proxy", () => {
+    const signedUrl =
+      "http://172.22.128.56:9000/oc-images/oc/123/civil_dress/photo.png?X-Amz-SignedHeaders=host&X-Amz-Signature=abc123";
+
+    expect(
+      rewriteStorageUrlToPublicBase(signedUrl, {
+        endpoint: "http://172.22.128.56:9000",
+        publicBaseUrl: "http://172.22.128.57/media",
+      })
+    ).toBe(
+      "http://172.22.128.57/media/oc-images/oc/123/civil_dress/photo.png?X-Amz-SignedHeaders=host&X-Amz-Signature=abc123"
     );
   });
 

@@ -35,9 +35,10 @@ function getMinioBrowserOrigins() {
     .map(toOrigin)
     .filter((origin): origin is string => Boolean(origin));
 
+  const publicOrigin = toOrigin(process.env.MINIO_PUBLIC_URL);
   const derivedOrigins = [
-    toOrigin(process.env.MINIO_PUBLIC_URL),
-    normalizeMinioEndpointOrigin(),
+    publicOrigin,
+    publicOrigin ? null : normalizeMinioEndpointOrigin(),
   ].filter((origin): origin is string => Boolean(origin));
 
   return Array.from(new Set([...configuredOrigins, ...derivedOrigins]));

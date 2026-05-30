@@ -61,7 +61,7 @@ Set at least:
 
 - `DATABASE_URL=postgresql://<user>:<password>@<VM2-IP>:5432/<db>`
 - `NEXT_PUBLIC_API_BASE_URL=http://<VM1-IP>`
-- `MINIO_ENDPOINT=http://<VM1-IP>/media`
+- `MINIO_ENDPOINT=http://<VM2-IP>:9000`
 - `MINIO_PUBLIC_URL=http://<VM1-IP>/media`
 - `MINIO_BROWSER_ORIGINS=http://<VM1-IP>`
 - `MINIO_ACCESS_KEY`

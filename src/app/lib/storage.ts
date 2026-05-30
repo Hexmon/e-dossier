@@ -112,6 +112,45 @@ export function normalizeStoragePublicBaseUrl(endpoint: string, publicUrl?: stri
     return endpoint.replace(/\/+$/, '');
 }
 
+function normalizedPathname(pathname: string) {
+    const normalized = pathname.replace(/\/+$/, '');
+    return normalized === '' ? '/' : normalized;
+}
+
+function joinUrlPath(basePath: string, childPath: string) {
+    const base = normalizedPathname(basePath);
+    const child = childPath.replace(/^\/+/, '');
+    if (!child) return base;
+    if (base === '/') return `/${child}`;
+    return `${base}/${child}`;
+}
+
+export function rewriteStorageUrlToPublicBase(
+    signedUrl: string,
+    config: Pick<StorageConfig, 'endpoint' | 'publicBaseUrl'>
+) {
+    const endpointUrl = new URL(config.endpoint);
+    const publicBaseUrl = new URL(config.publicBaseUrl);
+    if (
+        endpointUrl.origin === publicBaseUrl.origin &&
+        normalizedPathname(endpointUrl.pathname) === normalizedPathname(publicBaseUrl.pathname)
+    ) {
+        return signedUrl;
+    }
+
+    const url = new URL(signedUrl);
+    const endpointPath = normalizedPathname(endpointUrl.pathname);
+    let objectPath = url.pathname;
+    if (endpointPath !== '/' && objectPath.startsWith(`${endpointPath}/`)) {
+        objectPath = objectPath.slice(endpointPath.length);
+    }
+
+    publicBaseUrl.pathname = joinUrlPath(publicBaseUrl.pathname, objectPath);
+    publicBaseUrl.search = url.search;
+    publicBaseUrl.hash = url.hash;
+    return publicBaseUrl.toString();
+}
+
 export function getStorageConfig(): StorageConfig {
     for (const key of REQUIRED_ENV) requiredEnv(key);
     const endpoint = normalizeStorageEndpoint({
@@ -343,9 +382,10 @@ export async function createPresignedUploadUrl(params: {
             Key: params.key,
             ContentType: params.contentType,
         });
-        return await getSignedUrl(client, command, {
+        const signedUrl = await getSignedUrl(client, command, {
             expiresIn: params.expiresInSeconds ?? 300,
         });
+        return rewriteStorageUrlToPublicBase(signedUrl, config);
     } catch (error) {
         throw toStorageError(error, config, 'presign_put_object');
     }
@@ -372,9 +412,10 @@ export async function createPresignedGetUrl(params: {
         Key: params.key,
     });
     try {
-        return await getSignedUrl(client, command, {
+        const signedUrl = await getSignedUrl(client, command, {
             expiresIn: params.expiresInSeconds ?? 3600, // 1 hour default
         });
+        return rewriteStorageUrlToPublicBase(signedUrl, config);
     } catch (error) {
         throw toStorageError(error, config, 'presign_get_object');
     }
