@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
@@ -27,6 +28,7 @@ export default function SsbUploadPage() {
   const [uploadOc, setUploadOc] = useState<SsbUploadItem | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
+  const [visiblePasswordOcId, setVisiblePasswordOcId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -61,9 +63,10 @@ export default function SsbUploadPage() {
 
   const saveUpload = async () => {
     if (!uploadOc || !file || !password.trim()) return;
+    const submittedPassword = password.trim();
     setSaving(true);
     try {
-      const res = await uploadSsbPdf(uploadOc.ocId, { file, password });
+      const res = await uploadSsbPdf(uploadOc.ocId, { file, password: submittedPassword });
       setItems((prev) => prev.map((item) => (
         item.ocId === uploadOc.ocId ? { ...item, ...res.item, hasUpload: true } : item
       )));
@@ -131,6 +134,8 @@ export default function SsbUploadPage() {
                     <tr><td className="px-4 py-8 text-center text-muted-foreground" colSpan={4}>No OCs found for this course.</td></tr>
                   ) : items.map((item) => {
                     const editing = editOcId === item.ocId;
+                    const savedPassword = item.savedPassword;
+                    const passwordVisible = visiblePasswordOcId === item.ocId;
                     return (
                       <tr key={item.ocId} className="border-t">
                         <td className="px-4 py-3 font-medium">{item.ocNo}</td>
@@ -144,9 +149,30 @@ export default function SsbUploadPage() {
                               {editing ? "Cancel" : "Edit"}
                             </Button>
                             {editing ? (
-                              <Button type="button" size="sm" onClick={() => setUploadOc(item)}>
-                                Upload
-                              </Button>
+                              <>
+                                {savedPassword ? (
+                                  <div className="flex items-center gap-2">
+                                    {passwordVisible ? (
+                                      <span className="max-w-40 truncate text-xs text-muted-foreground">
+                                        {savedPassword}
+                                      </span>
+                                    ) : null}
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="icon-sm"
+                                      className="hover:bg-primary/10 hover:text-primary"
+                                      onClick={() => setVisiblePasswordOcId(passwordVisible ? null : item.ocId)}
+                                      aria-label={`${passwordVisible ? "Hide" : "Show"} saved SSB password for ${item.ocNo}`}
+                                    >
+                                      {passwordVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                    </Button>
+                                  </div>
+                                ) : null}
+                                <Button type="button" size="sm" onClick={() => setUploadOc(item)}>
+                                  Upload
+                                </Button>
+                              </>
                             ) : null}
                           </div>
                         </td>
