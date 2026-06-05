@@ -85,13 +85,14 @@ describe("Next production CSP MinIO origins", () => {
 
     const csp = await getCspHeaderValue();
 
-    expect(csp).toContain("img-src 'self' data: blob: http://localhost:9000 http://127.0.0.1:9000");
-    expect(csp).toContain("connect-src 'self' http://localhost:9000 http://127.0.0.1:9000");
+    expect(csp).toContain("img-src 'self' data: blob: http://localhost:9000");
+    expect(csp).toContain("connect-src 'self' http://localhost:9000");
+    expect(csp).not.toContain("http://127.0.0.1:9000");
   });
 
   it("supports proxy-mode MinIO URLs without leaking the path into CSP", async () => {
     process.env.NODE_ENV = "production";
-    process.env.MINIO_ENDPOINT = "http://172.22.128.57/media";
+    process.env.MINIO_ENDPOINT = "http://172.22.128.56:9000";
     process.env.MINIO_PUBLIC_URL = "http://172.22.128.57/media";
     delete process.env.MINIO_BROWSER_ORIGINS;
 
@@ -99,6 +100,7 @@ describe("Next production CSP MinIO origins", () => {
 
     expect(csp).toContain("img-src 'self' data: blob: http://172.22.128.57");
     expect(csp).toContain("connect-src 'self' http://172.22.128.57");
+    expect(csp).not.toContain("http://172.22.128.56:9000");
     expect(csp).not.toContain("/media");
   });
 });
