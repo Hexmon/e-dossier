@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { handleApiError, json } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { requireAdmin } from '@/app/lib/authz';
 import { getOcSsbUploadSummary, listCourseSsbUploadRows } from '@/app/db/queries/ssb-upload';
+import { decryptSsbStoredPassword } from '@/app/lib/ssb-upload-crypto';
 import { AuditEventType, AuditResourceType, type AuditNextRequest, withAuditRoute } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -15,7 +16,7 @@ const querySchema = z.object({
 
 async function GETHandler(req: AuditNextRequest) {
   try {
-    const authCtx = await requireAuth(req);
+    const authCtx = await requireAdmin(req);
     const sp = new URL(req.url).searchParams;
     const parsed = querySchema.parse({
       courseId: sp.get('courseId') ?? undefined,
@@ -26,10 +27,7 @@ async function GETHandler(req: AuditNextRequest) {
       const row = await getOcSsbUploadSummary(parsed.ocId);
       if (!row) return json.notFound('OC not found.');
       return json.ok({
-        item: {
-          ...row,
-          hasUpload: Boolean(row.fileName),
-        },
+        item: toSsbUploadItem(row),
       });
     }
 
@@ -46,10 +44,19 @@ async function GETHandler(req: AuditNextRequest) {
       },
     });
 
-    return json.ok({ items: items.map((item) => ({ ...item, hasUpload: Boolean(item.fileName) })) });
+    return json.ok({ items: items.map(toSsbUploadItem) });
   } catch (error) {
     return handleApiError(error);
   }
 }
 
 export const GET = withAuditRoute('GET', GETHandler);
+
+function toSsbUploadItem<T extends { fileName: string | null; savedPasswordCiphertext?: string | null }>(row: T) {
+  const { savedPasswordCiphertext: _savedPasswordCiphertext, ...item } = row;
+  return {
+    ...item,
+    hasUpload: Boolean(row.fileName),
+    savedPassword: decryptSsbStoredPassword(_savedPasswordCiphertext),
+  };
+}

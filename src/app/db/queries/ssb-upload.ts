@@ -13,6 +13,7 @@ export type SsbUploadRow = {
   fileName: string | null;
   sizeBytes: number | null;
   uploadedAt: Date | null;
+  savedPasswordCiphertext: string | null;
 };
 
 const uploadSelect = {
@@ -21,6 +22,7 @@ const uploadSelect = {
   contentType: ocSsbReports.ssbPdfContentType,
   sizeBytes: ocSsbReports.ssbPdfSizeBytes,
   passwordHash: ocSsbReports.ssbPdfPasswordHash,
+  savedPasswordCiphertext: ocSsbReports.ssbPdfPasswordCiphertext,
   salt: ocSsbReports.ssbPdfSalt,
   iv: ocSsbReports.ssbPdfIv,
   authTag: ocSsbReports.ssbPdfAuthTag,
@@ -48,6 +50,7 @@ async function listCourseSsbUploadRowsWithoutUploadColumns(courseId: string): Pr
       fileName: sql<null>`null`,
       sizeBytes: sql<null>`null`,
       uploadedAt: sql<null>`null`,
+      savedPasswordCiphertext: sql<null>`null`,
     })
     .from(ocCadets)
     .innerJoin(courses, eq(courses.id, ocCadets.courseId))
@@ -69,6 +72,7 @@ export async function listCourseSsbUploadRows(courseId: string): Promise<SsbUplo
         fileName: ocSsbReports.ssbPdfFileName,
         sizeBytes: ocSsbReports.ssbPdfSizeBytes,
         uploadedAt: ocSsbReports.ssbPdfUploadedAt,
+        savedPasswordCiphertext: ocSsbReports.ssbPdfPasswordCiphertext,
       })
       .from(ocCadets)
       .innerJoin(courses, eq(courses.id, ocCadets.courseId))
@@ -100,6 +104,7 @@ export async function getOcSsbUploadSummary(ocId: string) {
         fileName: ocSsbReports.ssbPdfFileName,
         sizeBytes: ocSsbReports.ssbPdfSizeBytes,
         uploadedAt: ocSsbReports.ssbPdfUploadedAt,
+        savedPasswordCiphertext: ocSsbReports.ssbPdfPasswordCiphertext,
       })
       .from(ocCadets)
       .leftJoin(ocSsbReports, and(eq(ocSsbReports.ocId, ocCadets.id), isNull(ocSsbReports.deletedAt)))
@@ -116,6 +121,7 @@ export async function getOcSsbUploadSummary(ocId: string) {
         fileName: sql<null>`null`,
         sizeBytes: sql<null>`null`,
         uploadedAt: sql<null>`null`,
+        savedPasswordCiphertext: sql<null>`null`,
       })
       .from(ocCadets)
       .where(and(eq(ocCadets.id, ocId), isNull(ocCadets.deletedAt)))
@@ -140,6 +146,7 @@ export async function saveOcSsbUpload(input: {
   contentType: string;
   sizeBytes: number;
   passwordHash: string;
+  passwordCiphertext: string;
   salt: string;
   iv: string;
   authTag: string;
@@ -158,6 +165,7 @@ export async function saveOcSsbUpload(input: {
       ssbPdfContentType: input.contentType,
       ssbPdfSizeBytes: input.sizeBytes,
       ssbPdfPasswordHash: input.passwordHash,
+      ssbPdfPasswordCiphertext: input.passwordCiphertext,
       ssbPdfPasswordAlgo: 'argon2id',
       ssbPdfSalt: input.salt,
       ssbPdfIv: input.iv,

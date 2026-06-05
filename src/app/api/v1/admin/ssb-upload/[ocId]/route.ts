@@ -5,7 +5,7 @@ import { requireAdmin } from '@/app/lib/authz';
 import { handleApiError, json } from '@/app/lib/http';
 import { deleteObject, putObjectBytes } from '@/app/lib/storage';
 import { getOcSsbUploadSummary, saveOcSsbUpload } from '@/app/db/queries/ssb-upload';
-import { encryptSsbPdf } from '@/app/lib/ssb-upload-crypto';
+import { encryptSsbPdf, encryptSsbStoredPassword } from '@/app/lib/ssb-upload-crypto';
 import { AuditEventType, AuditResourceType, type AuditNextRequest, withAuditRoute } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -42,6 +42,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
     });
 
     const passwordHash = await argon2.hash(password);
+    const passwordCiphertext = encryptSsbStoredPassword(password);
     const result = await saveOcSsbUpload({
       ocId,
       objectKey,
@@ -49,6 +50,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
       contentType: 'application/pdf',
       sizeBytes: file.size,
       passwordHash,
+      passwordCiphertext,
       salt: encrypted.salt,
       iv: encrypted.iv,
       authTag: encrypted.authTag,
@@ -79,6 +81,7 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         sizeBytes: file.size,
         uploadedAt: result.saved.ssbPdfUploadedAt,
         hasUpload: true,
+        savedPassword: password,
       },
     });
   } catch (error) {

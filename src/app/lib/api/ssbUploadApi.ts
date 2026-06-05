@@ -10,6 +10,7 @@ export type SsbUploadItem = {
   sizeBytes?: number | null;
   uploadedAt?: string | null;
   hasUpload: boolean;
+  savedPassword?: string | null;
 };
 
 export function listSsbUploadOcs(courseId: string) {

@@ -52,6 +52,7 @@ import * as authz from "@/app/lib/authz";
 import * as ssbQueries from "@/app/db/queries/ssb-upload";
 import * as storage from "@/app/lib/storage";
 import * as argon2 from "argon2";
+import { encryptSsbStoredPassword } from "@/app/lib/ssb-upload-crypto";
 
 const courseId = "11111111-1111-4111-8111-111111111111";
 const ocId = "22222222-2222-4222-8222-222222222222";
@@ -63,7 +64,7 @@ beforeEach(() => {
 });
 
 describe("GET /api/v1/admin/ssb-upload", () => {
-  it("is readable by authenticated dossier users and lists course OCs", async () => {
+  it("requires admin access and lists course OCs with saved passwords", async () => {
     vi.mocked(ssbQueries.listCourseSsbUploadRows).mockResolvedValueOnce([
       {
         ocId,
@@ -75,6 +76,7 @@ describe("GET /api/v1/admin/ssb-upload", () => {
         fileName: "ssb.pdf",
         sizeBytes: 120,
         uploadedAt: new Date("2026-01-01T00:00:00Z"),
+        savedPasswordCiphertext: encryptSsbStoredPassword("report-pass"),
       },
     ]);
 
@@ -83,14 +85,14 @@ describe("GET /api/v1/admin/ssb-upload", () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(authz.requireAuth).toHaveBeenCalledTimes(1);
-    expect(authz.requireAdmin).not.toHaveBeenCalled();
-    expect(body.items[0]).toMatchObject({ ocId, hasUpload: true });
+    expect(authz.requireAdmin).toHaveBeenCalledTimes(1);
+    expect(body.items[0]).toMatchObject({ ocId, hasUpload: true, savedPassword: "report-pass" });
+    expect(body.items[0].savedPasswordCiphertext).toBeUndefined();
   });
 });
 
 describe("POST /api/v1/admin/ssb-upload/[ocId]", () => {
-  it("encrypts the uploaded PDF and stores only password hash metadata", async () => {
+  it("encrypts the uploaded PDF and stores persistent password view metadata", async () => {
     vi.mocked(ssbQueries.getOcSsbUploadSummary).mockResolvedValueOnce({
       ocId,
       ocNo: "101",
@@ -122,9 +124,11 @@ describe("POST /api/v1/admin/ssb-upload/[ocId]", () => {
     expect(ssbQueries.saveOcSsbUpload).toHaveBeenCalledWith(expect.objectContaining({
       ocId,
       passwordHash: "argon-hash",
+      passwordCiphertext: expect.stringMatching(/^v1:/),
       fileName: "ssb.pdf",
     }));
     expect(body.item.hasUpload).toBe(true);
+    expect(body.item.savedPassword).toBe("report-pass");
   });
 });
 
