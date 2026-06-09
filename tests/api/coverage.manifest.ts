@@ -180,6 +180,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: ['src/app/api/v1/admin/marks-review-workflow/route.ts'],
   },
   {
+    testFile: 'tests/api/admin.warning-management.test.ts',
+    routeFiles: ['src/app/api/v1/admin/warning-management/route.ts'],
+  },
+  {
     testFile: 'tests/api/admin.training-camps.settings.test.ts',
     routeFiles: ['src/app/api/v1/admin/training-camps/settings/route.ts'],
   },
@@ -221,6 +225,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/me.workflow-notifications.test.ts',
     routeFiles: ['src/app/api/v1/me/workflow-notifications/route.ts'],
+  },
+  {
+    testFile: 'tests/api/me.warning-notifications.test.ts',
+    routeFiles: ['src/app/api/v1/me/warning-notifications/route.ts'],
   },
   {
     testFile: 'tests/api/me.switchable-identities.test.ts',

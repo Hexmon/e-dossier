@@ -39,6 +39,7 @@ export const endpoints = {
             gradingPolicyRecalculate: "/api/v1/admin/academics/grading-policy/recalculate",
         },
         marksReviewWorkflow: "/api/v1/admin/marks-review-workflow",
+        warningManagement: "/api/v1/admin/warning-management",
         reports: {
             verification: {
                 verify: "/api/v1/admin/reports/verification/verify",
@@ -102,6 +103,7 @@ export const endpoints = {
     me: {
         switchableIdentities: "/api/v1/me/switchable-identities",
         workflowNotifications: "/api/v1/me/workflow-notifications",
+        warningNotifications: "/api/v1/me/warning-notifications",
     },
     oc: {
         list: "/api/v1/oc",

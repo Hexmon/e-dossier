@@ -51,6 +51,9 @@ describe('authz-permissions helpers', () => {
     expect(admin?.permissionKeys).not.toContain('sidebar:dossier');
     expect(admin?.permissionKeys).toContain('me:read');
     expect(admin?.permissionKeys).toContain('me:navigation:read');
+    expect(admin?.permissionKeys).toContain('admin:warning-management:read');
+    expect(admin?.permissionKeys).toContain('me:warning-notifications:read');
+    expect(admin?.permissionKeys).toContain('me:warning-notifications:update');
     expect(admin?.permissionKeys).toContain('dashboard:data:course:read');
     expect(platoon?.permissionKeys).toContain('sidebar:dossier');
     expect(platoon?.permissionKeys).toContain('page:dashboard:milmgmt:physical-training:view');
@@ -59,9 +62,15 @@ describe('authz-permissions helpers', () => {
     expect(platoon?.permissionKeys).not.toContain('oc:physical-training:bulk:create');
     expect(platoon?.permissionKeys).toContain('me:read');
     expect(platoon?.permissionKeys).toContain('me:navigation:read');
+    expect(platoon?.permissionKeys).toContain('admin:warning-management:read');
+    expect(platoon?.permissionKeys).toContain('me:warning-notifications:read');
+    expect(platoon?.permissionKeys).toContain('me:warning-notifications:update');
     expect(platoon?.positionKeys).toContain('PTN_CDR');
     expect(platoon?.roleKeys).toContain('ptn_cdr');
     expect(otherUsers?.permissionKeys).toContain('page:dashboard:bulk-upload:view');
+    expect(otherUsers?.permissionKeys).toContain('admin:warning-management:read');
+    expect(otherUsers?.permissionKeys).toContain('me:warning-notifications:read');
+    expect(otherUsers?.permissionKeys).toContain('me:warning-notifications:update');
     expect(otherUsers?.permissionKeys).toContain('admin:courses:read');
     expect(otherUsers?.permissionKeys).toContain('admin:courses:offerings:read');
     expect(otherUsers?.permissionKeys).toContain('admin:physical-training:types:read');
