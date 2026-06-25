@@ -23,6 +23,7 @@ import {
   INTERVIEW_WRITE_PERMISSION_KEYS,
   resolveInterviewFallbackPermissionKeys,
 } from '@/lib/interview-access';
+import { normalizePositionKey } from '@/app/lib/warning-management';
 
 type AptClaim = {
   id?: string;
@@ -91,6 +92,14 @@ const INTERVIEW_PERMISSION_DESCRIPTIONS: Record<string, string> = {
   'oc:interviews:term:postmid:update': 'Allows editing post-mid-term interview fields.',
   'oc:interviews:special:update': 'Allows editing special interview records.',
 };
+
+const DISCIPLINE_RELEGATION_PERMISSION_KEYS = [
+  'admin:relegation:ocs:read',
+  'admin:relegation:courses:read',
+  'admin:relegation:exception:create',
+  'admin:relegation:presign:create',
+  'admin:relegation:pending-pdf:cleanup:create',
+] as const;
 
 let ensureInterviewRbacDefaultsPromise: Promise<void> | null = null;
 
@@ -795,6 +804,23 @@ export function applyInterviewPermissionFallbackOverrides(
   return { grantedPermissions: fallbackPermissions };
 }
 
+export function applyDisciplineRelegationPermissionFallbackOverrides(
+  input: {
+    position?: string | null;
+  },
+  permissionSet: Set<string>
+) {
+  if (normalizePositionKey(input.position) !== 'dc-ci-mceme') {
+    return { grantedPermissions: [] as string[] };
+  }
+
+  for (const permission of DISCIPLINE_RELEGATION_PERMISSION_KEYS) {
+    permissionSet.add(permission);
+  }
+
+  return { grantedPermissions: [...DISCIPLINE_RELEGATION_PERMISSION_KEYS] };
+}
+
 export async function getEffectivePermissionBundle(input: PermissionInput): Promise<EffectivePermissionBundle> {
   await ensureInterviewRbacDefaults();
   await ensureCodeRbacDefaults();
@@ -820,6 +846,12 @@ export async function getEffectivePermissionBundle(input: PermissionInput): Prom
       roles: uniqueRoles,
       position: appointment.positionKey,
       scopeType: appointment.scopeType,
+    },
+    permissionSet
+  );
+  applyDisciplineRelegationPermissionFallbackOverrides(
+    {
+      position: appointment.positionKey ?? input.apt?.position ?? null,
     },
     permissionSet
   );

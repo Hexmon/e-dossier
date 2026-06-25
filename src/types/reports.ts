@@ -359,3 +359,26 @@ export type CourseWiseFinalPerformanceDownloadRequest = {
   courseId: string;
   password: string;
 };
+
+export type MeritRankingRow = {
+  ocId: string;
+  meritRank: number;
+  ocNo: string;
+  name: string;
+  platoonId: string | null;
+  platoonKey: string | null;
+  platoonName: string | null;
+  platoonThemeColor: string | null;
+  currentSemester: number;
+  marksObtained: number;
+  categoryTotals: Record<string, number>;
+};
+
+export type MeritRankingPreview = {
+  reportType: 'OVERALL_TRAINING_MERIT_RANKINGS';
+  course: { id: string; code: string; title: string };
+  semester: number;
+  categories: Array<{ key: string; label: string }>;
+  rows: MeritRankingRow[];
+  formulaLabel: string;
+};

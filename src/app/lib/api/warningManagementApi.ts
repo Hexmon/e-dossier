@@ -31,6 +31,9 @@ export type WarningNotification = {
   actualPoints: number;
   semesterLabel: string;
   deepLink: string;
+  relegationLink: string | null;
+  isDisciplineRelegationEligible: boolean;
+  canMarkForRelegation: boolean;
   readAt: string | null;
   createdAt: string;
 };

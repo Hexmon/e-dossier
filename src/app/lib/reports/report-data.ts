@@ -17,8 +17,10 @@ import { courses } from '@/app/db/schema/training/courses';
 import { courseOfferingInstructors } from '@/app/db/schema/training/courseOfferings';
 import { instructors } from '@/app/db/schema/training/instructors';
 import { ocCommissioning } from '@/app/db/schema/training/oc';
+import { platoons } from '@/app/db/schema/auth/platoons';
 import { FIXED_MARKS, REPORT_TYPES } from '@/app/lib/reports/types';
 import { FPR_MAX_MARKS, SPR_MAX_MARKS } from '@/app/services/performance-record.constants';
+import { normalizePlatoonThemeColor } from '@/lib/platoon-theme';
 import {
   type AcademicGradingPolicy,
 } from '@/app/lib/grading-policy';
@@ -40,6 +42,7 @@ import type {
   FinalResultCompilationPreview,
   FinalResultOcRow,
   FinalResultSubjectColumn,
+  MeritRankingPreview,
   SemesterGradeCandidate,
   SemesterGradePreview,
   PtAssessmentPreview,
@@ -110,6 +113,23 @@ const COURSE_WISE_TAIL_COLUMNS: CourseWisePerformanceColumn[] = [
 function round2(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
+
+async function listPlatoonThemeColorsById(platoonIds: Array<string | null | undefined>) {
+  const normalizedIds = Array.from(new Set(platoonIds.filter((id): id is string => Boolean(id))));
+  if (!normalizedIds.length) return new Map<string, string>();
+
+  const rows = await db
+    .select({
+      id: platoons.id,
+      themeColor: platoons.themeColor,
+    })
+    .from(platoons)
+    .where(and(inArray(platoons.id, normalizedIds), isNull(platoons.deletedAt)));
+
+  return new Map(rows.map((row) => [row.id, normalizePlatoonThemeColor(row.themeColor)]));
+}
+
+const COURSE_SEMESTERS = [1, 2, 3, 4, 5, 6] as const;
 
 function semesterToRoman(semester: number): string {
   const map: Record<number, string> = {
@@ -709,47 +729,47 @@ export async function buildCourseWiseFinalPerformancePreview(params: {
     ocRows.map(async (oc, index) => {
       const [allSemScores, sprRecords] = await Promise.all([
         getAllSemesterSourceMarks(oc.id),
-        Promise.all([1, 2, 3, 4, 5, 6].map((semester) => getSprRecord(oc.id, semester))),
+        Promise.all(COURSE_SEMESTERS.map((semester) => getSprRecord(oc.id, semester))),
       ]);
 
       const academics = round2(
-        [1, 2, 3, 4, 5, 6].reduce(
+        COURSE_SEMESTERS.reduce(
           (sum, semester) => sum + Number(allSemScores[semester]?.academics ?? 0),
           0
         )
       );
       const ptSwimming = round2(
-        [1, 2, 3, 4, 5, 6].reduce(
+        COURSE_SEMESTERS.reduce(
           (sum, semester) => sum + Number(allSemScores[semester]?.ptSwimming ?? 0),
           0
         )
       );
       const games = round2(
-        [1, 2, 3, 4, 5, 6].reduce(
+        COURSE_SEMESTERS.reduce(
           (sum, semester) => sum + Number(allSemScores[semester]?.games ?? 0),
           0
         )
       );
       const olq = round2(
-        [1, 2, 3, 4, 5, 6].reduce(
+        COURSE_SEMESTERS.reduce(
           (sum, semester) => sum + Number(allSemScores[semester]?.olq ?? 0),
           0
         )
       );
       const cfe = round2(
-        [1, 2, 3, 4, 5, 6].reduce(
+        COURSE_SEMESTERS.reduce(
           (sum, semester) => sum + Number(allSemScores[semester]?.cfe ?? 0),
           0
         )
       );
       const camp = round2(
-        [1, 2, 3, 4, 5, 6].reduce(
+        COURSE_SEMESTERS.reduce(
           (sum, semester) => sum + Number(allSemScores[semester]?.camp ?? 0),
           0
         )
       );
       const drill = round2(
-        [1, 2, 3, 4, 5, 6].reduce(
+        COURSE_SEMESTERS.reduce(
           (sum, semester) => sum + Number(allSemScores[semester]?.drill ?? 0),
           0
         )
@@ -794,6 +814,94 @@ export async function buildCourseWiseFinalPerformancePreview(params: {
     formulaLabel:
       "Grand Total = Academics + PT & Swimming + Games + OLQ + CFE + Cdr's Mks + Camp + Drill",
     maxTotal: Number(FPR_MAX_MARKS.total),
+  };
+}
+
+export async function buildMeritRankingPreview(params: {
+  courseId: string;
+  semester: number;
+}): Promise<MeritRankingPreview> {
+  const categories = [
+    { key: 'academics', label: 'Academics' },
+    { key: 'ptSwimming', label: 'PT & Swimming' },
+    { key: 'games', label: 'Games' },
+    { key: 'olq', label: 'OLQ' },
+    { key: 'cfe', label: 'CFE' },
+    { key: 'camp', label: 'Camp' },
+    { key: 'drill', label: 'Drill' },
+    { key: 'cdrMarks', label: "Cdr's Marks" },
+  ];
+  const [course, ocRows] = await Promise.all([
+    resolveCourse(params.courseId),
+    listOCsBasic({
+      courseId: params.courseId,
+      active: true,
+      limit: 5000,
+      sort: 'name_asc',
+    }),
+  ]);
+  const platoonThemeColorById = await listPlatoonThemeColorsById(ocRows.map((oc) => oc.platoonId));
+
+  const semesters = COURSE_SEMESTERS.filter((semester) => semester <= params.semester);
+  const rows = await Promise.all(
+    ocRows.map(async (oc) => {
+      const [allSemScores, sprRecords] = await Promise.all([
+        getAllSemesterSourceMarks(oc.id),
+        Promise.all(semesters.map((semester) => getSprRecord(oc.id, semester))),
+      ]);
+
+      const categoryTotals = semesters.reduce<Record<string, number>>((totals, semester) => {
+        const source = allSemScores[semester];
+        totals.academics += Number(source?.academics ?? 0);
+        totals.ptSwimming += Number(source?.ptSwimming ?? 0);
+        totals.games += Number(source?.games ?? 0);
+        totals.olq += Number(source?.olq ?? 0);
+        totals.cfe += Number(source?.cfe ?? 0);
+        totals.camp += Number(source?.camp ?? 0);
+        totals.drill += Number(source?.drill ?? 0);
+        return totals;
+      }, Object.fromEntries(categories.map((category) => [category.key, 0])));
+      categoryTotals.cdrMarks = sprRecords.reduce((sum, record) => sum + Number(record?.cdrMarks ?? 0), 0);
+      const marksObtained = categories.reduce((sum, category) => sum + Number(categoryTotals[category.key] ?? 0), 0);
+
+      return {
+        ocId: oc.id,
+        ocNo: oc.ocNo,
+        name: oc.name,
+        platoonId: oc.platoonId ?? null,
+        platoonKey: oc.platoonKey ?? null,
+        platoonName: oc.platoonName ?? null,
+        platoonThemeColor: oc.platoonId ? (platoonThemeColorById.get(oc.platoonId) ?? null) : null,
+        currentSemester: params.semester,
+        marksObtained: round2(marksObtained),
+        categoryTotals: Object.fromEntries(
+          categories.map((category) => [category.key, round2(categoryTotals[category.key] ?? 0)])
+        ),
+      };
+    })
+  );
+
+  const rankedRows = rows
+    .sort((left, right) => {
+      const marksDiff = right.marksObtained - left.marksObtained;
+      if (marksDiff !== 0) return marksDiff;
+      const ocNoDiff = String(left.ocNo).localeCompare(String(right.ocNo), undefined, { numeric: true });
+      if (ocNoDiff !== 0) return ocNoDiff;
+      return left.name.localeCompare(right.name);
+    })
+    .map((row, index) => ({
+      ...row,
+      meritRank: index + 1,
+    }));
+
+  return {
+    reportType: REPORT_TYPES.OVERALL_TRAINING_MERIT_RANKINGS,
+    course,
+    semester: params.semester,
+    categories,
+    rows: rankedRows,
+    formulaLabel:
+      "Marks Obtained = cumulative FPR source marks from semester I through selected semester + Cdr's Mks",
   };
 }
 

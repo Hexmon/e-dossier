@@ -1,6 +1,7 @@
 import { handleApiError, json } from '@/app/lib/http';
 import { courseWiseFinalPerformancePreviewQuerySchema } from '@/app/lib/validators.reports';
-import { buildCourseWiseFinalPerformancePreview } from '@/app/lib/reports/report-data';
+import { buildCourseWiseFinalPerformancePreview, buildMeritRankingPreview } from '@/app/lib/reports/report-data';
+import { assertSemesterAllowed, resolveCourseWithSemesters } from '@/app/lib/reports/semester-resolution';
 import { requireAuth } from '@/app/lib/authz';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { AuditEventType, AuditResourceType, withAuditRoute } from '@/lib/audit';
@@ -14,7 +15,38 @@ async function GETHandler(req: AuditNextRequest) {
     const sp = new URL(req.url).searchParams;
     const query = courseWiseFinalPerformancePreviewQuerySchema.parse({
       courseId: sp.get('courseId') ?? undefined,
+      semester: sp.get('semester') ?? undefined,
     });
+
+    if (query.semester) {
+      const courseMeta = await resolveCourseWithSemesters(query.courseId);
+      assertSemesterAllowed(query.semester, courseMeta.allowedSemesters);
+
+      const preview = await buildMeritRankingPreview({
+        courseId: query.courseId,
+        semester: query.semester,
+      });
+
+      await req.audit.log({
+        action: AuditEventType.API_REQUEST,
+        outcome: 'SUCCESS',
+        actor: { type: 'user', id: authCtx.userId },
+        target: { type: AuditResourceType.COURSE, id: query.courseId },
+        metadata: {
+          description: 'Merit rankings preview fetched successfully.',
+          module: 'reports',
+          reportType: 'overall_training_merit_rankings',
+          courseId: query.courseId,
+          semester: query.semester,
+          rowCount: preview.rows.length,
+        },
+      });
+
+      return json.ok({
+        message: 'Merit rankings preview fetched successfully.',
+        data: preview,
+      });
+    }
 
     const preview = await buildCourseWiseFinalPerformancePreview({
       courseId: query.courseId,

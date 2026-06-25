@@ -4,6 +4,7 @@ import { PtAssessmentCard } from '@/components/reports/cards/PtAssessmentCard';
 import { FinalResultCompilationCard } from '@/components/reports/cards/FinalResultCompilationCard';
 import { CourseWisePerformanceCard } from '@/components/reports/cards/CourseWisePerformanceCard';
 import { CourseWiseFinalPerformanceCard } from '@/components/reports/cards/CourseWiseFinalPerformanceCard';
+import { MeritRankingsCard } from '@/components/reports/cards/MeritRankingsCard';
 
 export function ReportsHub() {
   return (
@@ -29,6 +30,7 @@ export function ReportsHub() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <CourseWisePerformanceCard />
           <CourseWiseFinalPerformanceCard />
+          <MeritRankingsCard />
         </div>
       </section>
     </div>

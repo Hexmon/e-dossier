@@ -2145,6 +2145,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/oc/:ocId/ssb-upload",
+    "action": "oc:ssb-upload:read",
+    "resourceType": "oc:ssb-upload",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/oc/:ocId/ssb/points",
     "action": "oc:ssb:points:read",
     "resourceType": "oc:ssb:points",
@@ -3368,6 +3377,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "method": "GET",
+    "path": "/api/v1/admin/ssb-upload/settings",
+    "action": "admin:ssb-upload:settings:read",
+    "resourceType": "admin:ssb-upload:settings",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
     "method": "POST",
     "path": "/api/v1/admin/ssb-upload/:ocId",
     "action": "admin:ssb-upload:create",
@@ -3384,6 +3402,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/ssb-upload/settings",
+    "action": "admin:ssb-upload:settings:update",
+    "resourceType": "admin:ssb-upload:settings",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
   },
   {
     "method": "POST",
@@ -3894,6 +3921,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/oc/:ocId/ssb",
     "action": "oc:ssb:create",
     "resourceType": "oc:ssb",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/oc/:ocId/ssb-upload/view",
+    "action": "oc:ssb-upload:view:create",
+    "resourceType": "oc:ssb-upload:view",
     "category": "oc",
     "fieldLevelCandidate": false,
     "adminBaseline": false

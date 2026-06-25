@@ -6,6 +6,7 @@ import {
   buildPtPublishItems,
   getAllowedWorkflowActions,
   isMarksWorkflowModuleActive,
+  reconcileWorkflowDraftPayloadWithLive,
   removeOcFromWorkflowDraftPayload,
   retainKnownWorkflowUserIds,
   resolveWorkflowActorContext,
@@ -232,6 +233,107 @@ describe('marksReviewWorkflow core', () => {
         motivationValues: [{ fieldId: 'field-1', value: 'Excellent' }],
       },
     ]);
+  });
+
+  it('reconciles academics drafts to the live course roster while preserving marks', () => {
+    const live = {
+      courseId: '11111111-1111-4111-8111-111111111111',
+      semester: 1,
+      subjectId: '22222222-2222-4222-8222-222222222222',
+      subject: {
+        id: '22222222-2222-4222-8222-222222222222',
+        code: 'CSIT-001',
+        name: 'Computer Science',
+      },
+      items: [
+        { ocId: '33333333-3333-4333-8333-333333333333', ocNo: '7534', name: 'Current OC' },
+        { ocId: '44444444-4444-4444-8444-444444444444', ocNo: '7535', name: 'New OC' },
+      ],
+    };
+    const draft = {
+      ...live,
+      items: [
+        {
+          ocId: '33333333-3333-4333-8333-333333333333',
+          ocNo: 'OLD-7534',
+          name: 'Old Current OC',
+          theory: { phaseTest1Marks: 10 },
+        },
+        {
+          ocId: '55555555-5555-4555-8555-555555555555',
+          ocNo: '7222',
+          name: 'Moved OC',
+          theory: { phaseTest1Marks: 99 },
+        },
+      ],
+    };
+
+    const result = reconcileWorkflowDraftPayloadWithLive(draft as any, live as any);
+
+    expect(result.items).toEqual([
+      {
+        ocId: '33333333-3333-4333-8333-333333333333',
+        ocNo: '7534',
+        name: 'Current OC',
+        theory: { phaseTest1Marks: 10 },
+        practical: undefined,
+      },
+      { ocId: '44444444-4444-4444-8444-444444444444', ocNo: '7535', name: 'New OC' },
+    ]);
+  });
+
+  it('reconciles PT drafts to the live course roster while preserving scores', () => {
+    const live = {
+      courseId: '11111111-1111-4111-8111-111111111111',
+      semester: 2,
+      template: { id: 'template-live' },
+      items: [
+        {
+          oc: { id: '33333333-3333-4333-8333-333333333333', ocNo: '7534', name: 'Current OC' },
+          scores: [],
+          motivationValues: [],
+        },
+        {
+          oc: { id: '44444444-4444-4444-8444-444444444444', ocNo: '7535', name: 'New OC' },
+          scores: [],
+          motivationValues: [],
+        },
+      ],
+    };
+    const draft = {
+      ...live,
+      template: { id: 'template-old' },
+      items: [
+        {
+          oc: { id: '33333333-3333-4333-8333-333333333333', ocNo: 'OLD-7534', name: 'Old Current OC' },
+          scores: [{ ptTaskScoreId: '66666666-6666-4666-8666-666666666666', marksScored: 18 }],
+          motivationValues: [{ fieldId: '77777777-7777-4777-8777-777777777777', value: 'Good' }],
+        },
+        {
+          oc: { id: '55555555-5555-4555-8555-555555555555', ocNo: '7222', name: 'Moved OC' },
+          scores: [{ ptTaskScoreId: '88888888-8888-4888-8888-888888888888', marksScored: 30 }],
+          motivationValues: [],
+        },
+      ],
+    };
+
+    const result = reconcileWorkflowDraftPayloadWithLive(draft as any, live as any);
+
+    expect(result).toEqual({
+      ...live,
+      items: [
+        {
+          oc: { id: '33333333-3333-4333-8333-333333333333', ocNo: '7534', name: 'Current OC' },
+          scores: [{ ptTaskScoreId: '66666666-6666-4666-8666-666666666666', marksScored: 18 }],
+          motivationValues: [{ fieldId: '77777777-7777-4777-8777-777777777777', value: 'Good' }],
+        },
+        {
+          oc: { id: '44444444-4444-4444-8444-444444444444', ocNo: '7535', name: 'New OC' },
+          scores: [],
+          motivationValues: [],
+        },
+      ],
+    });
   });
 
   it('removes a relegated OC from academic workflow draft payloads', () => {

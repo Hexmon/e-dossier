@@ -330,6 +330,13 @@
       "when": 1780942200000,
       "tag": "0046_warning_management",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1781505600000,
+      "tag": "0047_ssb_upload_visibility_settings",
+      "breakpoints": true
     }
   ]
 }

@@ -9,12 +9,16 @@ import {
   warningNotificationReads,
 } from '@/app/db/schema/training/warningManagement';
 import {
+  canViewWarningCriterion,
+  DISCIPLINE_RELEGATION_RESTRICTION_POINTS,
   mergeWarningCriteria,
   normalizePositionKey,
   normalizeWarningPositionKey,
+  warningPolicyKeyForCriterion,
   warningAppointmentPositionKey,
   warningNotificationActionSchema,
   warningSettingsUpdateSchema,
+  WARNING_POSITION_LEVELS,
   WARNING_MODULE_INTRO,
   type WarningCriterion,
   type WarningTriggerType,
@@ -43,6 +47,9 @@ type WarningNotification = {
   actualPoints: number;
   semesterLabel: string;
   deepLink: string;
+  relegationLink: string | null;
+  isDisciplineRelegationEligible: boolean;
+  canMarkForRelegation: boolean;
   readAt: string | null;
   createdAt: string;
 };
@@ -67,15 +74,15 @@ function pickWarningNotification(
   next: GeneratedWarningNotification,
 ) {
   if (!current) return next;
+  if (next.restrictionPoints !== current.restrictionPoints) {
+    return next.restrictionPoints > current.restrictionPoints ? next : current;
+  }
   if (next.specificity !== current.specificity) {
     return next.specificity > current.specificity ? next : current;
   }
   const nextExcess = next.actualPoints - next.restrictionPoints;
   const currentExcess = current.actualPoints - current.restrictionPoints;
   if (nextExcess !== currentExcess) return nextExcess > currentExcess ? next : current;
-  if (next.restrictionPoints !== current.restrictionPoints) {
-    return next.restrictionPoints > current.restrictionPoints ? next : current;
-  }
   return new Date(next.createdAt).getTime() > new Date(current.createdAt).getTime() ? next : current;
 }
 
@@ -93,6 +100,9 @@ function stripGeneratedMeta(item: GeneratedWarningNotification): Omit<WarningNot
     actualPoints: item.actualPoints,
     semesterLabel: item.semesterLabel,
     deepLink: item.deepLink,
+    relegationLink: item.relegationLink,
+    isDisciplineRelegationEligible: item.isDisciplineRelegationEligible,
+    canMarkForRelegation: item.canMarkForRelegation,
     createdAt: item.createdAt,
   };
 }
@@ -186,21 +196,47 @@ function maxTwoTermWindow(termPoints: Map<number, number>) {
   return best;
 }
 
+function canCurrentAppointmentViewCriterion(
+  criterion: WarningCriterion,
+  appointmentKey: string,
+  viewerPolicyKeys: string[],
+) {
+  const criterionPositionKey = normalizeWarningPositionKey(criterion.positionKey);
+  if (appointmentKey && criterionPositionKey === appointmentKey) return true;
+
+  const criterionPolicyKey = warningPolicyKeyForCriterion(criterion);
+  const isAppointmentSpecific = criterionPositionKey.startsWith('appointment:');
+  return viewerPolicyKeys.some((viewerPolicyKey) => {
+    if (!canViewWarningCriterion(viewerPolicyKey, criterionPolicyKey)) return false;
+    return !isAppointmentSpecific || WARNING_POSITION_LEVELS[criterionPolicyKey] > WARNING_POSITION_LEVELS[viewerPolicyKey];
+  });
+}
+
+function isDisciplineRelegationWarning(criterion: WarningCriterion) {
+  return (
+    criterion.triggerType === 'TWO_TERM_CUMULATIVE' &&
+    criterion.restrictionPoints >= DISCIPLINE_RELEGATION_RESTRICTION_POINTS &&
+    warningPolicyKeyForCriterion(criterion) === 'dc-ci-mceme'
+  );
+}
+
+function getDisciplineRelegationLink(criterion: WarningCriterion, ocId: string, canMarkForRelegation: boolean) {
+  return isDisciplineRelegationWarning(criterion) && canMarkForRelegation
+    ? `/dashboard/genmgmt/promotion-relegation/relegation?ocId=${encodeURIComponent(ocId)}&source=discipline-warning`
+    : null;
+}
+
 export async function listMyWarningNotifications(auth: AuthLike): Promise<WarningNotification[]> {
   const positionKeys = await getCurrentPositionKeys(auth);
   if (!positionKeys.length) return [];
 
   const settings = await listWarningSettingsForAdmin();
-  const matchedCriteria = settings.criteria.filter(
-    (criterion) => criterion.isEnabled && positionKeys.includes(normalizeWarningPositionKey(criterion.positionKey)),
-  );
   const appointmentKey = auth.claims?.apt?.id ? warningAppointmentPositionKey(auth.claims.apt.id) : '';
-  const hasAppointmentCriteria = matchedCriteria.some(
-    (criterion) => normalizeWarningPositionKey(criterion.positionKey) === appointmentKey,
+  const viewerPolicyKeys = positionKeys.filter((key) => WARNING_POSITION_LEVELS[key] !== undefined);
+  const criteria = settings.criteria.filter(
+    (criterion) =>
+      criterion.isEnabled && canCurrentAppointmentViewCriterion(criterion, appointmentKey, viewerPolicyKeys),
   );
-  const criteria = hasAppointmentCriteria
-    ? matchedCriteria.filter((criterion) => normalizeWarningPositionKey(criterion.positionKey) === appointmentKey)
-    : matchedCriteria;
   if (!criteria.length) return [];
 
   const rows = await db
@@ -253,10 +289,13 @@ export async function listMyWarningNotifications(auth: AuthLike): Promise<Warnin
 
       if (match.points < criterion.restrictionPoints) continue;
       const id = `${criterion.criterionKey}:${ocId}:${match.label.replace(/\s+/g, '-')}`;
+      const eligibleForDisciplineRelegation = isDisciplineRelegationWarning(criterion);
+      const canMarkForRelegation =
+        eligibleForDisciplineRelegation && viewerPolicyKeys.includes('dc-ci-mceme');
       const generated: GeneratedWarningNotification = {
         id,
         title: 'Warning notification',
-        message: `${entry.ocName}${entry.ocNo ? ` (${entry.ocNo})` : ''} reached ${match.points} restriction points against the ${criterion.restrictionPoints}-point ${criterion.positionName} warning criteria.`,
+        message: `${entry.ocName}${entry.ocNo ? ` (${entry.ocNo})` : ''} got warning by ${criterion.positionName} for reaching the ${criterion.restrictionPoints}-restriction-point criteria. Current restriction points: ${match.points}.`,
         ocId,
         ocNo: entry.ocNo,
         ocName: entry.ocName,
@@ -266,6 +305,9 @@ export async function listMyWarningNotifications(auth: AuthLike): Promise<Warnin
         actualPoints: match.points,
         semesterLabel: match.label,
         deepLink: `/dashboard/${ocId}/milmgmt/discip-records`,
+        relegationLink: getDisciplineRelegationLink(criterion, ocId, canMarkForRelegation),
+        isDisciplineRelegationEligible: eligibleForDisciplineRelegation,
+        canMarkForRelegation,
         createdAt: (entry.latest ?? new Date(0)).toISOString(),
         specificity: normalizeWarningPositionKey(criterion.positionKey) === appointmentKey ? 2 : 1,
       };

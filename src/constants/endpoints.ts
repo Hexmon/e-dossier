@@ -47,6 +47,9 @@ export const endpoints = {
         },
         ssbUpload: {
             list: "/api/v1/admin/ssb-upload",
+            settings: "/api/v1/admin/ssb-upload/settings",
+            oc: (ocId: string) => `/api/v1/oc/${ocId}/ssb-upload`,
+            ocView: (ocId: string) => `/api/v1/oc/${ocId}/ssb-upload/view`,
             upload: (ocId: string) => `/api/v1/admin/ssb-upload/${ocId}`,
             view: (ocId: string) => `/api/v1/admin/ssb-upload/${ocId}/view`,
         },
@@ -228,6 +231,9 @@ export const endpoints = {
             courseWiseFinalPerformance: {
                 preview: "/api/v1/reports/overall-training/course-wise-final-performance/preview",
                 download: "/api/v1/reports/overall-training/course-wise-final-performance/download",
+            },
+            meritRankings: {
+                preview: "/api/v1/reports/overall-training/course-wise-final-performance/preview",
             },
         },
     },

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyPlatoonCommanderMarksEntryOverrides,
   applyAdminAndSuperAdminOverrides,
+  applyDisciplineRelegationPermissionFallbackOverrides,
   applyInterviewPermissionFallbackOverrides,
   getAdminBaselineActions,
   normalizeRoleSet,
@@ -147,5 +148,30 @@ describe('authz-permissions helpers', () => {
       ])
     );
     expect(permissionSet.has(INTERVIEW_WRITE_PERMISSIONS.initial.plcdr)).toBe(true);
+  });
+
+  it('grants discipline-ground relegation marking APIs only to DC/CI positions', () => {
+    const dcciPermissions = new Set<string>();
+    const cdrPermissions = new Set<string>();
+
+    const dcci = applyDisciplineRelegationPermissionFallbackOverrides(
+      { position: 'DC & CI, MCEME' },
+      dcciPermissions
+    );
+    const cdr = applyDisciplineRelegationPermissionFallbackOverrides(
+      { position: 'CDR' },
+      cdrPermissions
+    );
+
+    expect(dcci.grantedPermissions).toEqual(
+      expect.arrayContaining([
+        'admin:relegation:ocs:read',
+        'admin:relegation:courses:read',
+        'admin:relegation:exception:create',
+      ])
+    );
+    expect(dcciPermissions.has('admin:relegation:exception:create')).toBe(true);
+    expect(cdr.grantedPermissions).toEqual([]);
+    expect(cdrPermissions.size).toBe(0);
   });
 });

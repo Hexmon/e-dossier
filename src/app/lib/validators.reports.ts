@@ -108,6 +108,7 @@ export const courseWisePerformanceDownloadBodySchema = z.object({
 
 export const courseWiseFinalPerformancePreviewQuerySchema = z.object({
   courseId: z.string().uuid(),
+  semester: reportSemesterSchema.min(2).optional(),
 });
 
 export const courseWiseFinalPerformanceDownloadBodySchema = z.object({

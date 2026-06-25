@@ -11,6 +11,34 @@ export type SsbUploadItem = {
   uploadedAt?: string | null;
   hasUpload: boolean;
   savedPassword?: string | null;
+  visibility?: SsbUploadVisibilityDecision;
+};
+
+export type SsbUploadVisibilityDecision = {
+  canView: boolean;
+  reason: string | null;
+  courseStartDate: string | null;
+  courseEndDate: string | null;
+  defaultVisibleUntil: string | null;
+  hiddenDays: number | null;
+  visibleFrom: string | null;
+  visibleUntil: string | null;
+  hasConfiguredSettings: boolean;
+};
+
+export type SsbUploadVisibilitySetting = {
+  id: string;
+  courseId: string;
+  positionId: string;
+  positionKey: string;
+  positionName: string | null;
+  hiddenDays: number;
+  visibleUntil: string;
+};
+
+export type SsbUploadVisibilitySettingsResponse = {
+  courseWindow: Pick<SsbUploadVisibilityDecision, 'courseStartDate' | 'courseEndDate' | 'defaultVisibleUntil'>;
+  settings: SsbUploadVisibilitySetting[];
 };
 
 export function listSsbUploadOcs(courseId: string) {
@@ -20,9 +48,7 @@ export function listSsbUploadOcs(courseId: string) {
 }
 
 export function getSsbUploadForOc(ocId: string) {
-  return api.get<{ item: SsbUploadItem }>(endpoints.admin.ssbUpload.list, {
-    query: { ocId },
-  });
+  return api.get<{ item: SsbUploadItem }>(endpoints.admin.ssbUpload.oc(ocId));
 }
 
 export function uploadSsbPdf(ocId: string, payload: { file: File; password: string }) {
@@ -32,6 +58,19 @@ export function uploadSsbPdf(ocId: string, payload: { file: File; password: stri
   return api.post<{ item: SsbUploadItem }, FormData>(endpoints.admin.ssbUpload.upload(ocId), form);
 }
 
+export function getSsbUploadVisibilitySettings(courseId: string) {
+  return api.get<SsbUploadVisibilitySettingsResponse>(endpoints.admin.ssbUpload.settings, {
+    query: { courseId },
+  });
+}
+
+export function saveSsbUploadVisibilitySettings(payload: {
+  courseId: string;
+  settings: Array<{ positionId: string; hiddenDays: number; visibleUntil: string }>;
+}) {
+  return api.post<SsbUploadVisibilitySettingsResponse, typeof payload>(endpoints.admin.ssbUpload.settings, payload);
+}
+
 async function getCsrfToken() {
   const response = await fetch('/api/v1/health', { method: 'GET', credentials: 'include' });
   return response.headers.get('X-CSRF-Token');
@@ -39,7 +78,7 @@ async function getCsrfToken() {
 
 export async function openSsbPdf(ocId: string, password: string) {
   const csrf = await getCsrfToken();
-  const response = await fetch(endpoints.admin.ssbUpload.view(ocId), {
+  const response = await fetch(endpoints.admin.ssbUpload.ocView(ocId), {
     method: 'POST',
     credentials: 'include',
     headers: {

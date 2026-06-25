@@ -47,6 +47,10 @@ type RelegationFormPrefill = {
 type RelegationFormProps = {
   mode?: RelegationFormMode;
   prefill?: RelegationFormPrefill;
+  prefillOcId?: string | null;
+  prefillOcNo?: string | null;
+  prefillOcName?: string | null;
+  prefillReason?: string;
   initialTransferMode?: RelegationTransferMode;
   lockOcSelection?: boolean;
   lockTransferTo?: boolean;
@@ -71,6 +75,10 @@ function parseApiError(error: unknown, fallback: string): string {
 export default function RelegationForm({
   mode = "transfer",
   prefill,
+  prefillOcId,
+  prefillOcNo,
+  prefillOcName,
+  prefillReason,
   initialTransferMode = "PREVIOUS_SEMESTER",
   lockOcSelection = false,
   lockTransferTo = false,
@@ -106,7 +114,7 @@ export default function RelegationForm({
   const selectedTransferToCourseId = watch("transferTo");
   const [transferMode, setTransferMode] = useState<RelegationTransferMode>(initialTransferMode);
   const targetCourseMode: RelegationTransferMode =
-    mode === "transfer" ? transferMode : "COURSE_TRANSFER";
+    mode === "transfer" ? transferMode : "PREVIOUS_SEMESTER";
 
   const { ocOptionsQuery, nextCoursesQuery, presignMutation, cleanupPendingPdfMutation, transferMutation } =
     useRelegationModule(currentCourseId || null, undefined, targetCourseMode);
@@ -114,6 +122,26 @@ export default function RelegationForm({
 
   const ocOptions = useMemo(() => ocOptionsQuery.data ?? [], [ocOptionsQuery.data]);
   const transferOptions = useMemo(() => nextCoursesQuery.data ?? [], [nextCoursesQuery.data]);
+  const resolvedPrefill = useMemo(() => {
+    if (prefill) return prefill;
+    if (!prefillOcId) return undefined;
+    const normalizedPrefillName = prefillOcName?.trim().toLowerCase();
+    const oc = ocOptions.find((item) => {
+      if (item.ocId === prefillOcId) return true;
+      if (prefillOcNo && item.ocNo === prefillOcNo) return true;
+      return Boolean(normalizedPrefillName && item.ocName.trim().toLowerCase() === normalizedPrefillName);
+    });
+    return oc
+      ? {
+          ocId: oc.ocId,
+          ocNo: oc.ocNo,
+          ocName: oc.ocName,
+          currentSemester: oc.currentSemester,
+          currentCourseId: oc.currentCourseId,
+          currentCourseCode: oc.currentCourseCode,
+        }
+      : undefined;
+  }, [ocOptions, prefill, prefillOcId, prefillOcName, prefillOcNo]);
   const [ocNameSearch, setOcNameSearch] = useState("");
   const [isOcNameDropdownOpen, setIsOcNameDropdownOpen] = useState(false);
   const [cleanupConfirmed, setCleanupConfirmed] = useState(false);
@@ -129,22 +157,22 @@ export default function RelegationForm({
   const selectedOc = useMemo(
     () =>
       ocOptions.find((item) => item.ocId === selectedOcId) ??
-      (prefill && selectedOcId === prefill.ocId
+      (resolvedPrefill && selectedOcId === resolvedPrefill.ocId
         ? {
-            ocId: prefill.ocId,
-            ocNo: prefill.ocNo ?? "",
-            ocName: prefill.ocName,
+            ocId: resolvedPrefill.ocId,
+            ocNo: resolvedPrefill.ocNo ?? "",
+            ocName: resolvedPrefill.ocName,
             status: "ACTIVE",
             isActive: true,
-            currentSemester: prefill.currentSemester ?? 1,
+            currentSemester: resolvedPrefill.currentSemester ?? 1,
             platoonId: null,
             platoonKey: null,
             platoonName: null,
-            currentCourseId: prefill.currentCourseId,
-            currentCourseCode: prefill.currentCourseCode,
+            currentCourseId: resolvedPrefill.currentCourseId,
+            currentCourseCode: resolvedPrefill.currentCourseCode,
           }
         : null),
-    [ocOptions, prefill, selectedOcId]
+    [ocOptions, resolvedPrefill, selectedOcId]
   );
   const selectedTargetCourse = useMemo(
     () => transferOptions.find((item) => item.courseId === selectedTransferToCourseId) ?? null,
@@ -183,21 +211,21 @@ export default function RelegationForm({
   }, [selectedOc?.ocName]);
 
   useEffect(() => {
-    if (!prefill) return;
+    if (!resolvedPrefill) return;
     setTransferMode(initialTransferMode);
     reset({
-      ocId: prefill.ocId,
-      ocName: prefill.ocName,
-      courseNo: prefill.currentCourseCode,
-      currentCourseId: prefill.currentCourseId,
-      transferTo: prefill.transferToCourseId ?? "",
-      reason: "",
+      ocId: resolvedPrefill.ocId,
+      ocName: resolvedPrefill.ocName,
+      courseNo: resolvedPrefill.currentCourseCode,
+      currentCourseId: resolvedPrefill.currentCourseId,
+      transferTo: resolvedPrefill.transferToCourseId ?? "",
+      reason: prefillReason ?? "",
       remark: "",
       pdfFile: null,
     });
-    setValue("ocId", prefill.ocId, { shouldDirty: false, shouldValidate: true });
-    setOcNameSearch(prefill.ocName);
-  }, [initialTransferMode, prefill, reset, setValue]);
+    setValue("ocId", resolvedPrefill.ocId, { shouldDirty: false, shouldValidate: true });
+    setOcNameSearch(resolvedPrefill.ocName);
+  }, [initialTransferMode, prefillReason, reset, resolvedPrefill, setValue]);
 
   useEffect(() => {
     setCleanupConfirmed(false);
@@ -342,7 +370,7 @@ export default function RelegationForm({
           : await transferMutation.mutateAsync(payload);
 
       const transfer = response.transfer;
-      if (lockOcSelection || prefill) {
+      if (lockOcSelection || resolvedPrefill) {
         setValue("courseNo", transfer.toCourse.courseCode, { shouldDirty: false });
         setValue("currentCourseId", transfer.toCourse.courseId, { shouldDirty: false });
         setValue("reason", "", { shouldDirty: false });
@@ -397,7 +425,7 @@ export default function RelegationForm({
           control={control}
           rules={{
             validate: (value) => {
-              if (lockOcSelection && prefill?.ocId) return true;
+              if (lockOcSelection && resolvedPrefill?.ocId) return true;
               return value ? true : "OC selection is required";
             },
           }}

@@ -5,8 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRoot, type Root } from "react-dom/client";
 
 const mockGetAllCoursesPaged = vi.hoisted(() => vi.fn());
+const mockGetAppointments = vi.hoisted(() => vi.fn());
 const mockListSsbUploadOcs = vi.hoisted(() => vi.fn());
 const mockUploadSsbPdf = vi.hoisted(() => vi.fn());
+const mockGetSsbUploadVisibilitySettings = vi.hoisted(() => vi.fn());
+const mockSaveSsbUploadVisibilitySettings = vi.hoisted(() => vi.fn());
 
 vi.mock("sonner", () => ({
   toast: {
@@ -19,8 +22,14 @@ vi.mock("@/app/lib/api/courseApi", () => ({
   getAllCoursesPaged: mockGetAllCoursesPaged,
 }));
 
+vi.mock("@/app/lib/api/appointmentApi", () => ({
+  getAppointments: mockGetAppointments,
+}));
+
 vi.mock("@/app/lib/api/ssbUploadApi", () => ({
+  getSsbUploadVisibilitySettings: mockGetSsbUploadVisibilitySettings,
   listSsbUploadOcs: mockListSsbUploadOcs,
+  saveSsbUploadVisibilitySettings: mockSaveSsbUploadVisibilitySettings,
   uploadSsbPdf: mockUploadSsbPdf,
 }));
 
@@ -125,6 +134,48 @@ describe("SsbUploadPage saved password visibility", () => {
     mockGetAllCoursesPaged.mockResolvedValue({
       items: [{ id: "course-1", code: "Course-100", title: "Course Course-100" }],
     });
+    mockGetAppointments.mockResolvedValue([{
+      id: "appointment-1",
+      userId: "user-1",
+      username: "active.officer",
+      positionId: "position-1",
+      positionKey: "PL_CDR",
+      positionName: "Platoon Commander",
+      scopeType: "PLATOON",
+      scopeId: "platoon-1",
+      platoonKey: "ARJUN",
+      platoonName: "Arjun",
+      startsAt: "2026-01-01T00:00:00.000Z",
+      endsAt: null,
+      reason: "",
+      deletedAt: null,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    }]);
+    mockGetSsbUploadVisibilitySettings.mockResolvedValue({
+      courseWindow: {
+        courseStartDate: "2026-01-01",
+        courseEndDate: "2026-06-14",
+        defaultVisibleUntil: "2026-06-15",
+      },
+      settings: [{
+        id: "setting-1",
+        courseId: "course-1",
+        positionId: "position-1",
+        positionKey: "PL_CDR",
+        positionName: "Platoon Commander",
+        hiddenDays: 10,
+        visibleUntil: "2026-06-20",
+      }],
+    });
+    mockSaveSsbUploadVisibilitySettings.mockResolvedValue({
+      courseWindow: {
+        courseStartDate: "2026-01-01",
+        courseEndDate: "2026-06-14",
+        defaultVisibleUntil: "2026-06-15",
+      },
+      settings: [],
+    });
     mockListSsbUploadOcs.mockResolvedValue({
       items: [{
         ocId: "oc-1",
@@ -181,6 +232,24 @@ describe("SsbUploadPage saved password visibility", () => {
     expect(
       container.querySelector('button[aria-label="Hide saved SSB password for OC-0001"]')
     ).toBeTruthy();
+  });
+
+  it("shows current active appointments with DD/MM/YYYY dates in configure settings", async () => {
+    await act(async () => {
+      root.render(<SsbUploadPage />);
+    });
+    await flush();
+
+    click(buttonContaining("Course-100"));
+    await flush();
+    click(buttonContaining("Configure Settings"));
+
+    expect(mockGetAppointments).toHaveBeenCalledWith({ active: true, includeFuture: false });
+    expect(container.textContent).toContain("Platoon Commander - Arjun");
+    expect(container.textContent).toContain("active.officer");
+    expect(container.textContent).toContain("01/01/2026");
+    expect(container.textContent).toContain("14/06/2026");
+    expect(container.textContent).toContain("20/06/2026");
   });
 
   function buttonContaining(text: string) {

@@ -12,6 +12,8 @@ export type WarningCriterion = {
   isEnabled: boolean;
 };
 
+export const DISCIPLINE_RELEGATION_RESTRICTION_POINTS = 42;
+
 export const DEFAULT_WARNING_CRITERIA: WarningCriterion[] = [
   {
     criterionKey: 'pi-cdr-single-term',
@@ -57,6 +59,13 @@ export const DEFAULT_WARNING_CRITERIA: WarningCriterion[] = [
 
 export const WARNING_POLICY_REFERENCE = DEFAULT_WARNING_CRITERIA;
 
+export const WARNING_POSITION_LEVELS: Record<string, number> = {
+  'pi-cdr': 10,
+  'ds-coord-dy-cdr': 20,
+  'cdr-ctw': 25,
+  'dc-ci-mceme': 30,
+};
+
 export const WARNING_MODULE_INTRO =
   'OC discipline records are monitored for accumulated restrictions. Warning notifications are issued to the configured appointment once an OC reaches the configured restriction-point threshold, including single-term and two-consecutive-term cumulative checks.';
 
@@ -90,6 +99,7 @@ export function normalizePositionKey(value: string | null | undefined) {
   if ((normalized.includes('ds coord') || normalized.includes('deputy')) && normalized.includes('cdr')) {
     return 'ds-coord-dy-cdr';
   }
+  if (normalized === 'cdr' || normalized === 'commander') return 'cdr-ctw';
   if (normalized.includes('cdr') && normalized.includes('ctw')) return 'cdr-ctw';
   if ((normalized.includes('pi') || normalized.includes('pl')) && normalized.includes('cdr')) return 'pi-cdr';
   return normalized.replace(/\s+/g, '-');
@@ -102,6 +112,20 @@ export function warningAppointmentPositionKey(appointmentId: string) {
 export function normalizeWarningPositionKey(value: string | null | undefined) {
   const raw = String(value ?? '').trim().toLowerCase();
   return raw.startsWith('appointment:') ? raw : normalizePositionKey(value);
+}
+
+export function warningPolicyKeyForCriterion(
+  criterion: Pick<WarningCriterion, 'positionKey' | 'positionName'>,
+) {
+  const positionKey = normalizeWarningPositionKey(criterion.positionKey);
+  if (!positionKey.startsWith('appointment:') && WARNING_POSITION_LEVELS[positionKey]) return positionKey;
+  return normalizePositionKey(criterion.positionName);
+}
+
+export function canViewWarningCriterion(viewerPolicyKey: string, criterionPolicyKey: string) {
+  const viewerLevel = WARNING_POSITION_LEVELS[viewerPolicyKey];
+  const criterionLevel = WARNING_POSITION_LEVELS[criterionPolicyKey];
+  return viewerLevel !== undefined && criterionLevel !== undefined && viewerLevel <= criterionLevel;
 }
 
 function criterionKeyForPosition(positionKey: string, triggerType: WarningTriggerType) {

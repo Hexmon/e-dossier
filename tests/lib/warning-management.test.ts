@@ -2,9 +2,11 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   buildWarningCriteriaForActiveAppointments,
+  canViewWarningCriterion,
   DEFAULT_WARNING_CRITERIA,
   mergeWarningCriteria,
   normalizePositionKey,
+  warningPolicyKeyForCriterion,
   warningAppointmentPositionKey,
 } from '@/app/lib/warning-management';
 
@@ -25,8 +27,35 @@ describe('warning management defaults', () => {
     expect(normalizePositionKey('PL Cdr')).toBe('pi-cdr');
     expect(normalizePositionKey('DS Coord / Dy Cdr')).toBe('ds-coord-dy-cdr');
     expect(normalizePositionKey('DS_COORD DS Coord / Dy Cdr')).toBe('ds-coord-dy-cdr');
+    expect(normalizePositionKey('CDR')).toBe('cdr-ctw');
     expect(normalizePositionKey('Cdr, CTW')).toBe('cdr-ctw');
     expect(normalizePositionKey('DC & CI, MCEME')).toBe('dc-ci-mceme');
+  });
+
+  it('allows lower warning appointments to view higher warning criteria', () => {
+    expect(canViewWarningCriterion('pi-cdr', 'ds-coord-dy-cdr')).toBe(true);
+    expect(canViewWarningCriterion('pi-cdr', 'cdr-ctw')).toBe(true);
+    expect(canViewWarningCriterion('pi-cdr', 'dc-ci-mceme')).toBe(true);
+    expect(canViewWarningCriterion('ds-coord-dy-cdr', 'cdr-ctw')).toBe(true);
+    expect(canViewWarningCriterion('cdr-ctw', 'dc-ci-mceme')).toBe(true);
+
+    expect(canViewWarningCriterion('ds-coord-dy-cdr', 'pi-cdr')).toBe(false);
+    expect(canViewWarningCriterion('dc-ci-mceme', 'cdr-ctw')).toBe(false);
+  });
+
+  it('derives policy keys from appointment-specific warning criteria labels', () => {
+    expect(
+      warningPolicyKeyForCriterion({
+        positionKey: warningAppointmentPositionKey('appointment-ranapratap'),
+        positionName: 'Ranapratap PL Cdr',
+      }),
+    ).toBe('pi-cdr');
+    expect(
+      warningPolicyKeyForCriterion({
+        positionKey: warningAppointmentPositionKey('appointment-dcci'),
+        positionName: 'DC & CI, MCEME',
+      }),
+    ).toBe('dc-ci-mceme');
   });
 
   it('overlays saved settings while preserving unsaved defaults', () => {
@@ -97,7 +126,23 @@ describe('warning management defaults', () => {
     const source = readFileSync('src/app/services/warningManagement.ts', 'utf8');
 
     expect(source).toContain('const unreadByOc = new Map<string, GeneratedWarningNotification>();');
+    expect(source).toContain('canCurrentAppointmentViewCriterion(criterion, appointmentKey, viewerPolicyKeys)');
     expect(source).toContain('unreadByOc.set(ocId, pickWarningNotification(unreadByOc.get(ocId), generated));');
     expect(source).toContain('const unread = Array.from(unreadByOc.values()).map(stripGeneratedMeta);');
+  });
+
+  it('shows dynamic warning messages with the issuing appointment name', () => {
+    const source = readFileSync('src/app/services/warningManagement.ts', 'utf8');
+
+    expect(source).toContain('got warning by ${criterion.positionName}');
+    expect(source).toContain('Current restriction points: ${match.points}.');
+  });
+
+  it('links 42-point two-term DC/CI warnings to the relegation workflow', () => {
+    const source = readFileSync('src/app/services/warningManagement.ts', 'utf8');
+
+    expect(source).toContain("criterion.triggerType === 'TWO_TERM_CUMULATIVE'");
+    expect(source).toContain('DISCIPLINE_RELEGATION_RESTRICTION_POINTS');
+    expect(source).toContain('source=discipline-warning');
   });
 });
