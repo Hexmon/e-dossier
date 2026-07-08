@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { getPermissionDisplayMeta } from '@/app/lib/rbac/permission-display';
 import { useRbacPermissions } from '@/hooks/useRbacPermissions';
 import { useRbacMappings } from '@/hooks/useRbacMappings';
@@ -14,6 +15,8 @@ import {
   type EffectiveRbacBundle,
   type FieldRule,
   type PositionPermissionMapping,
+  type RbacActiveAppointment,
+  type RbacFieldCatalogItem,
   type RbacPermission,
   type RbacPosition,
   type RbacRole,
@@ -21,6 +24,7 @@ import {
 } from '@/app/lib/api/rbacApi';
 
 type FieldRuleMode = 'ALLOW' | 'DENY' | 'OMIT' | 'MASK';
+type RbacManagementSection = 'appointment-access' | 'field-access' | 'access-preview';
 
 const EMPTY_PERMISSIONS: RbacPermission[] = [];
 const EMPTY_ROLE_MAPPINGS: RolePermissionMapping[] = [];
@@ -29,6 +33,8 @@ const EMPTY_ROLES: RbacRole[] = [];
 const EMPTY_POSITIONS: RbacPosition[] = [];
 const EMPTY_USERS: User[] = [];
 const EMPTY_FIELD_RULES: FieldRule[] = [];
+const EMPTY_FIELD_CATALOG: RbacFieldCatalogItem[] = [];
+const EMPTY_RBAC_ACTIVE_APPOINTMENTS: RbacActiveAppointment[] = [];
 const EMPTY_ACTIVE_APPOINTMENTS: NonNullable<User['activeAppointments']> = [];
 
 function toHumanText(value: string): string {
@@ -65,9 +71,12 @@ export default function RbacManagement() {
   const fieldRuleItems = fieldRules.data ?? EMPTY_FIELD_RULES;
   const fieldRuleDefaults = fieldRules.defaults?.defaultFieldRules ?? [];
   const missingDefaultFieldRules = fieldRules.defaults?.missingDefaultFieldRules ?? [];
+  const fieldCatalog = fieldRules.fieldCatalog ?? EMPTY_FIELD_CATALOG;
+  const rbacActiveAppointments = fieldRules.activeAppointments ?? EMPTY_RBAC_ACTIVE_APPOINTMENTS;
   const loadedPermissionCount = permissionsQuery.loadedCount ?? permissions.length;
   const totalPermissionCount = permissionsQuery.total ?? permissions.length;
 
+  const [activeSection, setActiveSection] = useState<RbacManagementSection>('appointment-access');
   const [permissionKey, setPermissionKey] = useState('');
   const [permissionDescription, setPermissionDescription] = useState('');
   const [roleKey, setRoleKey] = useState('');
@@ -101,6 +110,13 @@ export default function RbacManagement() {
   const [effectiveAppointmentId, setEffectiveAppointmentId] = useState('');
   const [effectiveBundle, setEffectiveBundle] = useState<EffectiveRbacBundle | null>(null);
   const [effectiveLoading, setEffectiveLoading] = useState(false);
+  const [fieldAccessAppointmentId, setFieldAccessAppointmentId] = useState('');
+  const [fieldCatalogSearch, setFieldCatalogSearch] = useState('');
+  const [fieldCatalogModuleFilter, setFieldCatalogModuleFilter] = useState('all');
+  const [selectedFieldIds, setSelectedFieldIds] = useState<string[]>([]);
+  const [allowSelectedRead, setAllowSelectedRead] = useState(true);
+  const [allowSelectedWrite, setAllowSelectedWrite] = useState(false);
+  const [fieldAccessSaving, setFieldAccessSaving] = useState(false);
 
   const activeRole = useMemo(() => roles.find((item) => item.id === selectedRoleId) ?? null, [roles, selectedRoleId]);
   const activePosition = useMemo(
@@ -116,6 +132,40 @@ export default function RbacManagement() {
   const selectedAppointment = useMemo(
     () => selectedUserAppointments.find((item) => item.id === selectedAppointmentId) ?? null,
     [selectedAppointmentId, selectedUserAppointments]
+  );
+  const selectedRbacAppointment = useMemo(
+    () => rbacActiveAppointments.find((item) => item.id === fieldAccessAppointmentId) ?? null,
+    [fieldAccessAppointmentId, rbacActiveAppointments]
+  );
+  const permissionIdByKey = useMemo(
+    () => new Map(permissions.map((permission) => [permission.key, permission.id])),
+    [permissions]
+  );
+  const fieldCatalogModules = useMemo(
+    () => Array.from(new Set(fieldCatalog.map((field) => field.moduleLabel))).sort(),
+    [fieldCatalog]
+  );
+  const selectedFieldIdSet = useMemo(() => new Set(selectedFieldIds), [selectedFieldIds]);
+  const filteredFieldCatalog = useMemo(() => {
+    const q = fieldCatalogSearch.trim().toLowerCase();
+    return fieldCatalog.filter((field) => {
+      if (!showTechnicalKeys && field.technical) return false;
+      if (fieldCatalogModuleFilter !== 'all' && field.moduleLabel !== fieldCatalogModuleFilter) return false;
+      if (!q) return true;
+      return [
+        field.moduleLabel,
+        field.areaLabel,
+        field.tableName,
+        field.fieldLabel,
+        field.fieldName,
+        field.columnName,
+        field.resourceType ?? '',
+      ].join(' ').toLowerCase().includes(q);
+    });
+  }, [fieldCatalog, fieldCatalogModuleFilter, fieldCatalogSearch, showTechnicalKeys]);
+  const selectedFieldCatalogItems = useMemo(
+    () => fieldCatalog.filter((field) => selectedFieldIdSet.has(field.id)),
+    [fieldCatalog, selectedFieldIdSet]
   );
 
   const currentScopePermissionIds = useMemo(() => {
@@ -200,6 +250,26 @@ export default function RbacManagement() {
     if (selectedPositionId) return fieldRuleItems.filter((rule) => rule.positionId === selectedPositionId);
     return [];
   }, [fieldRuleItems, selectedPositionId, selectedRoleId]);
+
+  const appointmentFieldAccessRows = useMemo(() => {
+    return rbacActiveAppointments.flatMap((appointment) =>
+      fieldRuleItems
+        .filter((rule) => rule.appointmentId === appointment.id || rule.positionId === appointment.positionId)
+        .flatMap((rule) =>
+          (rule.fields.length ? rule.fields : ['*']).map((field) => ({
+            appointment,
+            rule,
+            field,
+            source: rule.appointmentId === appointment.id ? 'Appointment' : 'Inherited position',
+          }))
+        )
+    );
+  }, [fieldRuleItems, rbacActiveAppointments]);
+
+  const filteredAppointmentFieldAccessRows = useMemo(() => {
+    if (!fieldAccessAppointmentId) return appointmentFieldAccessRows;
+    return appointmentFieldAccessRows.filter((row) => row.appointment.id === fieldAccessAppointmentId);
+  }, [appointmentFieldAccessRows, fieldAccessAppointmentId]);
 
   const hasUnsavedMappingChanges = useMemo(
     () => mappingScopeSelected && !arraysHaveSameValues(mappingPermissionIds, currentScopePermissionIds),
@@ -332,6 +402,7 @@ export default function RbacManagement() {
   const handleSelectUser = (userId: string) => {
     setSelectedUserId(userId);
     setSelectedAppointmentId('');
+    setFieldAccessAppointmentId('');
     setEffectiveBundle(null);
     const user = userSearchResults.find((item) => item.id === userId);
     if (user?.id) {
@@ -345,6 +416,7 @@ export default function RbacManagement() {
     const appointment = selectedUserAppointments.find((item) => item.id === appointmentId);
     if (!appointment) return;
     selectPositionMapping(appointment.positionId);
+    setFieldAccessAppointmentId(appointment.id);
     if (selectedUser?.id) {
       setEffectiveUserId(selectedUser.id);
       setEffectiveAppointmentId(appointment.id);
@@ -419,6 +491,128 @@ export default function RbacManagement() {
     setMappingPermissionIds((prev) => prev.filter((id) => !shownIds.has(id)));
   };
 
+  const toggleFieldSelection = (fieldId: string) => {
+    setSelectedFieldIds((current) =>
+      current.includes(fieldId)
+        ? current.filter((id) => id !== fieldId)
+        : [...current, fieldId]
+    );
+  };
+
+  const selectVisibleFields = () => {
+    const ids = filteredFieldCatalog
+      .filter((field) => field.readPermissionKey || field.writePermissionKeys.length > 0)
+      .map((field) => field.id);
+    setSelectedFieldIds((current) => Array.from(new Set([...current, ...ids])));
+  };
+
+  const clearSelectedFields = () => setSelectedFieldIds([]);
+
+  const upsertAppointmentFieldRule = async (permissionId: string, mode: FieldRuleMode, fields: string[]) => {
+    const uniqueFields = Array.from(new Set(fields)).filter(Boolean).sort();
+    if (!fieldAccessAppointmentId || uniqueFields.length === 0) return;
+
+    const existing = fieldRuleItems.find(
+      (rule) =>
+        rule.appointmentId === fieldAccessAppointmentId &&
+        rule.permissionId === permissionId &&
+        rule.mode === mode
+    );
+
+    if (existing) {
+      await fieldRules.updateRule.mutateAsync({
+        ruleId: existing.id,
+        input: {
+          appointmentId: fieldAccessAppointmentId,
+          positionId: null,
+          roleId: null,
+          fields: Array.from(new Set([...(existing.fields ?? []), ...uniqueFields])).sort(),
+        },
+      });
+      return;
+    }
+
+    await fieldRules.createRule.mutateAsync({
+      permissionId,
+      appointmentId: fieldAccessAppointmentId,
+      mode,
+      fields: uniqueFields,
+    });
+  };
+
+  const removeAppointmentFields = async (permissionIds: string[], fields: string[], modes: FieldRuleMode[]) => {
+    const fieldSet = new Set(fields);
+    const permissionSet = new Set(permissionIds);
+    const modeSet = new Set(modes);
+    const matchingRules = fieldRuleItems.filter(
+      (rule) =>
+        rule.appointmentId === fieldAccessAppointmentId &&
+        permissionSet.has(rule.permissionId) &&
+        modeSet.has(rule.mode)
+    );
+
+    for (const rule of matchingRules) {
+      const nextFields = (rule.fields ?? []).filter((field) => !fieldSet.has(field)).sort();
+      if (nextFields.length === 0) {
+        await fieldRules.deleteRule.mutateAsync(rule.id);
+      } else {
+        await fieldRules.updateRule.mutateAsync({
+          ruleId: rule.id,
+          input: { fields: nextFields },
+        });
+      }
+    }
+  };
+
+  const handleSaveAppointmentFieldAccess = async () => {
+    if (!fieldAccessAppointmentId || selectedFieldCatalogItems.length === 0) return;
+    setFieldAccessSaving(true);
+    try {
+      const readFieldsByPermission = new Map<string, string[]>();
+      const writeFieldsByPermission = new Map<string, string[]>();
+
+      for (const field of selectedFieldCatalogItems) {
+        if (field.readPermissionKey) {
+          const permissionId = permissionIdByKey.get(field.readPermissionKey);
+          if (permissionId) {
+            readFieldsByPermission.set(permissionId, [
+              ...(readFieldsByPermission.get(permissionId) ?? []),
+              field.fieldName,
+            ]);
+          }
+        }
+        for (const permissionKey of field.writePermissionKeys) {
+          const permissionId = permissionIdByKey.get(permissionKey);
+          if (permissionId) {
+            writeFieldsByPermission.set(permissionId, [
+              ...(writeFieldsByPermission.get(permissionId) ?? []),
+              field.fieldName,
+            ]);
+          }
+        }
+      }
+
+      const selectedFieldNames = selectedFieldCatalogItems.map((field) => field.fieldName);
+      if (allowSelectedRead) {
+        await removeAppointmentFields(Array.from(readFieldsByPermission.keys()), selectedFieldNames, ['OMIT', 'MASK', 'DENY']);
+      } else {
+        for (const [permissionId, fields] of readFieldsByPermission) {
+          await upsertAppointmentFieldRule(permissionId, 'OMIT', fields);
+        }
+      }
+
+      if (allowSelectedWrite) {
+        await removeAppointmentFields(Array.from(writeFieldsByPermission.keys()), selectedFieldNames, ['DENY']);
+      } else {
+        for (const [permissionId, fields] of writeFieldsByPermission) {
+          await upsertAppointmentFieldRule(permissionId, 'DENY', fields);
+        }
+      }
+    } finally {
+      setFieldAccessSaving(false);
+    }
+  };
+
   const handleCreateFieldRule = async () => {
     if (!fieldRulePermissionId) return;
     if (!fieldRuleRoleId && !fieldRulePositionId) return;
@@ -453,13 +647,35 @@ export default function RbacManagement() {
   };
 
   return (
-    <div className="space-y-8">
+    <Tabs
+      value={activeSection}
+      onValueChange={(value) => setActiveSection(value as RbacManagementSection)}
+      className="space-y-6"
+    >
+      <div className="rounded-lg border bg-background p-3">
+        <TabsList
+          aria-label="RBAC management sections"
+          className="grid h-auto w-full grid-cols-1 gap-1 sm:grid-cols-3"
+        >
+          <TabsTrigger value="appointment-access" className="py-2 text-xs sm:text-sm">
+            Appointment Permissions
+          </TabsTrigger>
+          <TabsTrigger value="field-access" className="py-2 text-xs sm:text-sm">
+            Field & Module Access
+          </TabsTrigger>
+          <TabsTrigger value="access-preview" className="py-2 text-xs sm:text-sm">
+            Review Access
+          </TabsTrigger>
+        </TabsList>
+      </div>
+
+      <TabsContent value="appointment-access" className="space-y-8">
       <section className="rounded-lg border p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold">Appointment-based access</h3>
+            <h3 className="text-lg font-semibold">Select Active Appointment</h3>
             <p className="text-sm text-muted-foreground">
-              Search a user, select an active appointment, and edit the permission mapping for that appointment position.
+              Search a user and choose the active appointment whose access needs to be managed.
             </p>
           </div>
           <span className="rounded bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
@@ -532,8 +748,35 @@ export default function RbacManagement() {
             ) : null}
           </div>
         </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!selectedPositionId}
+            onClick={() => setActiveSection('field-access')}
+          >
+            Manage Field & Module Access
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!selectedAppointmentId}
+            onClick={() => setActiveSection('access-preview')}
+          >
+            Review Selected Access
+          </Button>
+        </div>
       </section>
 
+      </TabsContent>
+
+      <TabsContent value="appointment-access" className="order-last space-y-8">
+      <details className="rounded-lg border p-4">
+        <summary className="cursor-pointer text-sm font-semibold">
+          Advanced system setup
+        </summary>
+        <div className="mt-4 space-y-8">
       <section className="rounded-lg border p-4">
         <h3 className="text-lg font-semibold">Roles</h3>
         <p className="mb-4 text-sm text-muted-foreground">
@@ -709,21 +952,23 @@ export default function RbacManagement() {
           </table>
         </div>
       </section>
+        </div>
+      </details>
 
+      </TabsContent>
+
+      <TabsContent value="appointment-access" className="space-y-8">
       <section className="rounded-lg border p-4">
-        <h3 className="text-lg font-semibold">Role/Position Mappings</h3>
+        <h3 className="text-lg font-semibold">Appointment Permissions</h3>
         <p className="text-sm text-muted-foreground">
-          Assign actions to appointment positions first. Use role mappings for global/system identities and compatibility.
+          Assign allowed actions to the selected appointment position.
         </p>
 
         <div className="mt-3 rounded-md border bg-muted/30 p-3 text-sm">
-          <p>1. Choose an appointment above or select a position here.</p>
-          <p>2. Select permissions from the list below.</p>
-          <p>3. Save mapping for the chosen scope.</p>
           <p className="mt-2 font-medium">{activeScopeLabel}</p>
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div className="mt-4 grid gap-4 md:grid-cols-[minmax(240px,420px)_1fr]">
           <div className="space-y-2">
             <label className="text-sm font-medium">Appointment Position Mapping</label>
             <select
@@ -742,23 +987,26 @@ export default function RbacManagement() {
             </select>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Advanced Role Mapping</label>
-            <select
-              className="h-9 w-full rounded border bg-background px-2"
-              value={selectedRoleId}
-              onChange={(event) => {
-                selectRoleMapping(event.target.value);
-              }}
-            >
-              <option value="">Select role</option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.description?.trim() || toHumanText(role.key)}
-                </option>
-              ))}
-            </select>
-          </div>
+          <details className="rounded-md border bg-muted/20 p-3">
+            <summary className="cursor-pointer text-sm font-medium">Role mapping override</summary>
+            <div className="mt-3 space-y-2">
+              <label className="text-sm font-medium">Advanced Role Mapping</label>
+              <select
+                className="h-9 w-full rounded border bg-background px-2"
+                value={selectedRoleId}
+                onChange={(event) => {
+                  selectRoleMapping(event.target.value);
+                }}
+              >
+                <option value="">Select role</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.description?.trim() || toHumanText(role.key)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </details>
         </div>
 
         <div className="mt-4 space-y-2">
@@ -962,9 +1210,28 @@ export default function RbacManagement() {
           >
             Save Role Mapping
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!selectedPositionId}
+            onClick={() => setActiveSection('field-access')}
+          >
+            Manage Fields
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={!selectedAppointmentId && !effectiveUserId.trim()}
+            onClick={() => setActiveSection('access-preview')}
+          >
+            Review Access
+          </Button>
         </div>
       </section>
 
+      </TabsContent>
+
+      <TabsContent value="access-preview" className="space-y-8">
       <section className="rounded-lg border p-4">
         <h3 className="text-lg font-semibold">User Effective Access</h3>
         <p className="mb-4 text-sm text-muted-foreground">
@@ -1081,7 +1348,213 @@ export default function RbacManagement() {
         ) : null}
       </section>
 
+      </TabsContent>
+
+      <TabsContent value="field-access" className="space-y-8">
       <section className="rounded-lg border p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">Field & Module Access</h3>
+            <p className="text-sm text-muted-foreground">
+              Review the field-level access currently applied to active appointments.
+            </p>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Active appointments: {rbacActiveAppointments.length} | Field rules: {fieldRuleItems.length}
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-[minmax(240px,360px)_1fr]">
+          <select
+            className="h-9 rounded border bg-background px-2"
+            value={fieldAccessAppointmentId}
+            onChange={(event) => setFieldAccessAppointmentId(event.target.value)}
+          >
+            <option value="">All active appointments</option>
+            {rbacActiveAppointments.map((appointment) => (
+              <option key={appointment.id} value={appointment.id}>
+                {appointment.label}
+              </option>
+            ))}
+          </select>
+          <div className="rounded border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+            {selectedRbacAppointment
+              ? `${selectedRbacAppointment.username} | ${selectedRbacAppointment.scopeType}${selectedRbacAppointment.scopeId ? `:${selectedRbacAppointment.scopeId}` : ''}`
+              : 'Select an appointment to focus the table and configure field access.'}
+          </div>
+        </div>
+
+        <div className="mt-4 max-h-72 overflow-auto rounded border">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-muted">
+              <tr>
+                <th className="p-2 text-left">Appointment</th>
+                <th className="p-2 text-left">Permission</th>
+                <th className="p-2 text-left">Mode</th>
+                <th className="p-2 text-left">Field</th>
+                <th className="p-2 text-left">Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAppointmentFieldAccessRows.map((row, index) => (
+                <tr key={`${row.appointment.id}-${row.rule.id}-${row.field}-${index}`} className="border-t">
+                  <td className="p-2">{row.appointment.label}</td>
+                  <td className="p-2 font-mono">{row.rule.permissionKey}</td>
+                  <td className="p-2">{row.rule.mode}</td>
+                  <td className="p-2 font-mono">{row.field}</td>
+                  <td className="p-2">{row.source}</td>
+                </tr>
+              ))}
+              {filteredAppointmentFieldAccessRows.length === 0 ? (
+                <tr>
+                  <td className="p-4 text-center text-muted-foreground" colSpan={5}>
+                    No field-level rules are currently applied for this appointment filter.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="rounded-lg border p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">Configure Field & Module Access</h3>
+            <p className="text-sm text-muted-foreground">
+              Select an active appointment, choose module fields, and save read/write access.
+            </p>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Fields: {filteredFieldCatalog.length} / {fieldCatalog.length}
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-2 md:grid-cols-[minmax(240px,360px)_180px_1fr]">
+          <select
+            className="h-9 rounded border bg-background px-2"
+            value={fieldAccessAppointmentId}
+            onChange={(event) => setFieldAccessAppointmentId(event.target.value)}
+          >
+            <option value="">Select active appointment</option>
+            {rbacActiveAppointments.map((appointment) => (
+              <option key={appointment.id} value={appointment.id}>
+                {appointment.label}
+              </option>
+            ))}
+          </select>
+          <select
+            className="h-9 rounded border bg-background px-2"
+            value={fieldCatalogModuleFilter}
+            onChange={(event) => setFieldCatalogModuleFilter(event.target.value)}
+          >
+            <option value="all">All modules</option>
+            {fieldCatalogModules.map((moduleLabel) => (
+              <option key={moduleLabel} value={moduleLabel}>
+                {moduleLabel}
+              </option>
+            ))}
+          </select>
+          <Input
+            placeholder="Search fields, tables, resources"
+            value={fieldCatalogSearch}
+            onChange={(event) => setFieldCatalogSearch(event.target.value)}
+          />
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={allowSelectedRead}
+              onChange={(event) => setAllowSelectedRead(event.target.checked)}
+            />
+            Allow read
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={allowSelectedWrite}
+              onChange={(event) => setAllowSelectedWrite(event.target.checked)}
+            />
+            Allow write
+          </label>
+          <Button type="button" size="sm" variant="outline" onClick={selectVisibleFields}>
+            Select visible
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={clearSelectedFields}>
+            Clear selected
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!fieldAccessAppointmentId || selectedFieldIds.length === 0 || fieldAccessSaving}
+            onClick={handleSaveAppointmentFieldAccess}
+          >
+            {fieldAccessSaving ? 'Saving...' : `Save ${selectedFieldIds.length} field${selectedFieldIds.length === 1 ? '' : 's'}`}
+          </Button>
+          <span className="text-xs text-muted-foreground">
+            Unchecked read/write restricts the selected fields for this appointment.
+          </span>
+        </div>
+
+        <div className="mt-4 max-h-96 overflow-auto rounded border">
+          <table className="w-full text-xs">
+            <thead className="sticky top-0 bg-muted">
+              <tr>
+                <th className="p-2 text-left">Select</th>
+                <th className="p-2 text-left">Module</th>
+                <th className="p-2 text-left">Field</th>
+                <th className="p-2 text-left">Table</th>
+                <th className="p-2 text-left">Read</th>
+                <th className="p-2 text-left">Write</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredFieldCatalog.slice(0, 500).map((field) => {
+                const readAvailable = Boolean(field.readPermissionKey && permissionIdByKey.has(field.readPermissionKey));
+                const writeAvailable = field.writePermissionKeys.some((key) => permissionIdByKey.has(key));
+                return (
+                  <tr key={field.id} className="border-t">
+                    <td className="p-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedFieldIdSet.has(field.id)}
+                        disabled={!readAvailable && !writeAvailable}
+                        onChange={() => toggleFieldSelection(field.id)}
+                      />
+                    </td>
+                    <td className="p-2">
+                      <div className="font-medium">{field.moduleLabel}</div>
+                      <div className="text-muted-foreground">{field.areaLabel}</div>
+                    </td>
+                    <td className="p-2">
+                      <div>{field.fieldLabel}</div>
+                      <div className="font-mono text-[11px] text-muted-foreground">{field.fieldName}</div>
+                    </td>
+                    <td className="p-2 font-mono">{field.tableName}</td>
+                    <td className="p-2 font-mono">{readAvailable ? field.readPermissionKey : '-'}</td>
+                    <td className="p-2 font-mono">
+                      {writeAvailable ? field.writePermissionKeys.filter((key) => permissionIdByKey.has(key)).join(', ') : '-'}
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredFieldCatalog.length === 0 ? (
+                <tr>
+                  <td className="p-4 text-center text-muted-foreground" colSpan={6}>
+                    No fields match this filter.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <details className="rounded-lg border p-4">
+        <summary className="cursor-pointer text-sm font-semibold">Advanced field rules</summary>
+        <div className="mt-4">
         <h3 className="text-lg font-semibold">Field Rules</h3>
         <p className="mb-4 text-sm text-muted-foreground">
           Configure field-level control (`ALLOW`, `DENY`, `OMIT`, `MASK`) per permission/action.
@@ -1210,7 +1683,9 @@ export default function RbacManagement() {
             </tbody>
           </table>
         </div>
-      </section>
-    </div>
+        </div>
+      </details>
+      </TabsContent>
+    </Tabs>
   );
 }

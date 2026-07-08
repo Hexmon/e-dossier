@@ -1380,6 +1380,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "GET",
+    "path": "/api/v1/admin/warning-management",
+    "action": "admin:warning-management:read",
+    "resourceType": "admin:warning-management",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
+    "method": "GET",
     "path": "/api/v1/admin/module-access",
     "action": "admin:module-access:read",
     "resourceType": "admin:module-access",
@@ -1563,6 +1572,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/me/workflow-notifications",
     "action": "me:workflow-notifications:read",
     "resourceType": "me:workflow-notifications",
+    "category": "me",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/me/warning-notifications",
+    "action": "me:warning-notifications:read",
+    "resourceType": "me:warning-notifications",
     "category": "me",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -2121,6 +2139,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/oc/:ocId/ssb",
     "action": "oc:ssb:read",
     "resourceType": "oc:ssb",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/oc/:ocId/ssb-upload",
+    "action": "oc:ssb-upload:read",
+    "resourceType": "oc:ssb-upload",
     "category": "oc",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -3350,6 +3377,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "adminBaseline": false
   },
   {
+    "method": "GET",
+    "path": "/api/v1/admin/ssb-upload/settings",
+    "action": "admin:ssb-upload:settings:read",
+    "resourceType": "admin:ssb-upload:settings",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
+  },
+  {
     "method": "POST",
     "path": "/api/v1/admin/ssb-upload/:ocId",
     "action": "admin:ssb-upload:create",
@@ -3366,6 +3402,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "category": "admin",
     "fieldLevelCandidate": false,
     "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/admin/ssb-upload/settings",
+    "action": "admin:ssb-upload:settings:update",
+    "resourceType": "admin:ssb-upload:settings",
+    "category": "admin",
+    "fieldLevelCandidate": false,
+    "adminBaseline": true
   },
   {
     "method": "POST",
@@ -3525,6 +3570,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/me/workflow-notifications",
     "action": "me:workflow-notifications:update",
     "resourceType": "me:workflow-notifications",
+    "category": "me",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/me/warning-notifications",
+    "action": "me:warning-notifications:update",
+    "resourceType": "me:warning-notifications",
     "category": "me",
     "fieldLevelCandidate": false,
     "adminBaseline": false
@@ -3873,6 +3927,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
   },
   {
     "method": "POST",
+    "path": "/api/v1/oc/:ocId/ssb-upload/view",
+    "action": "oc:ssb-upload:view:create",
+    "resourceType": "oc:ssb-upload:view",
+    "category": "oc",
+    "fieldLevelCandidate": false,
+    "adminBaseline": false
+  },
+  {
+    "method": "POST",
     "path": "/api/v1/oc/:ocId/ssb/points",
     "action": "oc:ssb:points:create",
     "resourceType": "oc:ssb:points",
@@ -4056,6 +4119,15 @@ export const API_ACTION_MAP: ApiActionEntry[] = [
     "path": "/api/v1/admin/marks-review-workflow",
     "action": "admin:marks-review-workflow:update",
     "resourceType": "admin:marks-review-workflow",
+    "category": "admin",
+    "fieldLevelCandidate": true,
+    "adminBaseline": true
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/admin/warning-management",
+    "action": "admin:warning-management:update",
+    "resourceType": "admin:warning-management",
     "category": "admin",
     "fieldLevelCandidate": true,
     "adminBaseline": true
@@ -4690,6 +4762,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "adminBaseline": true
   },
   {
+    "route": "/dashboard/genmgmt/warning-management",
+    "action": "page:dashboard:genmgmt:warning-management:view",
+    "resourceType": "page:dashboard:genmgmt:warning-management",
+    "category": "genmgmt",
+    "adminBaseline": true
+  },
+  {
     "route": "/dashboard/genmgmt/rbac",
     "action": "page:dashboard:genmgmt:rbac:view",
     "resourceType": "page:dashboard:genmgmt:rbac",
@@ -4876,6 +4955,13 @@ export const PAGE_ACTION_MAP: PageActionEntry[] = [
     "action": "page:dashboard:manage-pt-marks:view",
     "resourceType": "page:dashboard:manage-pt-marks",
     "category": "manage-pt-marks",
+    "adminBaseline": false
+  },
+  {
+    "route": "/dashboard/notifications",
+    "action": "page:dashboard:notifications:view",
+    "resourceType": "page:dashboard:notifications",
+    "category": "notifications",
     "adminBaseline": false
   },
   {

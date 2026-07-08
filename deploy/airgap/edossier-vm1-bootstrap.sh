@@ -237,7 +237,7 @@ fi
 
 for env_file in "$APP_ENV_EXAMPLE" "$APP_ENV_FILE"; do
   set_env_value "$env_file" "NEXT_PUBLIC_API_BASE_URL" "$PUBLIC_APP_ORIGIN"
-  set_env_value "$env_file" "MINIO_ENDPOINT" "$MEDIA_PROXY_URL"
+  set_env_value "$env_file" "MINIO_ENDPOINT" "$MINIO_ORIGIN"
   set_env_value "$env_file" "MINIO_PUBLIC_URL" "$MEDIA_PROXY_URL"
   set_env_value "$env_file" "MINIO_BROWSER_ORIGINS" "$PUBLIC_APP_ORIGIN"
   set_env_value "$env_file" "NODE_ENV" "production"

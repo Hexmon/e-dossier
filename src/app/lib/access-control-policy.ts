@@ -20,8 +20,10 @@ const PUBLIC_API_METHOD_RULES: Readonly<Record<string, readonly PathRule[]>> = {
     // Route handlers return dropdown-safe public projections for non-privileged callers.
     { path: "/api/v1/admin/positions", exact: true },
     { path: "/api/v1/admin/users", exact: true },
+    // Read-only training camp templates and ticker settings are consumed by non-admin
+    // dashboard flows. The route handlers still require authentication; writes stay protected.
+    { path: "/api/v1/admin/training-camps" },
     { path: "/api/v1/admin/interview/pending/ticker-setting", exact: true },
-    { path: "/api/v1/admin/ssb-upload", exact: true },
     { path: "/api/v1/platoons" },
     { path: "/api/v1/site-settings" },
     { path: "/api/v1/setup/status", exact: true },
@@ -52,7 +54,7 @@ const SHARED_AUTHENTICATED_ADMIN_METHOD_RULES: Readonly<Record<string, readonly 
     { path: "/api/v1/admin/interview" },
     { path: "/api/v1/admin/punishments", exact: true },
     { path: "/api/v1/admin/physical-training" },
-    { path: "/api/v1/admin/training-camps" },
+    { path: "/api/v1/admin/warning-management", exact: true },
   ],
 };
 

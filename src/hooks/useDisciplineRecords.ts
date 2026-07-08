@@ -87,18 +87,28 @@ export function useDisciplineRecords(ocId: string, semestersCount = 6) {
         mutationFn: async ({ semester, payloadRows }: { semester: number; payloadRows: DisciplineForm["records"] }) => {
             if (!ocId) throw new Error("No OC ID");
 
-            const payload = payloadRows.map((r) => ({
-                semester,
-                dateOfOffence: r.dateOfOffence ?? "",
-                offence: r.offence ?? "",
-                punishmentAwarded: r.punishmentAwarded ?? null,
-                punishmentId: r.punishmentId ?? null,
-                numberOfPunishments: r.numberOfPunishments ?? 1,
-                awardedOn: r.dateOfAward ?? null,
-                awardedBy: r.byWhomAwarded ?? null,
-                pointsDelta: r.negativePts ? Number(r.negativePts) : 0,
-                pointsCumulative: r.cumulative ? round2(Number(r.cumulative)) : 0,
-            }));
+            let cumulativeTotal = (groupedBySemester[semester - 1] ?? []).reduce(
+                (sum, row) => sum + (Number(row.negativePts) || 0),
+                0
+            );
+
+            const payload = payloadRows.map((r) => {
+                const pointsDelta = r.negativePts ? Number(r.negativePts) : 0;
+                cumulativeTotal = round2(cumulativeTotal + pointsDelta);
+
+                return {
+                    semester,
+                    dateOfOffence: r.dateOfOffence ?? "",
+                    offence: r.offence ?? "",
+                    punishmentAwarded: r.punishmentAwarded ?? null,
+                    punishmentId: r.punishmentId ?? null,
+                    numberOfPunishments: r.numberOfPunishments ?? 1,
+                    awardedOn: r.dateOfAward ?? null,
+                    awardedBy: r.byWhomAwarded ?? null,
+                    pointsDelta,
+                    pointsCumulative: cumulativeTotal,
+                };
+            });
 
             return await saveDisciplineRecords(ocId, payload);
         },

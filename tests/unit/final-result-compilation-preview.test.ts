@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_ACADEMIC_GRADING_POLICY } from '@/app/lib/grading-policy';
-import { buildFinalResultCompilationPreview } from '@/app/lib/reports/report-data';
+import { buildFinalResultCompilationPreview, buildMeritRankingPreview } from '@/app/lib/reports/report-data';
 import { db } from '@/app/db/client';
 import { listCourseOfferings } from '@/app/db/queries/courses';
 import { listOCsBasic } from '@/app/db/queries/oc';
 import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy';
 import { getSiteSettingsOrDefault } from '@/app/db/queries/site-settings';
+import { getAllSemesterSourceMarks, getSprRecord } from '@/app/db/queries/performance-records';
 import { getOcAcademics } from '@/app/services/oc-academics';
 
 vi.mock('@/app/db/client', () => ({
@@ -29,6 +30,12 @@ vi.mock('@/app/db/queries/academicGradingPolicy', () => ({
 
 vi.mock('@/app/db/queries/site-settings', () => ({
   getSiteSettingsOrDefault: vi.fn(),
+}));
+
+vi.mock('@/app/db/queries/performance-records', () => ({
+  getAllSemesterSourceMarks: vi.fn(),
+  getSemesterSourceScoresDetailed: vi.fn(),
+  getSprRecord: vi.fn(),
 }));
 
 vi.mock('@/app/services/oc-academics', () => ({
@@ -223,7 +230,7 @@ describe('buildFinalResultCompilationPreview', () => {
     });
   });
 
-  it('filters rows and subject columns branch-wise from third semester onwards', async () => {
+  it('filters rows and keeps common subject columns with the selected branch from third semester onwards', async () => {
     const preview = await buildFinalResultCompilationPreview({
       courseId: 'course-1',
       semester: 4,
@@ -235,6 +242,7 @@ describe('buildFinalResultCompilationPreview', () => {
     expect(preview.rows.map((row) => row.branchTag)).toEqual(['E', 'E']);
     expect(preview.subjectColumns).toHaveLength(2);
     expect(preview.subjectColumns.map((column) => column.branch)).toEqual(['E', 'C']);
+    expect(preview.subjectColumns.map((column) => column.subjectCode)).toEqual(['EC401', 'MA401']);
     expect(preview.rows[0]?.certSerialNo).toBe('TES-50/Sem-IV(E)/01');
     expect(preview.rows[1]?.certSerialNo).toBe('TES-50/Sem-IV(E)/02');
   });
@@ -359,5 +367,129 @@ describe('buildFinalResultCompilationPreview', () => {
     expect(preview.rows.map((row) => row.branchTag)).toEqual(['C', 'C', 'C']);
     expect(preview.subjectColumns).toHaveLength(1);
     expect(preview.subjectColumns[0]).toMatchObject({ branch: 'C' });
+  });
+
+  it('builds merit rankings from cumulative FPR marks through the selected semester', async () => {
+    const sourceMarksByOc: Record<string, Record<number, any>> = {
+      'oc-1': {
+        1: { academics: 40, ptSwimming: 5, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        2: { academics: 45, ptSwimming: 5, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        3: { academics: 55, ptSwimming: 5, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        4: { academics: 60, ptSwimming: 5, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        5: { academics: 900, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        6: { academics: 900, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+      },
+      'oc-2': {
+        1: { academics: 60, ptSwimming: 10, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        2: { academics: 70, ptSwimming: 10, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        3: { academics: 80, ptSwimming: 10, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        4: { academics: 90, ptSwimming: 10, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        5: { academics: 0, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        6: { academics: 0, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+      },
+      'oc-3': {
+        1: { academics: 30, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        2: { academics: 30, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        3: { academics: 30, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        4: { academics: 30, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        5: { academics: 0, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+        6: { academics: 0, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+      },
+    };
+    const cdrMarksByOc: Record<string, Record<number, number>> = {
+      'oc-1': { 1: 1, 2: 2, 3: 3, 4: 4 },
+      'oc-2': { 1: 5, 2: 5, 3: 5, 4: 5 },
+      'oc-3': { 1: 0, 2: 0, 3: 0, 4: 0 },
+    };
+
+    vi.mocked(getAllSemesterSourceMarks).mockImplementation(async (ocId: string) => sourceMarksByOc[ocId]);
+    vi.mocked(getSprRecord).mockImplementation(async (ocId: string, semester: number) => ({
+      cdrMarks: cdrMarksByOc[ocId]?.[semester] ?? 0,
+    }) as any);
+
+    const preview = await buildMeritRankingPreview({
+      courseId: 'course-1',
+      semester: 4,
+    });
+
+    expect(preview.reportType).toBe('OVERALL_TRAINING_MERIT_RANKINGS');
+    expect(preview.rows.map((row) => row.ocId)).toEqual(['oc-2', 'oc-1', 'oc-3']);
+    expect(preview.rows.map((row) => row.meritRank)).toEqual([1, 2, 3]);
+    expect(preview.rows.map((row) => row.marksObtained)).toEqual([360, 230, 120]);
+    expect(preview.categories.map((category) => category.key)).toEqual([
+      'academics',
+      'ptSwimming',
+      'games',
+      'olq',
+      'cfe',
+      'camp',
+      'drill',
+      'cdrMarks',
+    ]);
+    expect(preview.rows[0].categoryTotals).toMatchObject({
+      academics: 300,
+      ptSwimming: 40,
+      cdrMarks: 20,
+    });
+    expect(getSprRecord).toHaveBeenCalledWith('oc-1', 4);
+    expect(getSprRecord).not.toHaveBeenCalledWith('oc-1', 5);
+  });
+
+  it('adds platoon theme colors to merit ranking rows', async () => {
+    (db.select as any).mockReset();
+    (db.select as any)
+      .mockImplementationOnce(() => ({
+        from: () => ({
+          where: () => ({
+            limit: async () => [{ id: 'course-1', code: 'TES-50', title: 'TES 50' }],
+          }),
+        }),
+      }))
+      .mockImplementationOnce(() => ({
+        from: () => ({
+          where: async () => [
+            { id: 'platoon-1', themeColor: '#b45309' },
+            { id: 'platoon-2', themeColor: '#0369a1' },
+          ],
+        }),
+      }));
+
+    vi.mocked(listOCsBasic).mockResolvedValue([
+      {
+        id: 'oc-1',
+        ocNo: '1001',
+        name: 'OC Alpha',
+        platoonId: 'platoon-1',
+        platoonKey: 'ALPHA',
+        platoonName: 'Alpha Platoon',
+      },
+      {
+        id: 'oc-2',
+        ocNo: '1002',
+        name: 'OC Bravo',
+        platoonId: 'platoon-2',
+        platoonKey: 'BRAVO',
+        platoonName: 'Bravo Platoon',
+      },
+    ] as any);
+    vi.mocked(getAllSemesterSourceMarks).mockResolvedValue({
+      1: { academics: 10, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+      2: { academics: 10, ptSwimming: 0, games: 0, olq: 0, cfe: 0, camp: 0, drill: 0 },
+    } as any);
+    vi.mocked(getSprRecord).mockResolvedValue({ cdrMarks: 0 } as any);
+
+    const preview = await buildMeritRankingPreview({
+      courseId: 'course-1',
+      semester: 2,
+    });
+
+    expect(preview.rows.map((row) => ({
+      ocId: row.ocId,
+      platoonName: row.platoonName,
+      platoonThemeColor: row.platoonThemeColor,
+    }))).toEqual([
+      { ocId: 'oc-1', platoonName: 'Alpha Platoon', platoonThemeColor: '#B45309' },
+      { ocId: 'oc-2', platoonName: 'Bravo Platoon', platoonThemeColor: '#0369A1' },
+    ]);
   });
 });

@@ -94,7 +94,7 @@ async function DELETEHandler(req: AuditNextRequest, { params }: { params: Promis
         ocId,
         module: 'discipline',
         recordId: row.id,
-        hardDeleted: false,
+        hardDeleted: true,
       },
     });
 

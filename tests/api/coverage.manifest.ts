@@ -132,6 +132,17 @@ export const MISC_UNCOVERED_ROUTE_FILES = [
 
 const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
+    testFile: 'tests/api/admin.ssb-upload.test.ts',
+    routeFiles: [
+      'src/app/api/v1/admin/ssb-upload/route.ts',
+      'src/app/api/v1/admin/ssb-upload/[ocId]/route.ts',
+      'src/app/api/v1/admin/ssb-upload/[ocId]/view/route.ts',
+      'src/app/api/v1/admin/ssb-upload/settings/route.ts',
+      'src/app/api/v1/oc/[ocId]/ssb-upload/route.ts',
+      'src/app/api/v1/oc/[ocId]/ssb-upload/view/route.ts',
+    ],
+  },
+  {
     testFile: 'tests/api/dashboard.course.test.ts',
     routeFiles: ['src/app/api/v1/dashboard/data/course/route.ts'],
   },
@@ -180,6 +191,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
     routeFiles: ['src/app/api/v1/admin/marks-review-workflow/route.ts'],
   },
   {
+    testFile: 'tests/api/admin.warning-management.test.ts',
+    routeFiles: ['src/app/api/v1/admin/warning-management/route.ts'],
+  },
+  {
     testFile: 'tests/api/admin.training-camps.settings.test.ts',
     routeFiles: ['src/app/api/v1/admin/training-camps/settings/route.ts'],
   },
@@ -221,6 +236,10 @@ const EXPLICIT_GROUPS: ApiCoverageGroup[] = [
   {
     testFile: 'tests/api/me.workflow-notifications.test.ts',
     routeFiles: ['src/app/api/v1/me/workflow-notifications/route.ts'],
+  },
+  {
+    testFile: 'tests/api/me.warning-notifications.test.ts',
+    routeFiles: ['src/app/api/v1/me/warning-notifications/route.ts'],
   },
   {
     testFile: 'tests/api/me.switchable-identities.test.ts',

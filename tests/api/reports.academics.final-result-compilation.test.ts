@@ -178,6 +178,20 @@ describe('Final result compilation report routes', () => {
     });
   });
 
+  it('preview rejects O as a report branch filter', async () => {
+    const req = makeJsonRequest({
+      method: 'GET',
+      path: `/api/v1/reports/academics/final-result-compilation/preview?courseId=${courseId}&semester=4&branches=O`,
+    });
+
+    const res = await previewFinalResultCompilation(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.message).toBe('Validation failed');
+    expect(reportData.buildFinalResultCompilationPreview).not.toHaveBeenCalled();
+  });
+
   it('download returns an encrypted pdf using derived enrollment and cert values', async () => {
     const req = makeJsonRequest({
       method: 'POST',

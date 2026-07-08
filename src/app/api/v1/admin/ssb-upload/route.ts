@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { handleApiError, json } from '@/app/lib/http';
-import { requireAuth } from '@/app/lib/authz';
+import { requireAdmin } from '@/app/lib/authz';
 import { getOcSsbUploadSummary, listCourseSsbUploadRows } from '@/app/db/queries/ssb-upload';
+import { decryptSsbStoredPassword } from '@/app/lib/ssb-upload-crypto';
+import { deriveSidebarRoleGroup } from '@/lib/sidebar-visibility';
 import { AuditEventType, AuditResourceType, type AuditNextRequest, withAuditRoute } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -15,7 +17,8 @@ const querySchema = z.object({
 
 async function GETHandler(req: AuditNextRequest) {
   try {
-    const authCtx = await requireAuth(req);
+    const authCtx = await requireAdmin(req);
+    const canViewSavedPassword = isSuperAdminContext(authCtx);
     const sp = new URL(req.url).searchParams;
     const parsed = querySchema.parse({
       courseId: sp.get('courseId') ?? undefined,
@@ -25,11 +28,22 @@ async function GETHandler(req: AuditNextRequest) {
     if (parsed.ocId) {
       const row = await getOcSsbUploadSummary(parsed.ocId);
       if (!row) return json.notFound('OC not found.');
+      const item = toSsbUploadItem(row, { canViewSavedPassword, includeSavedPassword: canViewSavedPassword });
+      if (canViewSavedPassword && item.savedPassword) {
+        await req.audit.log({
+          action: AuditEventType.SENSITIVE_DATA_EXPORTED,
+          outcome: 'SUCCESS',
+          actor: { type: 'user', id: authCtx.userId },
+          target: { type: AuditResourceType.OC, id: parsed.ocId },
+          metadata: {
+            description: 'SSB PDF saved password revealed to SUPER_ADMIN.',
+            module: 'ssb-upload',
+            ocId: parsed.ocId,
+          },
+        });
+      }
       return json.ok({
-        item: {
-          ...row,
-          hasUpload: Boolean(row.fileName),
-        },
+        item,
       });
     }
 
@@ -46,10 +60,35 @@ async function GETHandler(req: AuditNextRequest) {
       },
     });
 
-    return json.ok({ items: items.map((item) => ({ ...item, hasUpload: Boolean(item.fileName) })) });
+    return json.ok({ items: items.map((item) => toSsbUploadItem(item, { canViewSavedPassword })) });
   } catch (error) {
     return handleApiError(error);
   }
 }
 
 export const GET = withAuditRoute('GET', GETHandler);
+
+function isSuperAdminContext(authCtx: Awaited<ReturnType<typeof requireAdmin>>) {
+  return deriveSidebarRoleGroup({
+    roles: authCtx.roles,
+    position: authCtx.claims?.apt?.position ?? null,
+  }) === 'SUPER_ADMIN';
+}
+
+function toSsbUploadItem<T extends { fileName: string | null; savedPasswordCiphertext?: string | null }>(
+  row: T,
+  options: { canViewSavedPassword: boolean; includeSavedPassword?: boolean }
+) {
+  const { savedPasswordCiphertext: _savedPasswordCiphertext, ...item } = row;
+  const savedPassword =
+    options.includeSavedPassword && options.canViewSavedPassword
+      ? decryptSsbStoredPassword(_savedPasswordCiphertext)
+      : null;
+
+  return {
+    ...item,
+    hasUpload: Boolean(row.fileName),
+    canViewSavedPassword: options.canViewSavedPassword,
+    ...(savedPassword ? { savedPassword } : {}),
+  };
+}
