@@ -10,6 +10,7 @@ export type SsbUploadItem = {
   sizeBytes?: number | null;
   uploadedAt?: string | null;
   hasUpload: boolean;
+  canViewSavedPassword?: boolean;
   savedPassword?: string | null;
   visibility?: SsbUploadVisibilityDecision;
 };
@@ -49,6 +50,12 @@ export function listSsbUploadOcs(courseId: string) {
 
 export function getSsbUploadForOc(ocId: string) {
   return api.get<{ item: SsbUploadItem }>(endpoints.admin.ssbUpload.oc(ocId));
+}
+
+export function getAdminSsbUploadForOc(ocId: string) {
+  return api.get<{ item: SsbUploadItem }>(endpoints.admin.ssbUpload.list, {
+    query: { ocId },
+  });
 }
 
 export function uploadSsbPdf(ocId: string, payload: { file: File; password: string }) {

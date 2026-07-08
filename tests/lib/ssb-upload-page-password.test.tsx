@@ -6,6 +6,7 @@ import { createRoot, type Root } from "react-dom/client";
 
 const mockGetAllCoursesPaged = vi.hoisted(() => vi.fn());
 const mockGetAppointments = vi.hoisted(() => vi.fn());
+const mockGetAdminSsbUploadForOc = vi.hoisted(() => vi.fn());
 const mockListSsbUploadOcs = vi.hoisted(() => vi.fn());
 const mockUploadSsbPdf = vi.hoisted(() => vi.fn());
 const mockGetSsbUploadVisibilitySettings = vi.hoisted(() => vi.fn());
@@ -27,6 +28,7 @@ vi.mock("@/app/lib/api/appointmentApi", () => ({
 }));
 
 vi.mock("@/app/lib/api/ssbUploadApi", () => ({
+  getAdminSsbUploadForOc: mockGetAdminSsbUploadForOc,
   getSsbUploadVisibilitySettings: mockGetSsbUploadVisibilitySettings,
   listSsbUploadOcs: mockListSsbUploadOcs,
   saveSsbUploadVisibilitySettings: mockSaveSsbUploadVisibilitySettings,
@@ -125,7 +127,7 @@ import SsbUploadPage from "@/app/dashboard/genmgmt/ssb-upload/page";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
-describe("SsbUploadPage saved password visibility", () => {
+describe("SsbUploadPage SSB upload controls", () => {
   let container: HTMLDivElement;
   let root: Root;
 
@@ -183,8 +185,19 @@ describe("SsbUploadPage saved password visibility", () => {
         name: "Pratik",
         hasUpload: true,
         fileName: "ssb.pdf",
-        savedPassword: "report-pass",
+        canViewSavedPassword: false,
       }],
+    });
+    mockGetAdminSsbUploadForOc.mockResolvedValue({
+      item: {
+        ocId: "oc-1",
+        ocNo: "OC-0001",
+        name: "Pratik",
+        fileName: "ssb.pdf",
+        hasUpload: true,
+        canViewSavedPassword: true,
+        savedPassword: "report-pass",
+      },
     });
     mockUploadSsbPdf.mockResolvedValue({
       item: {
@@ -207,7 +220,7 @@ describe("SsbUploadPage saved password visibility", () => {
     container.remove();
   });
 
-  it("shows an eye button beside upload to reveal the saved password for an OC", async () => {
+  it("does not render saved password recovery controls for an OC", async () => {
     await act(async () => {
       root.render(<SsbUploadPage />);
     });
@@ -222,12 +235,42 @@ describe("SsbUploadPage saved password visibility", () => {
       'button[aria-label="Show saved SSB password for OC-0001"]'
     ) as HTMLButtonElement;
 
+    expect(showButton).toBeFalsy();
+    expect(container.textContent).not.toContain("report-pass");
+    expect(buttonContaining("Upload")).toBeTruthy();
+  });
+
+  it("lets SUPER_ADMIN reveal a saved password through a single-OC lookup", async () => {
+    mockListSsbUploadOcs.mockResolvedValueOnce({
+      items: [{
+        ocId: "oc-1",
+        ocNo: "OC-0001",
+        name: "Pratik",
+        hasUpload: true,
+        fileName: "ssb.pdf",
+        canViewSavedPassword: true,
+      }],
+    });
+
+    await act(async () => {
+      root.render(<SsbUploadPage />);
+    });
+    await flush();
+
+    click(buttonContaining("Course-100"));
+    await flush();
+    click(buttonContaining("Edit"));
+
+    const showButton = container.querySelector(
+      'button[aria-label="Show saved SSB password for OC-0001"]'
+    ) as HTMLButtonElement;
     expect(showButton).toBeTruthy();
-    expect(showButton.className).toContain("hover:text-primary");
     expect(container.textContent).not.toContain("report-pass");
 
     click(showButton);
+    await flush();
 
+    expect(mockGetAdminSsbUploadForOc).toHaveBeenCalledWith("oc-1");
     expect(container.textContent).toContain("report-pass");
     expect(
       container.querySelector('button[aria-label="Hide saved SSB password for OC-0001"]')

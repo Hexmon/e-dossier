@@ -1,4 +1,4 @@
-export type ReportBranch = 'E' | 'M' | 'O';
+export type ReportBranch = 'E' | 'M';
 export type ConsolidatedSessionalSection = 'theory' | 'practical';
 
 export type CourseSemesterMetadata = {

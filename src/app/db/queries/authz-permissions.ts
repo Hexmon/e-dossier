@@ -16,6 +16,7 @@ import {
   getPlatoonCommanderDefaultPermissionKeys,
   getRbacDefaultProfiles,
   normalizeRbacKey,
+  PLATOON_CADET_APPOINTMENTS_PERMISSION_KEYS,
   RBAC_WILDCARD_PERMISSION,
 } from '@/app/lib/rbac/default-permissions';
 import {
@@ -40,6 +41,7 @@ export type EffectiveFieldRule = {
   mode: FieldRuleMode;
   fields: string[];
   source: {
+    appointmentId?: string | null;
     positionId?: string | null;
     roleId?: string | null;
   };
@@ -246,6 +248,7 @@ const RBAC_CODE_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v1';
 const RBAC_DASHBOARD_SESSION_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v2_dashboard_session';
 const RBAC_OTHER_USER_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v3_other_user_defaults';
 const RBAC_ROLE_GROUP_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v6_warning_notifications';
+const RBAC_PLATOON_CADET_APPOINTMENTS_STATE_KEY = 'rbac_code_defaults_v7_platoon_cadet_appointments';
 let ensureCodeRbacDefaultsPromise: Promise<void> | null = null;
 
 async function upsertPermissionKeys(permissionKeys: string[]): Promise<Map<string, string>> {
@@ -522,6 +525,33 @@ async function applyRoleGroupDefaultsToExistingSubjects(
   }
 }
 
+async function applyPlatoonCadetAppointmentsDefaultsToExistingSubjects(
+  permissionIdByKey: Map<string, string>
+): Promise<void> {
+  const permissionIds = getPermissionIds(
+    permissionIdByKey,
+    PLATOON_CADET_APPOINTMENTS_PERMISSION_KEYS
+  );
+  if (permissionIds.length === 0) return;
+
+  const [roleRows, positionRows] = await Promise.all([
+    db.select({ id: roles.id, key: roles.key }).from(roles),
+    db.select({ id: positions.id, key: positions.key }).from(positions),
+  ]);
+
+  for (const role of roleRows) {
+    if (hasBroadPlatoonCommanderRole({ roles: [role.key] })) {
+      await addRolePermissions(role.id, permissionIds);
+    }
+  }
+
+  for (const position of positionRows) {
+    if (hasBroadPlatoonCommanderRole({ position: position.key })) {
+      await addPositionPermissions(position.id, permissionIds);
+    }
+  }
+}
+
 export async function applyDefaultPermissionsToPosition(
   positionId: string,
   positionKey: string
@@ -560,6 +590,12 @@ async function ensureCodeRbacDefaultsInner(): Promise<void> {
   if (!(await hasRbacDefaultsState(RBAC_ROLE_GROUP_DEFAULTS_STATE_KEY))) {
     await applyRoleGroupDefaultsToExistingSubjects(permissionIdByKey);
     await markRbacDefaultsState(RBAC_ROLE_GROUP_DEFAULTS_STATE_KEY);
+    changed = true;
+  }
+
+  if (!(await hasRbacDefaultsState(RBAC_PLATOON_CADET_APPOINTMENTS_STATE_KEY))) {
+    await applyPlatoonCadetAppointmentsDefaultsToExistingSubjects(permissionIdByKey);
+    await markRbacDefaultsState(RBAC_PLATOON_CADET_APPOINTMENTS_STATE_KEY);
     changed = true;
   }
 
@@ -714,12 +750,16 @@ async function loadRolePermissionKeys(roleIds: string[]): Promise<Set<string>> {
 
 async function loadFieldRules(
   permissionKeys: string[],
+  appointmentId: string | null,
   positionId: string | null,
   roleIds: string[]
 ): Promise<Record<string, EffectiveFieldRule[]>> {
   if (permissionKeys.length === 0) return {};
 
   const scopeFilters: any[] = [];
+  if (appointmentId) {
+    scopeFilters.push(eq(permissionFieldRules.appointmentId, appointmentId));
+  }
   if (positionId) {
     scopeFilters.push(eq(permissionFieldRules.positionId, positionId));
   }
@@ -733,6 +773,7 @@ async function loadFieldRules(
       permissionKey: permissions.key,
       mode: permissionFieldRules.mode,
       fields: permissionFieldRules.fields,
+      appointmentId: permissionFieldRules.appointmentId,
       positionId: permissionFieldRules.positionId,
       roleId: permissionFieldRules.roleId,
     })
@@ -747,6 +788,7 @@ async function loadFieldRules(
       mode: row.mode,
       fields: row.fields ?? [],
       source: {
+        appointmentId: row.appointmentId,
         positionId: row.positionId,
         roleId: row.roleId,
       },
@@ -859,6 +901,7 @@ export async function getEffectivePermissionBundle(input: PermissionInput): Prom
   const sortedPermissions = Array.from(permissionSet).sort();
   const fieldRulesByAction = await loadFieldRules(
     sortedPermissions.filter((perm) => perm !== '*'),
+    appointment.appointmentId,
     appointment.positionId,
     roleIds
   );

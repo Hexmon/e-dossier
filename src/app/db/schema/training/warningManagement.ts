@@ -6,10 +6,12 @@ export const warningManagementSettings = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     criterionKey: text('criterion_key').notNull(),
+    module: text('module').notNull().default('DISCIPLINE'),
     positionKey: text('position_key').notNull(),
     positionName: text('position_name').notNull(),
     triggerType: text('trigger_type').notNull(),
     restrictionPoints: integer('restriction_points').notNull(),
+    absenceDays: integer('absence_days').notNull().default(0),
     isEnabled: boolean('is_enabled').notNull().default(true),
     updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -17,6 +19,7 @@ export const warningManagementSettings = pgTable(
   },
   (table) => ({
     uqCriterion: uniqueIndex('uq_warning_management_settings_criterion').on(table.criterionKey),
+    ixModule: index('ix_warning_management_settings_module').on(table.module),
     ixPositionKey: index('ix_warning_management_settings_position_key').on(table.positionKey),
   }),
 );

@@ -106,4 +106,49 @@ describe("AppSidebar setup mode", () => {
     expect(html).toContain("href=\"/dashboard/reports\"");
     expect(navState.useNavigation).toHaveBeenCalledWith({ enabled: true });
   });
+
+  it("restores cadet appointments under settings for eligible platoon commanders", () => {
+    navState.searchParams = new URLSearchParams();
+    navState.useMe.mockReturnValueOnce({
+      data: {
+        apt: { position: "ARJUNPLCDR" },
+        user: { id: "pl-cdr-1" },
+        cadetAppointments: { canManage: true },
+      },
+    });
+    navState.useSetupStatus.mockReturnValueOnce({
+      data: { setupComplete: true },
+      isLoading: false,
+    });
+    navState.useNavigation.mockReturnValueOnce({
+      data: {
+        sections: [
+          {
+            key: "dashboard",
+            label: "Dashboard",
+            items: [{ key: "home", label: "Home", url: "/dashboard", icon: "Home" }],
+          },
+          {
+            key: "reports",
+            label: "Reports",
+            items: [{ key: "reports", label: "Reports", url: "/dashboard/reports", icon: "FileText" }],
+          },
+          {
+            key: "help",
+            label: "Help",
+            items: [{ key: "help", label: "Help", url: "/dashboard/help", icon: "LifeBuoy" }],
+          },
+        ],
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    const html = renderSidebar();
+
+    expect(html).toContain("Settings");
+    expect(html).toContain("Cadet Appointments");
+    expect(html).toContain("href=\"/dashboard/settings/device/appointments\"");
+    expect(html).not.toContain("Device Site Settings");
+  });
 });

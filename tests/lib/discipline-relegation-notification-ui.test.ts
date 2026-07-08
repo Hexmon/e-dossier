@@ -20,4 +20,28 @@ describe('warning notifications page actions', () => {
     expect(source).toContain('View OC');
     expect(source).toContain('item.deepLink');
   });
+
+  it('separates discipline and medical notifications into page tabs', () => {
+    const source = readFileSync('src/app/dashboard/notifications/page.tsx', 'utf8');
+
+    expect(source).toContain('TabsTrigger');
+    expect(source).toContain('Discipline');
+    expect(source).toContain('Medical');
+    expect(source).toContain('useState<WarningModule>("DISCIPLINE")');
+    expect(source).toContain('notifications.filter((item) => item.module === selectedModule)');
+    expect(source).toContain('No discipline warning notifications.');
+    expect(source).toContain('No medical warning notifications.');
+  });
+
+  it('separates discipline and medical notifications into bell dropdown tabs', () => {
+    const source = readFileSync('src/components/Dashboard/WarningNotificationBell.tsx', 'utf8');
+
+    expect(source).toContain('TabsTrigger');
+    expect(source).toContain('Discipline');
+    expect(source).toContain('Medical');
+    expect(source).toContain('useState<WarningModule>("DISCIPLINE")');
+    expect(source).toContain('notifications.filter((item) => item.module === selectedModule)');
+    expect(source).toContain('No discipline warning notifications.');
+    expect(source).toContain('No medical warning notifications.');
+  });
 });

@@ -146,7 +146,7 @@ export async function saveOcSsbUpload(input: {
   contentType: string;
   sizeBytes: number;
   passwordHash: string;
-  passwordCiphertext: string;
+  passwordCiphertext?: string | null;
   salt: string;
   iv: string;
   authTag: string;

@@ -66,6 +66,14 @@ describe('authz-permissions helpers', () => {
     expect(platoon?.permissionKeys).toContain('admin:warning-management:read');
     expect(platoon?.permissionKeys).toContain('me:warning-notifications:read');
     expect(platoon?.permissionKeys).toContain('me:warning-notifications:update');
+    expect(platoon?.permissionKeys).toContain('page:dashboard:settings:device:appointments:view');
+    expect(platoon?.permissionKeys).toContain('pl-cdr:cadet-appointments:read');
+    expect(platoon?.permissionKeys).toContain('pl-cdr:cadet-appointments:create');
+    expect(platoon?.permissionKeys).toContain('pl-cdr:cadet-appointments:update');
+    expect(platoon?.permissionKeys).toContain('pl-cdr:cadet-appointments:delete');
+    expect(platoon?.permissionKeys).toContain('pl-cdr:cadet-appointments:transfer:create');
+    expect(platoon?.permissionKeys).not.toContain('page:dashboard:settings:view');
+    expect(platoon?.permissionKeys).not.toContain('admin:device-site-settings:update');
     expect(platoon?.positionKeys).toContain('PTN_CDR');
     expect(platoon?.roleKeys).toContain('ptn_cdr');
     expect(otherUsers?.permissionKeys).toContain('page:dashboard:bulk-upload:view');
@@ -106,7 +114,10 @@ describe('authz-permissions helpers', () => {
     expect(otherUserKeys).toContain('sidebar:dossier');
     expect(platoonKeys).toContain('sidebar:dossier');
     expect(platoonKeys).toContain('page:dashboard:reports:view');
+    expect(platoonKeys).toContain('page:dashboard:settings:device:appointments:view');
+    expect(platoonKeys).toContain('pl-cdr:cadet-appointments:read');
     expect(platoonKeys).not.toContain('page:dashboard:bulk-upload:view');
+    expect(platoonKeys).not.toContain('page:dashboard:settings:view');
     expect(resolveDefaultPermissionKeysForPosition('ADMIN')).toEqual([]);
   });
 

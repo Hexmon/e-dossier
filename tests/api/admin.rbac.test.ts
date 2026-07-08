@@ -117,11 +117,49 @@ vi.mock('@/app/db/queries/rbac-admin', () => ({
     defaultFieldRules: [],
     missingDefaultFieldRules: [],
   })),
+  getRbacFieldCatalogMetadata: vi.fn(async () => ({
+    fieldCatalog: [
+      {
+        id: 'users.email',
+        moduleLabel: 'Administration',
+        areaLabel: 'Users',
+        tableName: 'users',
+        tableExport: 'users',
+        fieldKey: 'email',
+        fieldName: 'email',
+        fieldLabel: 'Email',
+        columnName: 'email',
+        dataType: 'string',
+        resourceType: 'admin:users',
+        readPermissionKey: 'admin:users:read',
+        writePermissionKeys: ['admin:users:update'],
+        technical: false,
+      },
+    ],
+    activeAppointments: [
+      {
+        id: '44444444-4444-4444-8444-444444444444',
+        userId: 'admin-1',
+        userName: 'Admin',
+        username: 'admin',
+        userRank: 'ADMIN',
+        positionId: 'pos-1',
+        positionKey: 'ADMIN',
+        positionName: 'Admin',
+        scopeType: 'GLOBAL',
+        scopeId: null,
+        assignment: 'PRIMARY',
+        startsAt: new Date(),
+        label: 'ADMIN Admin (ADMIN)',
+      },
+    ],
+  })),
   createFieldRule: vi.fn(async () => ({
     id: 'rule-1',
     permissionId: 'perm-1',
     positionId: 'pos-1',
     roleId: null,
+    appointmentId: null,
     mode: 'OMIT',
     fields: ['score'],
     note: null,
@@ -131,6 +169,7 @@ vi.mock('@/app/db/queries/rbac-admin', () => ({
     permissionId: 'perm-1',
     positionId: 'pos-1',
     roleId: null,
+    appointmentId: null,
     mode: 'OMIT',
     fields: ['score'],
     note: null,
@@ -548,6 +587,8 @@ describe('RBAC mappings, roles, and field rules routes', () => {
     expect(body.items).toHaveLength(1);
     expect(body.defaults.defaultFieldRules).toEqual([]);
     expect(body.defaults.missingDefaultFieldRules).toEqual([]);
+    expect(body.fieldCatalog[0].id).toBe('users.email');
+    expect(body.activeAppointments[0].id).toBe('44444444-4444-4444-8444-444444444444');
   });
 
   it('POST /api/v1/admin/rbac/field-rules validates payload', async () => {
@@ -582,6 +623,29 @@ describe('RBAC mappings, roles, and field rules routes', () => {
     const res = await postFieldRule(req as any, createRouteContext());
 
     expect(res.status).toBe(400);
+  });
+
+  it('POST /api/v1/admin/rbac/field-rules creates appointment scoped rules', async () => {
+    const req = makeJsonRequest({
+      method: 'POST',
+      path: '/api/v1/admin/rbac/field-rules',
+      body: {
+        permissionId: '11111111-1111-4111-8111-111111111111',
+        appointmentId: '44444444-4444-4444-8444-444444444444',
+        mode: 'DENY',
+        fields: ['email'],
+      },
+    });
+
+    const res = await postFieldRule(req as any, createRouteContext());
+
+    expect(res.status).toBe(201);
+    expect(rbacAdminQueries.createFieldRule).toHaveBeenCalledWith({
+      permissionId: '11111111-1111-4111-8111-111111111111',
+      appointmentId: '44444444-4444-4444-8444-444444444444',
+      mode: 'DENY',
+      fields: ['email'],
+    });
   });
 
   it('PATCH /api/v1/admin/rbac/field-rules/:ruleId rejects updates that remove rule scope', async () => {

@@ -81,7 +81,6 @@ async function POSTHandler(req: AuditNextRequest, { params }: { params: Promise<
         sizeBytes: file.size,
         uploadedAt: result.saved.ssbPdfUploadedAt,
         hasUpload: true,
-        savedPassword: password,
       },
     });
   } catch (error) {

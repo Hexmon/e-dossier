@@ -3,7 +3,7 @@ import { ApiError } from '@/app/lib/http';
 import { db } from '@/app/db/client';
 import { appointments } from '@/app/db/schema/auth/appointments';
 import { positions } from '@/app/db/schema/auth/positions';
-import { ocCadets, ocDiscipline } from '@/app/db/schema/training/oc';
+import { ocCadets, ocDiscipline, ocMedicalCategory } from '@/app/db/schema/training/oc';
 import {
   warningManagementSettings,
   warningNotificationReads,
@@ -11,15 +11,22 @@ import {
 import {
   canViewWarningCriterion,
   DISCIPLINE_RELEGATION_RESTRICTION_POINTS,
+  MEDICAL_WARNING_MODULE_INTRO,
+  MEDICAL_WARNING_TRIGGER_TYPE,
   mergeWarningCriteria,
+  mergeMedicalWarningCriteria,
   normalizePositionKey,
   normalizeWarningPositionKey,
+  parseMedicalAbsenceDays,
   warningPolicyKeyForCriterion,
   warningAppointmentPositionKey,
   warningNotificationActionSchema,
   warningSettingsUpdateSchema,
   WARNING_POSITION_LEVELS,
   WARNING_MODULE_INTRO,
+  type MedicalWarningCriterion,
+  type MedicalWarningTriggerType,
+  type WarningModule,
   type WarningCriterion,
   type WarningTriggerType,
 } from '@/app/lib/warning-management';
@@ -42,9 +49,12 @@ type WarningNotification = {
   ocNo: string | null;
   ocName: string;
   appointmentName: string;
-  triggerType: WarningTriggerType;
+  module: WarningModule;
+  triggerType: WarningTriggerType | MedicalWarningTriggerType;
   restrictionPoints: number;
   actualPoints: number;
+  absenceDays: number;
+  actualAbsenceDays: number;
   semesterLabel: string;
   deepLink: string;
   relegationLink: string | null;
@@ -61,10 +71,25 @@ type GeneratedWarningNotification = Omit<WarningNotification, 'readAt'> & {
 function toCriterion(row: typeof warningManagementSettings.$inferSelect): WarningCriterion {
   return {
     criterionKey: row.criterionKey,
+    module: row.module as WarningModule,
     positionKey: row.positionKey,
     positionName: row.positionName,
     triggerType: row.triggerType as WarningTriggerType,
     restrictionPoints: row.restrictionPoints,
+    absenceDays: row.absenceDays,
+    isEnabled: row.isEnabled,
+  };
+}
+
+function toMedicalCriterion(row: typeof warningManagementSettings.$inferSelect): MedicalWarningCriterion {
+  return {
+    criterionKey: row.criterionKey,
+    module: 'MEDICAL',
+    positionKey: row.positionKey,
+    positionName: row.positionName,
+    triggerType: MEDICAL_WARNING_TRIGGER_TYPE,
+    restrictionPoints: 0,
+    absenceDays: row.absenceDays,
     isEnabled: row.isEnabled,
   };
 }
@@ -95,9 +120,12 @@ function stripGeneratedMeta(item: GeneratedWarningNotification): Omit<WarningNot
     ocNo: item.ocNo,
     ocName: item.ocName,
     appointmentName: item.appointmentName,
+    module: item.module,
     triggerType: item.triggerType,
     restrictionPoints: item.restrictionPoints,
     actualPoints: item.actualPoints,
+    absenceDays: item.absenceDays,
+    actualAbsenceDays: item.actualAbsenceDays,
     semesterLabel: item.semesterLabel,
     deepLink: item.deepLink,
     relegationLink: item.relegationLink,
@@ -109,16 +137,20 @@ function stripGeneratedMeta(item: GeneratedWarningNotification): Omit<WarningNot
 
 export async function listWarningSettingsForAdmin() {
   const rows = await db.select().from(warningManagementSettings).orderBy(warningManagementSettings.positionName);
+  const disciplineRows = rows.filter((row) => row.module === 'DISCIPLINE');
+  const medicalRows = rows.filter((row) => row.module === 'MEDICAL');
   return {
     intro: WARNING_MODULE_INTRO,
-    criteria: mergeWarningCriteria(rows.map(toCriterion)),
+    medicalIntro: MEDICAL_WARNING_MODULE_INTRO,
+    criteria: mergeWarningCriteria(disciplineRows.map(toCriterion)),
+    medicalCriteria: mergeMedicalWarningCriteria(medicalRows.map(toMedicalCriterion)),
   };
 }
 
 export async function updateWarningSettingsForAdmin(input: unknown, updatedBy: string) {
   const parsed = warningSettingsUpdateSchema.parse(input);
   const now = new Date();
-  const rows = parsed.criteria.map((criterion) => ({
+  const rows = [...parsed.criteria, ...parsed.medicalCriteria].map((criterion) => ({
     ...criterion,
     positionKey: normalizeWarningPositionKey(criterion.positionKey),
     updatedBy,
@@ -137,6 +169,8 @@ export async function updateWarningSettingsForAdmin(input: unknown, updatedBy: s
           positionName: row.positionName,
           triggerType: row.triggerType,
           restrictionPoints: row.restrictionPoints,
+          absenceDays: row.absenceDays,
+          module: row.module,
           isEnabled: row.isEnabled,
           updatedBy,
           updatedAt: now,
@@ -197,7 +231,7 @@ function maxTwoTermWindow(termPoints: Map<number, number>) {
 }
 
 function canCurrentAppointmentViewCriterion(
-  criterion: WarningCriterion,
+  criterion: Pick<WarningCriterion | MedicalWarningCriterion, 'positionKey' | 'positionName'>,
   appointmentKey: string,
   viewerPolicyKeys: string[],
 ) {
@@ -214,6 +248,7 @@ function canCurrentAppointmentViewCriterion(
 
 function isDisciplineRelegationWarning(criterion: WarningCriterion) {
   return (
+    criterion.module === 'DISCIPLINE' &&
     criterion.triggerType === 'TWO_TERM_CUMULATIVE' &&
     criterion.restrictionPoints >= DISCIPLINE_RELEGATION_RESTRICTION_POINTS &&
     warningPolicyKeyForCriterion(criterion) === 'dc-ci-mceme'
@@ -237,9 +272,13 @@ export async function listMyWarningNotifications(auth: AuthLike): Promise<Warnin
     (criterion) =>
       criterion.isEnabled && canCurrentAppointmentViewCriterion(criterion, appointmentKey, viewerPolicyKeys),
   );
-  if (!criteria.length) return [];
+  const medicalCriteria = settings.medicalCriteria.filter(
+    (criterion) =>
+      criterion.isEnabled && canCurrentAppointmentViewCriterion(criterion, appointmentKey, viewerPolicyKeys),
+  );
+  if (!criteria.length && !medicalCriteria.length) return [];
 
-  const rows = await db
+  const rows = criteria.length ? await db
     .select({
       ocId: ocCadets.id,
       ocNo: ocCadets.ocNo,
@@ -252,7 +291,7 @@ export async function listMyWarningNotifications(auth: AuthLike): Promise<Warnin
     })
     .from(ocDiscipline)
     .innerJoin(ocCadets, eq(ocCadets.id, ocDiscipline.ocId))
-    .where(isNull(ocDiscipline.deletedAt));
+    .where(isNull(ocDiscipline.deletedAt)) : [];
 
   const byOc = new Map<string, {
     ocNo: string | null;
@@ -300,9 +339,12 @@ export async function listMyWarningNotifications(auth: AuthLike): Promise<Warnin
         ocNo: entry.ocNo,
         ocName: entry.ocName,
         appointmentName: criterion.positionName,
+        module: 'DISCIPLINE',
         triggerType: criterion.triggerType,
         restrictionPoints: criterion.restrictionPoints,
         actualPoints: match.points,
+        absenceDays: 0,
+        actualAbsenceDays: 0,
         semesterLabel: match.label,
         deepLink: `/dashboard/${ocId}/milmgmt/discip-records`,
         relegationLink: getDisciplineRelegationLink(criterion, ocId, canMarkForRelegation),
@@ -315,7 +357,83 @@ export async function listMyWarningNotifications(auth: AuthLike): Promise<Warnin
     }
   }
 
-  const unread = Array.from(unreadByOc.values()).map(stripGeneratedMeta);
+  const medicalUnreadByOc = new Map<string, GeneratedWarningNotification>();
+  if (medicalCriteria.length) {
+    const medicalRows = await db
+      .select({
+        ocId: ocCadets.id,
+        ocNo: ocCadets.ocNo,
+        ocName: ocCadets.name,
+        semester: ocMedicalCategory.semester,
+        date: ocMedicalCategory.date,
+        absence: ocMedicalCategory.absence,
+      })
+      .from(ocMedicalCategory)
+      .innerJoin(ocCadets, eq(ocCadets.id, ocMedicalCategory.ocId))
+      .where(isNull(ocMedicalCategory.deletedAt));
+
+    const medicalByOc = new Map<string, {
+      ocNo: string | null;
+      ocName: string;
+      latest: Date | null;
+      absenceDays: number;
+      semesterLabel: string;
+    }>();
+
+    for (const row of medicalRows) {
+      const absenceDays = parseMedicalAbsenceDays(row.absence);
+      if (absenceDays === null || absenceDays <= 0) continue;
+      const current = medicalByOc.get(row.ocId);
+      const date = row.date instanceof Date ? row.date : new Date(row.date);
+      const latest = Number.isNaN(date.getTime()) ? current?.latest ?? null : date;
+      if (current && current.absenceDays > absenceDays) {
+        if (latest && (!current.latest || latest > current.latest)) current.latest = latest;
+        continue;
+      }
+      medicalByOc.set(row.ocId, {
+        ocNo: row.ocNo,
+        ocName: row.ocName,
+        latest,
+        absenceDays,
+        semesterLabel: `Term ${Number(row.semester)}`,
+      });
+    }
+
+    for (const [ocId, entry] of medicalByOc) {
+      for (const criterion of medicalCriteria) {
+        if (entry.absenceDays < criterion.absenceDays) continue;
+        const id = `${criterion.criterionKey}:${ocId}:${entry.semesterLabel.replace(/\s+/g, '-')}:${entry.absenceDays}-days`;
+        const generated: GeneratedWarningNotification = {
+          id,
+          title: 'Medical warning notification',
+          message: `${entry.ocName}${entry.ocNo ? ` (${entry.ocNo})` : ''} got medical warning by ${criterion.positionName} for reaching the ${criterion.absenceDays}-day absence criteria. Current medical absence: ${entry.absenceDays} day${entry.absenceDays === 1 ? '' : 's'}.`,
+          ocId,
+          ocNo: entry.ocNo,
+          ocName: entry.ocName,
+          appointmentName: criterion.positionName,
+          module: 'MEDICAL',
+          triggerType: MEDICAL_WARNING_TRIGGER_TYPE,
+          restrictionPoints: 0,
+          actualPoints: entry.absenceDays,
+          absenceDays: criterion.absenceDays,
+          actualAbsenceDays: entry.absenceDays,
+          semesterLabel: entry.semesterLabel,
+          deepLink: `/dashboard/${ocId}/milmgmt/med-record`,
+          relegationLink: null,
+          isDisciplineRelegationEligible: false,
+          canMarkForRelegation: false,
+          createdAt: (entry.latest ?? new Date(0)).toISOString(),
+          specificity: normalizeWarningPositionKey(criterion.positionKey) === appointmentKey ? 2 : 1,
+        };
+        medicalUnreadByOc.set(ocId, pickWarningNotification(medicalUnreadByOc.get(ocId), generated));
+      }
+    }
+  }
+
+  const unread = [
+    ...Array.from(unreadByOc.values()),
+    ...Array.from(medicalUnreadByOc.values()),
+  ].map(stripGeneratedMeta);
 
   if (!unread.length) return [];
 

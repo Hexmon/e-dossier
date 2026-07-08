@@ -196,6 +196,36 @@ describe('withAuthz', () => {
     expect(loggedEvent.metadata.authz.allow).toBe(true);
   });
 
+  it('applies field rules to GET JSON responses before returning', async () => {
+    const allowDecision = makeDecision(true);
+    const engine = makeEngine(allowDecision);
+    const handler = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ item: { name: 'Test User', phone: '+911234567890' } }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        })
+    );
+    const principal = makePrincipal({
+      fieldRulesByAction: {
+        'me:read': [{ mode: 'OMIT', fields: ['phone'] }],
+      },
+    });
+
+    const wrapped = withAuthz(handler as any, {
+      action: 'me:read',
+      engine,
+      getPrincipal: async () => principal,
+    });
+
+    const response = await wrapped(makeRequest('http://localhost/api/v1/me') as any, { params: Promise.resolve({}) });
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ item: { name: 'Test User' } });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
   it('applies field rules to POST JSON payloads before the handler runs', async () => {
     const allowDecision = makeDecision(true);
     const engine = makeEngine(allowDecision);

@@ -18,6 +18,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getAllCoursesPaged, type CourseResponse } from "@/app/lib/api/courseApi";
 import { getAppointments, type Appointment } from "@/app/lib/api/appointmentApi";
 import {
+  getAdminSsbUploadForOc,
   getSsbUploadVisibilitySettings,
   listSsbUploadOcs,
   saveSsbUploadVisibilitySettings,
@@ -66,6 +67,7 @@ export default function SsbUploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
   const [visiblePasswordOcId, setVisiblePasswordOcId] = useState<string | null>(null);
+  const [passwordLoadingOcId, setPasswordLoadingOcId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -190,6 +192,35 @@ export default function SsbUploadPage() {
     }
   };
 
+  const toggleSavedPassword = async (item: SsbUploadItem) => {
+    if (visiblePasswordOcId === item.ocId) {
+      setVisiblePasswordOcId(null);
+      return;
+    }
+
+    if (item.savedPassword) {
+      setVisiblePasswordOcId(item.ocId);
+      return;
+    }
+
+    setPasswordLoadingOcId(item.ocId);
+    try {
+      const res = await getAdminSsbUploadForOc(item.ocId);
+      setItems((prev) => prev.map((row) => (
+        row.ocId === item.ocId ? { ...row, ...res.item } : row
+      )));
+      if (res.item.savedPassword) {
+        setVisiblePasswordOcId(item.ocId);
+      } else {
+        toast.error("Saved password is not available. Check SSB_UPLOAD_PASSWORD_SECRET.");
+      }
+    } catch (error) {
+      toast.error(getFriendlyApiErrorMessage(error, "Failed to load saved SSB password"));
+    } finally {
+      setPasswordLoadingOcId(null);
+    }
+  };
+
   return (
     <DashboardLayout title="SSB Upload" description="Upload encrypted course-wise SSB PDFs.">
       <div className="p-6">
@@ -265,7 +296,6 @@ export default function SsbUploadPage() {
                     <tr><td className="px-4 py-8 text-center text-muted-foreground" colSpan={4}>No OCs found for this course.</td></tr>
                   ) : items.map((item) => {
                     const editing = editOcId === item.ocId;
-                    const savedPassword = item.savedPassword;
                     const passwordVisible = visiblePasswordOcId === item.ocId;
                     return (
                       <tr key={item.ocId} className="border-t">
@@ -281,11 +311,11 @@ export default function SsbUploadPage() {
                             </Button>
                             {editing ? (
                               <>
-                                {savedPassword ? (
+                                {item.hasUpload && item.canViewSavedPassword ? (
                                   <div className="flex items-center gap-2">
-                                    {passwordVisible ? (
+                                    {passwordVisible && item.savedPassword ? (
                                       <span className="max-w-40 truncate text-xs text-muted-foreground">
-                                        {savedPassword}
+                                        {item.savedPassword}
                                       </span>
                                     ) : null}
                                     <Button
@@ -293,7 +323,8 @@ export default function SsbUploadPage() {
                                       variant="outline"
                                       size="icon-sm"
                                       className="hover:bg-primary/10 hover:text-primary"
-                                      onClick={() => setVisiblePasswordOcId(passwordVisible ? null : item.ocId)}
+                                      disabled={passwordLoadingOcId === item.ocId}
+                                      onClick={() => void toggleSavedPassword(item)}
                                       aria-label={`${passwordVisible ? "Hide" : "Show"} saved SSB password for ${item.ocNo}`}
                                     >
                                       {passwordVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

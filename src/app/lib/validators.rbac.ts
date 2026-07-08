@@ -50,18 +50,20 @@ export const rbacFieldRuleCreateSchema = z
     permissionId: z.string().uuid(),
     positionId: z.string().uuid().nullable().optional(),
     roleId: z.string().uuid().nullable().optional(),
+    appointmentId: z.string().uuid().nullable().optional(),
     mode: z.enum(['ALLOW', 'DENY', 'OMIT', 'MASK']),
     fields: z.array(z.string().trim().min(1)).default([]),
     note: z.string().trim().max(1000).nullable().optional(),
   })
-  .refine((payload) => Boolean(payload.positionId) !== Boolean(payload.roleId), {
-    message: 'Exactly one of positionId or roleId is required.',
+  .refine((payload) => [payload.positionId, payload.roleId, payload.appointmentId].filter(Boolean).length === 1, {
+    message: 'Exactly one of positionId, roleId, or appointmentId is required.',
   });
 
 export const rbacFieldRuleUpdateSchema = z
   .object({
     positionId: z.string().uuid().nullable().optional(),
     roleId: z.string().uuid().nullable().optional(),
+    appointmentId: z.string().uuid().nullable().optional(),
     mode: z.enum(['ALLOW', 'DENY', 'OMIT', 'MASK']).optional(),
     fields: z.array(z.string().trim().min(1)).optional(),
     note: z.string().trim().max(1000).nullable().optional(),

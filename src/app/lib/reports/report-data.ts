@@ -221,19 +221,19 @@ function toFinalResultBranchTag(branch: string | null | undefined): 'C' | 'E' | 
 }
 
 function toFinalResultBranchFilter(branches: ReportBranch[] | undefined, semester: number) {
-  if (semester <= 2) return new Set<'C' | 'E' | 'M'>();
-  return new Set(branches?.map((branch) => toFinalResultBranchTag(branch)) ?? []);
+  if (semester <= 2) return new Set<ReportBranch>();
+  return new Set(branches ?? []);
 }
 
-function toOcBranchTag(branch: string | null | undefined): ReportBranch {
+function toReportBranch(branch: string | null | undefined): ReportBranch | null {
   const normalized = String(branch ?? '').trim().toUpperCase();
   if (normalized === 'E') return 'E';
   if (normalized === 'M') return 'M';
-  return 'O';
+  return null;
 }
 
 function toConsolidatedSessionalBranchFilter(branches: ReportBranch[] | undefined) {
-  return new Set((branches ?? []).map((branch) => toOcBranchTag(branch)));
+  return new Set(branches ?? []);
 }
 
 function computeSemesterSummary(
@@ -319,7 +319,8 @@ export async function buildConsolidatedSessionalPreview(params: {
   const selectedBranchFilter = toConsolidatedSessionalBranchFilter(params.branches);
   const filteredOCs = subjectScopedOCs.filter((oc) => {
     if (!selectedBranchFilter.size) return true;
-    return selectedBranchFilter.has(toOcBranchTag(oc.branch));
+    const branch = toReportBranch(oc.branch);
+    return branch !== null && selectedBranchFilter.has(branch);
   });
 
   const semesterViews = await Promise.all(
@@ -476,13 +477,17 @@ export async function buildFinalResultCompilationPreview(params: {
       ? offerings
       : offerings.filter((offering) => {
           const subjectBranch = toFinalResultBranchTag(offering.subject.branch);
-          return subjectBranch === 'C' || selectedBranchFilter.has(subjectBranch);
+          if (subjectBranch === 'C') return true;
+          return selectedBranchFilter.has(subjectBranch);
         });
 
   const filteredOcRows =
     !selectedBranchFilter.size
       ? ocRows
-      : ocRows.filter((oc) => selectedBranchFilter.has(toFinalResultBranchTag(oc.branch)));
+      : ocRows.filter((oc) => {
+          const branch = toReportBranch(oc.branch);
+          return branch !== null && selectedBranchFilter.has(branch);
+        });
 
   const subjectColumns = normalizeSubjectColumns(filteredOfferings);
 
@@ -908,7 +913,7 @@ export async function buildMeritRankingPreview(params: {
 export async function listSemesterGradeCandidates(params: {
   courseId: string;
   semester: number;
-  branches?: Array<'E' | 'M' | 'O'>;
+  branches?: ReportBranch[];
   q?: string;
 }): Promise<SemesterGradeCandidate[]> {
   await resolveCourse(params.courseId);
@@ -926,8 +931,8 @@ export async function listSemesterGradeCandidates(params: {
   return rows
     .filter((row) => {
       if (!branchFilter.size) return true;
-      const branch = String(row.branch ?? 'O').toUpperCase() as 'E' | 'M' | 'O';
-      return branchFilter.has(branch);
+      const branch = toReportBranch(row.branch);
+      return branch !== null && branchFilter.has(branch);
     })
     .map((row) => ({
       ocId: row.id,

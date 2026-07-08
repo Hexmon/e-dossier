@@ -397,6 +397,137 @@ describe("server page auth", () => {
     expect(redirect).toHaveBeenCalledWith("/dashboard");
   });
 
+  it("allows scoped platoon commanders onto cadet appointment settings under v2 without opening all settings", async () => {
+    process.env.AUTHZ_V2_ENABLED = "true";
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "true";
+    (headers as any).mockResolvedValueOnce({
+      get: (name: string) =>
+        name === "x-pathname" ? "/dashboard/settings/device/appointments" : null,
+    });
+    (verifyAccessJWT as any).mockResolvedValueOnce({
+      sub: "pl-cdr-1",
+      roles: ["ARJUNPLCDR"],
+      apt: {
+        position: "ARJUNPLCDR",
+        scope: {
+          type: "PLATOON",
+          id: "platoon-1",
+        },
+      },
+    });
+    (resolveModuleAccessForUser as any).mockResolvedValueOnce({
+      roleGroup: "PLATOON_COMMANDER",
+      isAdmin: false,
+      isSuperAdmin: false,
+      settings: {
+        adminCanAccessDossier: false,
+        adminCanAccessBulkUpload: false,
+        adminCanAccessReports: false,
+      },
+      workflowAssignments: [],
+      canAccessDossier: true,
+      canAccessReports: true,
+      canAccessBulkUpload: false,
+      canAccessAcademicsBulk: false,
+      canAccessPtBulk: false,
+      sections: {
+        dashboard: true,
+        admin: false,
+        settings: false,
+        dossier: true,
+        bulk_upload: false,
+        reports: true,
+        help: true,
+      },
+    });
+    (getEffectivePermissionBundleCached as any).mockResolvedValueOnce({
+      userId: "pl-cdr-1",
+      roles: ["ARJUNPLCDR"],
+      appointment: {
+        appointmentId: "apt-1",
+        positionId: "position-1",
+        positionKey: "ARJUNPLCDR",
+        scopeType: "PLATOON",
+        scopeId: "platoon-1",
+      },
+      isAdmin: false,
+      isSuperAdmin: false,
+      permissions: [],
+      deniedPermissions: [],
+      fieldRulesByAction: {},
+      policyVersion: 2,
+    });
+
+    const ctx = await requirePlatoonCommanderDashboardAccess();
+
+    expect(ctx.scopeId).toBe("platoon-1");
+    expect(redirect).not.toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("keeps general settings blocked for scoped platoon commanders under v2", async () => {
+    process.env.AUTHZ_V2_ENABLED = "true";
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "true";
+    (headers as any).mockResolvedValueOnce({
+      get: (name: string) => (name === "x-pathname" ? "/dashboard/settings" : null),
+    });
+    (verifyAccessJWT as any).mockResolvedValueOnce({
+      sub: "pl-cdr-1",
+      roles: ["ARJUNPLCDR"],
+      apt: {
+        position: "ARJUNPLCDR",
+        scope: {
+          type: "PLATOON",
+          id: "platoon-1",
+        },
+      },
+    });
+    (resolveModuleAccessForUser as any).mockResolvedValueOnce({
+      roleGroup: "PLATOON_COMMANDER",
+      isAdmin: false,
+      isSuperAdmin: false,
+      settings: {
+        adminCanAccessDossier: false,
+        adminCanAccessBulkUpload: false,
+        adminCanAccessReports: false,
+      },
+      workflowAssignments: [],
+      canAccessDossier: true,
+      canAccessReports: true,
+      canAccessBulkUpload: false,
+      canAccessAcademicsBulk: false,
+      canAccessPtBulk: false,
+      sections: {
+        dashboard: true,
+        admin: false,
+        settings: false,
+        dossier: true,
+        bulk_upload: false,
+        reports: true,
+        help: true,
+      },
+    });
+    (getEffectivePermissionBundleCached as any).mockResolvedValueOnce({
+      userId: "pl-cdr-1",
+      roles: ["ARJUNPLCDR"],
+      appointment: {
+        appointmentId: "apt-1",
+        positionId: "position-1",
+        positionKey: "ARJUNPLCDR",
+        scopeType: "PLATOON",
+        scopeId: "platoon-1",
+      },
+      isAdmin: false,
+      isSuperAdmin: false,
+      permissions: [],
+      deniedPermissions: [],
+      fieldRulesByAction: {},
+      policyVersion: 2,
+    });
+
+    await expect(requireDashboardAccess()).rejects.toThrow("REDIRECT:/dashboard");
+    expect(redirect).toHaveBeenCalledWith("/dashboard");
+  });
+
   it("fails closed under v2 when middleware did not provide the current pathname", async () => {
     process.env.AUTHZ_V2_ENABLED = "true";
     process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "false";

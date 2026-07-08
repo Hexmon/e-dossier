@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import BreadcrumbNav from "@/components/layout/BreadcrumbNav";
@@ -7,15 +8,28 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { warningManagementApi } from "@/app/lib/api/warningManagementApi";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { warningManagementApi, type WarningModule, type WarningNotification } from "@/app/lib/api/warningManagementApi";
+
+const WARNING_NOTIFICATION_TABS: Array<{ value: WarningModule; label: string; emptyText: string }> = [
+  { value: "DISCIPLINE", label: "Discipline", emptyText: "No discipline warning notifications." },
+  { value: "MEDICAL", label: "Medical", emptyText: "No medical warning notifications." },
+];
 
 function formatDate(value: string) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
+function metricLabel(item: WarningNotification) {
+  return item.module === "MEDICAL"
+    ? `${item.actualAbsenceDays}/${item.absenceDays} days`
+    : `${item.actualPoints}/${item.restrictionPoints} points`;
+}
+
 export default function WarningNotificationsPage() {
   const queryClient = useQueryClient();
+  const [selectedModule, setSelectedModule] = useState<WarningModule>("DISCIPLINE");
   const notificationsQuery = useQuery({
     queryKey: ["warning-notifications"],
     queryFn: () => warningManagementApi.getNotifications(),
@@ -25,7 +39,19 @@ export default function WarningNotificationsPage() {
     onSuccess: (data) => queryClient.setQueryData(["warning-notifications"], data),
   });
 
-  const notifications = notificationsQuery.data?.items ?? [];
+  const notifications = useMemo(() => notificationsQuery.data?.items ?? [], [notificationsQuery.data?.items]);
+  const visibleNotifications = useMemo(
+    () => notifications.filter((item) => item.module === selectedModule),
+    [notifications, selectedModule],
+  );
+  const notificationCounts = useMemo(
+    () => ({
+      DISCIPLINE: notifications.filter((item) => item.module === "DISCIPLINE").length,
+      MEDICAL: notifications.filter((item) => item.module === "MEDICAL").length,
+    }),
+    [notifications],
+  );
+  const activeTab = WARNING_NOTIFICATION_TABS.find((tab) => tab.value === selectedModule) ?? WARNING_NOTIFICATION_TABS[0];
 
   return (
     <DashboardLayout
@@ -66,12 +92,24 @@ export default function WarningNotificationsPage() {
             <Badge variant="outline">Unread {notificationsQuery.data?.unreadCount ?? 0}</Badge>
           </CardHeader>
           <CardContent className="space-y-3">
+            <Tabs value={selectedModule} onValueChange={(value) => setSelectedModule(value as WarningModule)}>
+              <TabsList className="grid w-full max-w-md grid-cols-2">
+                {WARNING_NOTIFICATION_TABS.map((tab) => (
+                  <TabsTrigger key={tab.value} value={tab.value}>
+                    {tab.label}
+                    <Badge variant="outline" className="ml-1">
+                      {notificationCounts[tab.value]}
+                    </Badge>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
             {notificationsQuery.isLoading ? (
               <p className="text-sm text-muted-foreground">Loading notifications...</p>
-            ) : notifications.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No warning notifications.</p>
+            ) : visibleNotifications.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{activeTab.emptyText}</p>
             ) : (
-              notifications.map((item) => (
+              visibleNotifications.map((item) => (
                 <div
                   key={item.id}
                   className={`rounded-md border p-4 ${item.readAt ? "opacity-60" : "bg-muted/30"}`}
@@ -81,7 +119,7 @@ export default function WarningNotificationsPage() {
                       {item.readAt ? "Read" : "Unread"}
                     </Badge>
                     <Badge variant="outline">{item.appointmentName}</Badge>
-                    <Badge>{item.actualPoints}/{item.restrictionPoints} points</Badge>
+                    <Badge>{metricLabel(item)}</Badge>
                     <span className="text-xs text-muted-foreground">{formatDate(item.createdAt)}</span>
                   </div>
                   <h3 className="mt-3 font-semibold">{item.ocName}{item.ocNo ? ` (${item.ocNo})` : ""}</h3>

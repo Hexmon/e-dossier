@@ -72,6 +72,7 @@ const appointmentId = "44444444-4444-4444-8444-444444444444";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  process.env.SSB_UPLOAD_PASSWORD_SECRET = "test-ssb-password-secret";
   vi.mocked(authz.requireAuth).mockResolvedValue({
     userId: "user-1",
     roles: [],
@@ -99,7 +100,7 @@ beforeEach(() => {
 });
 
 describe("GET /api/v1/admin/ssb-upload", () => {
-  it("requires admin access and lists course OCs with saved passwords", async () => {
+  it("requires admin access and lists course OCs without exposing saved passwords to ADMIN", async () => {
     vi.mocked(ssbQueries.listCourseSsbUploadRows).mockResolvedValueOnce([
       {
         ocId,
@@ -121,13 +122,50 @@ describe("GET /api/v1/admin/ssb-upload", () => {
 
     expect(res.status).toBe(200);
     expect(authz.requireAdmin).toHaveBeenCalledTimes(1);
-    expect(body.items[0]).toMatchObject({ ocId, hasUpload: true, savedPassword: "report-pass" });
+    expect(body.items[0]).toMatchObject({ ocId, hasUpload: true, canViewSavedPassword: false });
+    expect(body.items[0].savedPassword).toBeUndefined();
     expect(body.items[0].savedPasswordCiphertext).toBeUndefined();
+  });
+
+  it("reveals one OC saved password only to SUPER_ADMIN on single-OC lookup", async () => {
+    vi.mocked(authz.requireAdmin).mockResolvedValueOnce({
+      userId: "super-admin-1",
+      roles: ["SUPER_ADMIN"],
+      claims: { apt: { position: "SUPER_ADMIN" } },
+    } as any);
+    vi.mocked(ssbQueries.getOcSsbUploadSummary).mockResolvedValueOnce({
+      ocId,
+      ocNo: "101",
+      name: "OC One",
+      courseId,
+      fileName: "ssb.pdf",
+      sizeBytes: 120,
+      uploadedAt: new Date("2026-01-01T00:00:00Z"),
+      savedPasswordCiphertext: encryptSsbStoredPassword("report-pass"),
+    } as any);
+
+    const req = makeJsonRequest({ method: "GET", path: `/api/v1/admin/ssb-upload?ocId=${ocId}` });
+    const res = await GET(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.item).toMatchObject({
+      ocId,
+      hasUpload: true,
+      canViewSavedPassword: true,
+      savedPassword: "report-pass",
+    });
+    expect(body.item.savedPasswordCiphertext).toBeUndefined();
+    expect(auditLogMock).toHaveBeenCalledWith(expect.objectContaining({
+      action: "sensitive.data.exported",
+      actor: { type: "user", id: "super-admin-1" },
+      target: { type: "oc", id: ocId },
+    }));
   });
 });
 
 describe("POST /api/v1/admin/ssb-upload/[ocId]", () => {
-  it("encrypts the uploaded PDF and stores persistent password view metadata", async () => {
+  it("encrypts the uploaded PDF and stores password recovery metadata for SUPER_ADMIN reveal", async () => {
     vi.mocked(ssbQueries.getOcSsbUploadSummary).mockResolvedValueOnce({
       ocId,
       ocNo: "101",
@@ -163,7 +201,7 @@ describe("POST /api/v1/admin/ssb-upload/[ocId]", () => {
       fileName: "ssb.pdf",
     }));
     expect(body.item.hasUpload).toBe(true);
-    expect(body.item.savedPassword).toBe("report-pass");
+    expect(body.item.savedPassword).toBeUndefined();
   });
 });
 

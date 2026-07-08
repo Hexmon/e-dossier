@@ -230,7 +230,7 @@ describe('buildFinalResultCompilationPreview', () => {
     });
   });
 
-  it('filters rows and subject columns branch-wise from third semester onwards', async () => {
+  it('filters rows and keeps common subject columns with the selected branch from third semester onwards', async () => {
     const preview = await buildFinalResultCompilationPreview({
       courseId: 'course-1',
       semester: 4,
@@ -242,6 +242,7 @@ describe('buildFinalResultCompilationPreview', () => {
     expect(preview.rows.map((row) => row.branchTag)).toEqual(['E', 'E']);
     expect(preview.subjectColumns).toHaveLength(2);
     expect(preview.subjectColumns.map((column) => column.branch)).toEqual(['E', 'C']);
+    expect(preview.subjectColumns.map((column) => column.subjectCode)).toEqual(['EC401', 'MA401']);
     expect(preview.rows[0]?.certSerialNo).toBe('TES-50/Sem-IV(E)/01');
     expect(preview.rows[1]?.certSerialNo).toBe('TES-50/Sem-IV(E)/02');
   });

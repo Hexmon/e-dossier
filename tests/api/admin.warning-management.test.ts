@@ -41,6 +41,19 @@ describe('admin warning management API', () => {
           isEnabled: true,
         },
       ],
+      medicalIntro: 'Medical warnings are issued from absence days.',
+      medicalCriteria: [
+        {
+          criterionKey: 'appointment-medical-1-medical-absence-days',
+          module: 'MEDICAL',
+          positionKey: 'appointment:appointment-medical-1',
+          positionName: 'Medical Officer',
+          triggerType: 'MEDICAL_ABSENCE_DAYS',
+          restrictionPoints: 0,
+          absenceDays: 0,
+          isEnabled: true,
+        },
+      ],
     });
     (updateWarningSettingsForAdmin as any).mockResolvedValue({
       intro: 'Warnings are issued from restriction points.',
@@ -54,6 +67,19 @@ describe('admin warning management API', () => {
           isEnabled: true,
         },
       ],
+      medicalIntro: 'Medical warnings are issued from absence days.',
+      medicalCriteria: [
+        {
+          criterionKey: 'appointment-medical-1-medical-absence-days',
+          module: 'MEDICAL',
+          positionKey: 'appointment:appointment-medical-1',
+          positionName: 'Medical Officer',
+          triggerType: 'MEDICAL_ABSENCE_DAYS',
+          restrictionPoints: 0,
+          absenceDays: 2,
+          isEnabled: true,
+        },
+      ],
     });
   });
 
@@ -64,6 +90,7 @@ describe('admin warning management API', () => {
 
     expect(res.status).toBe(200);
     expect(body.criteria[0].restrictionPoints).toBe(10);
+    expect(body.medicalCriteria[0].absenceDays).toBe(0);
     expect(body.intro).toContain('restriction points');
     expect(requireAuth).toHaveBeenCalled();
     expect(requireAdmin).not.toHaveBeenCalled();
@@ -81,6 +108,18 @@ describe('admin warning management API', () => {
           isEnabled: true,
         },
       ],
+      medicalCriteria: [
+        {
+          criterionKey: 'appointment-medical-1-medical-absence-days',
+          module: 'MEDICAL',
+          positionKey: 'appointment:appointment-medical-1',
+          positionName: 'Medical Officer',
+          triggerType: 'MEDICAL_ABSENCE_DAYS',
+          restrictionPoints: 0,
+          absenceDays: 2,
+          isEnabled: true,
+        },
+      ],
     };
     const req = attachAudit(
       makeJsonRequest({ method: 'PUT', path: '/api/v1/admin/warning-management', body: payload }),
@@ -90,6 +129,7 @@ describe('admin warning management API', () => {
 
     expect(res.status).toBe(200);
     expect(body.criteria[0].restrictionPoints).toBe(12);
+    expect(body.medicalCriteria[0].absenceDays).toBe(2);
     expect(updateWarningSettingsForAdmin).toHaveBeenCalledWith(payload, 'admin-1');
   });
 

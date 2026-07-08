@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import { check, pgEnum, pgTable, text, timestamp, uuid, varchar, integer, uniqueIndex } from 'drizzle-orm/pg-core';
 import { permissions, roles } from './rbac';
 import { positions } from './positions';
+import { appointments } from './appointments';
 
 export const fieldRuleModeEnum = pgEnum('field_rule_mode', ['ALLOW', 'DENY', 'OMIT', 'MASK']);
 
@@ -14,6 +15,7 @@ export const permissionFieldRules = pgTable(
       .references(() => permissions.id, { onDelete: 'cascade' }),
     positionId: uuid('position_id').references(() => positions.id, { onDelete: 'cascade' }),
     roleId: uuid('role_id').references(() => roles.id, { onDelete: 'cascade' }),
+    appointmentId: uuid('appointment_id').references(() => appointments.id, { onDelete: 'cascade' }),
     mode: fieldRuleModeEnum('mode').notNull().default('ALLOW'),
     fields: text('fields')
       .array()
@@ -32,7 +34,7 @@ export const permissionFieldRules = pgTable(
     ),
     mustBindRoleOrPosition: check(
       'chk_permission_field_rules_scope',
-      sql`(${t.positionId} IS NOT NULL OR ${t.roleId} IS NOT NULL)`
+      sql`((${t.appointmentId} IS NOT NULL AND ${t.positionId} IS NULL AND ${t.roleId} IS NULL) OR (${t.appointmentId} IS NULL AND (${t.positionId} IS NOT NULL OR ${t.roleId} IS NOT NULL)))`
     ),
   })
 );

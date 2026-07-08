@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const branchSchema = z.enum(['E', 'M', 'O']);
+const branchSchema = z.enum(['E', 'M']);
 const consolidatedSessionalSubjectTypeSchema = z.enum(['theory', 'practical']);
 
 export const reportSemesterSchema = z.coerce.number().int().min(1).max(6);

@@ -39,7 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import { useMe } from "@/hooks/useMe";
 import OCSelectModal from "@/components/modals/OCSelectModal";
-import { useNavigation, type NavItem } from "@/hooks/useNavigation";
+import { useNavigation, type NavItem, type NavSection } from "@/hooks/useNavigation";
 import { useSetupStatus } from "@/hooks/useSetupStatus";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buildCurrentDossierRoot, isDossierManagementRoute } from "@/lib/dossier-route";
@@ -62,6 +62,12 @@ const ICON_MAP: Record<string, any> = {
 };
 
 const SETUP_RETURN_TO = "/setup";
+const CADET_APPOINTMENTS_ITEM = {
+  key: "cadet_appointments",
+  label: "Cadet Appointments",
+  url: "/dashboard/settings/device/appointments",
+  icon: "CalendarDays",
+};
 
 const SETUP_DASHBOARD_PATHS = [
   "/dashboard/genmgmt/platoon-management",
@@ -156,6 +162,52 @@ function getSetupItemActive(pathname: string | null, item: (typeof SETUP_SIDEBAR
   }
 
   return pathname === itemPath;
+}
+
+function withCadetAppointmentsSidebarEntry(
+  sections: NavSection[],
+  canViewCadetAppointmentsSettings: boolean
+): NavSection[] {
+  if (!canViewCadetAppointmentsSettings) {
+    return sections;
+  }
+
+  if (sections.some((section) => section.items.some((item) => item.key === CADET_APPOINTMENTS_ITEM.key))) {
+    return sections;
+  }
+
+  let hadSettingsSection = false;
+  const withExistingSettings = sections.map((section) => {
+    if (section.key !== "settings") {
+      return section;
+    }
+
+    hadSettingsSection = true;
+    return {
+      ...section,
+      items: [...section.items, CADET_APPOINTMENTS_ITEM],
+    };
+  });
+
+  if (hadSettingsSection) {
+    return withExistingSettings;
+  }
+
+  const syntheticSettingsSection = {
+    key: "settings",
+    label: "Settings",
+    items: [CADET_APPOINTMENTS_ITEM],
+  };
+  const helpIndex = sections.findIndex((section) => section.key === "help");
+  if (helpIndex === -1) {
+    return [...sections, syntheticSettingsSection];
+  }
+
+  return [
+    ...sections.slice(0, helpIndex),
+    syntheticSettingsSection,
+    ...sections.slice(helpIndex),
+  ];
 }
 
 function SetupOnlySidebar({
@@ -268,28 +320,10 @@ export function AppSidebar() {
   const userId = (meData?.user as any)?.id || "";
   const isDossierRouteActive = isDossierManagementRoute(pathname);
   const canViewCadetAppointmentsSettings = meData?.cadetAppointments?.canManage === true;
-  const visibleSections = (navData?.sections ?? []).map((section) => {
-    if (section.key !== "settings" || !canViewCadetAppointmentsSettings) {
-      return section;
-    }
-
-    if (section.items.some((item) => item.key === "cadet_appointments")) {
-      return section;
-    }
-
-    return {
-      ...section,
-      items: [
-        ...section.items,
-        {
-          key: "cadet_appointments",
-          label: "Cadet Appointments",
-          url: "/dashboard/settings/device/appointments",
-          icon: "CalendarDays",
-        },
-      ],
-    };
-  });
+  const visibleSections = withCadetAppointmentsSidebarEntry(
+    navData?.sections ?? [],
+    canViewCadetAppointmentsSettings
+  );
   const mainSections = visibleSections.filter((section) => section.key !== "help");
   const pinnedSections = visibleSections.filter((section) => section.key === "help");
 

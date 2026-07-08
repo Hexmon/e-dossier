@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  buildMedicalWarningCriteriaForActiveAppointments,
   buildWarningCriteriaForActiveAppointments,
   canViewWarningCriterion,
   DEFAULT_WARNING_CRITERIA,
   mergeWarningCriteria,
   normalizePositionKey,
+  parseMedicalAbsenceDays,
   warningPolicyKeyForCriterion,
   warningAppointmentPositionKey,
 } from '@/app/lib/warning-management';
@@ -122,13 +124,64 @@ describe('warning management defaults', () => {
     expect(criteria.find((item) => item.positionKey === karnaKey)?.restrictionPoints).toBe(10);
   });
 
+  it('builds medical warning criteria for active appointments with zero-day defaults', () => {
+    const plCdrKey = warningAppointmentPositionKey('appointment-pl-cdr-1');
+    const adjutantKey = warningAppointmentPositionKey('appointment-adjutant-1');
+    const criteria = buildMedicalWarningCriteriaForActiveAppointments(
+      [
+        {
+          criterionKey: 'appointment-pl-cdr-1-medical-absence-days',
+          module: 'MEDICAL',
+          positionKey: plCdrKey,
+          positionName: 'PL Cdr',
+          triggerType: 'MEDICAL_ABSENCE_DAYS',
+          restrictionPoints: 0,
+          absenceDays: 3,
+          isEnabled: false,
+        },
+      ],
+      [
+        { positionKey: plCdrKey, positionName: 'PL Cdr' },
+        { positionKey: adjutantKey, positionName: 'Adjutant' },
+      ],
+    );
+
+    expect(criteria).toEqual([
+      expect.objectContaining({
+        module: 'MEDICAL',
+        positionKey: plCdrKey,
+        triggerType: 'MEDICAL_ABSENCE_DAYS',
+        absenceDays: 3,
+        isEnabled: false,
+      }),
+      expect.objectContaining({
+        module: 'MEDICAL',
+        positionKey: adjutantKey,
+        triggerType: 'MEDICAL_ABSENCE_DAYS',
+        absenceDays: 0,
+        isEnabled: true,
+      }),
+    ]);
+  });
+
+  it('parses medical absence text into whole day counts', () => {
+    expect(parseMedicalAbsenceDays('3')).toBe(3);
+    expect(parseMedicalAbsenceDays('2.5 days')).toBe(3);
+    expect(parseMedicalAbsenceDays('Absent for 7 days')).toBe(7);
+    expect(parseMedicalAbsenceDays('NIL')).toBeNull();
+    expect(parseMedicalAbsenceDays('')).toBeNull();
+  });
+
   it('deduplicates generated warning notifications by OC before returning them', () => {
     const source = readFileSync('src/app/services/warningManagement.ts', 'utf8');
 
     expect(source).toContain('const unreadByOc = new Map<string, GeneratedWarningNotification>();');
+    expect(source).toContain('const medicalUnreadByOc = new Map<string, GeneratedWarningNotification>();');
     expect(source).toContain('canCurrentAppointmentViewCriterion(criterion, appointmentKey, viewerPolicyKeys)');
     expect(source).toContain('unreadByOc.set(ocId, pickWarningNotification(unreadByOc.get(ocId), generated));');
-    expect(source).toContain('const unread = Array.from(unreadByOc.values()).map(stripGeneratedMeta);');
+    expect(source).toContain('medicalUnreadByOc.set(ocId, pickWarningNotification(medicalUnreadByOc.get(ocId), generated));');
+    expect(source).toContain('...Array.from(unreadByOc.values())');
+    expect(source).toContain('...Array.from(medicalUnreadByOc.values())');
   });
 
   it('shows dynamic warning messages with the issuing appointment name', () => {
@@ -136,6 +189,8 @@ describe('warning management defaults', () => {
 
     expect(source).toContain('got warning by ${criterion.positionName}');
     expect(source).toContain('Current restriction points: ${match.points}.');
+    expect(source).toContain('got medical warning by ${criterion.positionName}');
+    expect(source).toContain('Current medical absence: ${entry.absenceDays}');
   });
 
   it('links 42-point two-term DC/CI warnings to the relegation workflow', () => {
@@ -144,5 +199,25 @@ describe('warning management defaults', () => {
     expect(source).toContain("criterion.triggerType === 'TWO_TERM_CUMULATIVE'");
     expect(source).toContain('DISCIPLINE_RELEGATION_RESTRICTION_POINTS');
     expect(source).toContain('source=discipline-warning');
+  });
+
+  it('generates medical notifications from medical category absence records', () => {
+    const source = readFileSync('src/app/services/warningManagement.ts', 'utf8');
+
+    expect(source).toContain('ocMedicalCategory.absence');
+    expect(source).toContain('parseMedicalAbsenceDays(row.absence)');
+    expect(source).toContain('/milmgmt/med-record');
+    expect(source).toContain('MEDICAL_WARNING_TRIGGER_TYPE');
+  });
+
+  it('keeps separate save buttons for restriction and medical warning management', () => {
+    const source = readFileSync('src/app/dashboard/genmgmt/warning-management/page.tsx', 'utf8');
+
+    expect(source).toContain('handleSaveDiscipline');
+    expect(source).toContain('handleSaveMedical');
+    expect(source).toContain('Save Restriction Settings');
+    expect(source).toContain('Save Medical Settings');
+    expect(source).toContain('updateSettings({ criteria: draft, medicalCriteria: [] })');
+    expect(source).toContain('updateSettings({ criteria: [], medicalCriteria: medicalDraft })');
   });
 });

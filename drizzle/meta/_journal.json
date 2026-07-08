@@ -337,6 +337,27 @@
       "when": 1781505600000,
       "tag": "0047_ssb_upload_visibility_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1781592000000,
+      "tag": "0048_appointment_scoped_field_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1781678400000,
+      "tag": "0049_medical_warning_management",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1781764800000,
+      "tag": "0050_platoon_cadet_appointment_permissions",
+      "breakpoints": true
     }
   ]
 }

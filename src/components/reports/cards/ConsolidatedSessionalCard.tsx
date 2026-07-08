@@ -20,7 +20,7 @@ import { DownloadDialog } from '@/components/reports/common/DownloadDialog';
 import { useConsolidatedSessionalPreview, useCourseSemesters, useReportsDownloads } from '@/hooks/useReports';
 import type { ConsolidatedSessionalSection, ReportBranch } from '@/types/reports';
 
-const BRANCH_OPTIONS: ReportBranch[] = ['E', 'M', 'O'];
+const BRANCH_OPTIONS: ReportBranch[] = ['E', 'M'];
 
 export function ConsolidatedSessionalCard() {
   const [courseId, setCourseId] = useState('');
