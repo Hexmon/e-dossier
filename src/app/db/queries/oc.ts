@@ -1059,8 +1059,7 @@ export async function updateDiscipline(ocId: string, id: string, data: Partial<t
 export async function deleteDiscipline(ocId: string, id: string) {
     const enrollmentId = await getActiveEnrollmentId(ocId);
     const [row] = await db
-        .update(ocDiscipline)
-        .set({ deletedAt: new Date() })
+        .delete(ocDiscipline)
         .where(and(eq(ocDiscipline.id, id), eq(ocDiscipline.ocId, ocId), eq(ocDiscipline.enrollmentId, enrollmentId), isNull(ocDiscipline.deletedAt)))
         .returning();
     return row ?? null;

@@ -1,8 +1,11 @@
-import { and, asc, eq, ilike, inArray, sql } from 'drizzle-orm';
+import { and, asc, eq, ilike, inArray, isNull, sql } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import { db } from '../client';
 import { authzPolicyState, permissionFieldRules } from '../schema/auth/rbac-extensions';
 import { permissions, positionPermissions, rolePermissions, roles } from '../schema/auth/rbac';
 import { positions } from '../schema/auth/positions';
+import { appointments } from '../schema/auth/appointments';
+import { users } from '../schema/auth/users';
 import { clearEffectivePermissionsCache } from '@/app/lib/acx/cache';
 import { ensureCodeRbacDefaults, ensureInterviewRbacDefaults } from './authz-permissions';
 import {
@@ -12,6 +15,7 @@ import {
   normalizeRbacKey,
 } from '@/app/lib/rbac/default-permissions';
 import { getRbacDefaultFieldRules } from '@/app/lib/rbac/default-field-rules';
+import { listRbacFieldCatalog } from '@/app/lib/rbac/field-catalog';
 import { getPermissionDisplayMeta } from '@/app/lib/rbac/permission-display';
 import { ApiError } from '@/app/lib/http';
 
@@ -20,6 +24,8 @@ type Paging = {
   limit?: number;
   offset?: number;
 };
+
+const appointmentPositions = alias(positions, 'appointment_positions');
 
 export async function listRbacPermissions(input: Paging = {}) {
   await ensureInterviewRbacDefaults();
@@ -246,6 +252,42 @@ export async function listRbacPositions() {
     .orderBy(asc(positions.key));
 }
 
+export async function listActiveRbacAppointments() {
+  const rows = await db
+    .select({
+      id: appointments.id,
+      userId: appointments.userId,
+      userName: users.name,
+      username: users.username,
+      userRank: users.rank,
+      positionId: appointments.positionId,
+      positionKey: positions.key,
+      positionName: positions.displayName,
+      scopeType: appointments.scopeType,
+      scopeId: appointments.scopeId,
+      assignment: appointments.assignment,
+      startsAt: appointments.startsAt,
+    })
+    .from(appointments)
+    .innerJoin(users, eq(users.id, appointments.userId))
+    .innerJoin(positions, eq(positions.id, appointments.positionId))
+    .where(
+      and(
+        isNull(appointments.deletedAt),
+        isNull(users.deletedAt),
+        eq(users.isActive, true),
+        sql`${appointments.startsAt} <= now()`,
+        sql`(${appointments.endsAt} IS NULL OR ${appointments.endsAt} > now())`
+      )
+    )
+    .orderBy(asc(positions.key), asc(users.name));
+
+  return rows.map((row) => ({
+    ...row,
+    label: `${row.userRank ? `${row.userRank} ` : ''}${row.userName} (${row.positionKey})`,
+  }));
+}
+
 export async function listRolePermissionMappings(roleId?: string) {
   await ensureInterviewRbacDefaults();
   await ensureCodeRbacDefaults();
@@ -402,11 +444,12 @@ export async function setPositionPermissionMappings(positionId: string, permissi
   await bumpPolicyVersionAndInvalidate();
 }
 
-export async function listFieldRules(input: { permissionId?: string; positionId?: string; roleId?: string } = {}) {
+export async function listFieldRules(input: { permissionId?: string; positionId?: string; roleId?: string; appointmentId?: string } = {}) {
   const filters: any[] = [];
   if (input.permissionId) filters.push(eq(permissionFieldRules.permissionId, input.permissionId));
   if (input.positionId) filters.push(eq(permissionFieldRules.positionId, input.positionId));
   if (input.roleId) filters.push(eq(permissionFieldRules.roleId, input.roleId));
+  if (input.appointmentId) filters.push(eq(permissionFieldRules.appointmentId, input.appointmentId));
 
   const rows = await db
     .select({
@@ -417,6 +460,10 @@ export async function listFieldRules(input: { permissionId?: string; positionId?
       positionKey: positions.key,
       roleId: permissionFieldRules.roleId,
       roleKey: roles.key,
+      appointmentId: permissionFieldRules.appointmentId,
+      appointmentUserName: users.name,
+      appointmentUserRank: users.rank,
+      appointmentPositionKey: appointmentPositions.key,
       mode: permissionFieldRules.mode,
       fields: permissionFieldRules.fields,
       note: permissionFieldRules.note,
@@ -427,6 +474,9 @@ export async function listFieldRules(input: { permissionId?: string; positionId?
     .innerJoin(permissions, eq(permissions.id, permissionFieldRules.permissionId))
     .leftJoin(positions, eq(positions.id, permissionFieldRules.positionId))
     .leftJoin(roles, eq(roles.id, permissionFieldRules.roleId))
+    .leftJoin(appointments, eq(appointments.id, permissionFieldRules.appointmentId))
+    .leftJoin(users, eq(users.id, appointments.userId))
+    .leftJoin(appointmentPositions, eq(appointmentPositions.id, appointments.positionId))
     .where(filters.length ? and(...filters) : undefined)
     .orderBy(asc(permissions.key));
 
@@ -435,6 +485,18 @@ export async function listFieldRules(input: { permissionId?: string; positionId?
     defaultRule: false,
     customRule: true,
   }));
+}
+
+export async function getRbacFieldCatalogMetadata() {
+  const [fieldCatalog, activeAppointments] = await Promise.all([
+    Promise.resolve(listRbacFieldCatalog()),
+    listActiveRbacAppointments(),
+  ]);
+
+  return {
+    fieldCatalog,
+    activeAppointments,
+  };
 }
 
 export function getRbacDefaultFieldRuleMetadata() {
@@ -448,16 +510,18 @@ export async function createFieldRule(input: {
   permissionId: string;
   positionId?: string | null;
   roleId?: string | null;
+  appointmentId?: string | null;
   mode: 'ALLOW' | 'DENY' | 'OMIT' | 'MASK';
   fields?: string[];
   note?: string | null;
 }) {
   const hasPosition = Boolean(input.positionId);
   const hasRole = Boolean(input.roleId);
-  if (hasPosition === hasRole) {
+  const hasAppointment = Boolean(input.appointmentId);
+  if ([hasPosition, hasRole, hasAppointment].filter(Boolean).length !== 1) {
     throw new ApiError(
       400,
-      'Exactly one of positionId or roleId is required for a field rule.',
+      'Exactly one of positionId, roleId, or appointmentId is required for a field rule.',
       'bad_request'
     );
   }
@@ -468,6 +532,7 @@ export async function createFieldRule(input: {
       permissionId: input.permissionId,
       positionId: input.positionId ?? null,
       roleId: input.roleId ?? null,
+      appointmentId: input.appointmentId ?? null,
       mode: input.mode,
       fields: input.fields ?? [],
       note: input.note ?? null,
@@ -477,6 +542,7 @@ export async function createFieldRule(input: {
       permissionId: permissionFieldRules.permissionId,
       positionId: permissionFieldRules.positionId,
       roleId: permissionFieldRules.roleId,
+      appointmentId: permissionFieldRules.appointmentId,
       mode: permissionFieldRules.mode,
       fields: permissionFieldRules.fields,
       note: permissionFieldRules.note,
@@ -494,12 +560,14 @@ export async function updateFieldRule(
     note?: string | null;
     positionId?: string | null;
     roleId?: string | null;
+    appointmentId?: string | null;
   }
 ) {
   const [existing] = await db
     .select({
       positionId: permissionFieldRules.positionId,
       roleId: permissionFieldRules.roleId,
+      appointmentId: permissionFieldRules.appointmentId,
     })
     .from(permissionFieldRules)
     .where(eq(permissionFieldRules.id, ruleId))
@@ -509,10 +577,11 @@ export async function updateFieldRule(
 
   const nextPositionId = input.positionId !== undefined ? input.positionId : existing.positionId;
   const nextRoleId = input.roleId !== undefined ? input.roleId : existing.roleId;
-  if (Boolean(nextPositionId) === Boolean(nextRoleId)) {
+  const nextAppointmentId = input.appointmentId !== undefined ? input.appointmentId : existing.appointmentId;
+  if ([nextPositionId, nextRoleId, nextAppointmentId].filter(Boolean).length !== 1) {
     throw new ApiError(
       400,
-      'Exactly one of positionId or roleId is required for a field rule.',
+      'Exactly one of positionId, roleId, or appointmentId is required for a field rule.',
       'bad_request'
     );
   }
@@ -525,6 +594,7 @@ export async function updateFieldRule(
       ...(input.note !== undefined ? { note: input.note ?? null } : {}),
       ...(input.positionId !== undefined ? { positionId: input.positionId ?? null } : {}),
       ...(input.roleId !== undefined ? { roleId: input.roleId ?? null } : {}),
+      ...(input.appointmentId !== undefined ? { appointmentId: input.appointmentId ?? null } : {}),
       updatedAt: new Date(),
     })
     .where(eq(permissionFieldRules.id, ruleId))
@@ -533,6 +603,7 @@ export async function updateFieldRule(
       permissionId: permissionFieldRules.permissionId,
       positionId: permissionFieldRules.positionId,
       roleId: permissionFieldRules.roleId,
+      appointmentId: permissionFieldRules.appointmentId,
       mode: permissionFieldRules.mode,
       fields: permissionFieldRules.fields,
       note: permissionFieldRules.note,

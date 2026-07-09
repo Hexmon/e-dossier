@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PasswordField } from '@/components/reports/common/PasswordField';
 import type { ReportBranch } from '@/types/reports';
 
-const BRANCH_OPTIONS: ReportBranch[] = ['E', 'M', 'O'];
+const BRANCH_OPTIONS: ReportBranch[] = ['E', 'M'];
 
 export function FinalResultCompilationCard() {
   const [courseId, setCourseId] = useState('');

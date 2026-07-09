@@ -57,6 +57,7 @@ import {
   academicWorkflowDraftPayloadSchema,
   ptWorkflowDraftPayloadSchema,
   isWorkflowAssignedUser,
+  reconcileWorkflowDraftPayloadWithLive,
   workflowNotificationActionSchema,
   type WorkflowNotificationActionInput,
 } from '@/app/lib/marks-review-workflow';
@@ -579,6 +580,12 @@ async function buildWorkflowRouteState(args: {
 }) {
   const liveState = await args.draftPayloadFactory();
   const ticket = args.settings.isActive ? await getWorkflowTicketRow(args.module, args.workflowKey) : null;
+  const draftPayload = ticket?.draftPayload
+    ? reconcileWorkflowDraftPayloadWithLive(
+        ticket.draftPayload as AcademicWorkflowDraftPayload | PtWorkflowDraftPayload,
+        liveState.payload,
+      )
+    : liveState.payload;
   const actorFlags = resolveWorkflowActorContext({
     settings: args.settings,
     userId: args.actor.userId,
@@ -622,7 +629,7 @@ async function buildWorkflowRouteState(args: {
     currentRevision: ticket?.currentRevision ?? null,
     allowedActions,
     liveSnapshot: liveState.payload,
-    draftPayload: (ticket?.draftPayload as AcademicWorkflowDraftPayload | PtWorkflowDraftPayload | undefined) ?? liveState.payload,
+    draftPayload,
     activityLog: ticket ? await decorateWorkflowActivityLog(ticket.id) : [],
     selectionLabel: ticket?.selectionLabel ?? liveState.selectionLabel,
     courseLabel: ticket?.courseLabel ?? liveState.courseLabel,
@@ -678,6 +685,12 @@ async function mutateWorkflowTicket(args: {
   }
 
   const liveState = await args.livePayloadFactory();
+  const existingDraftPayload = existingTicket
+    ? reconcileWorkflowDraftPayloadWithLive(
+        existingTicket.draftPayload as AcademicWorkflowDraftPayload | PtWorkflowDraftPayload,
+        liveState.payload,
+      )
+    : null;
   const now = new Date();
   const deepLink = args.deepLinkFactory();
 
@@ -686,7 +699,8 @@ async function mutateWorkflowTicket(args: {
       ensureVerifierDraftMessage(actorFlags, effectiveStatus, args.action.message);
     }
 
-    const validatedPayload = await args.validatePayload(args.action.payload);
+    const reconciledPayload = reconcileWorkflowDraftPayloadWithLive(args.action.payload, liveState.payload);
+    const validatedPayload = await args.validatePayload(reconciledPayload);
     if (!existingTicket) {
       const created = await createWorkflowTicketRow({
         module: args.module,
@@ -766,6 +780,7 @@ async function mutateWorkflowTicket(args: {
   if (args.action.action === 'SUBMIT_FOR_VERIFICATION') {
     await updateWorkflowTicketRow(existingTicket.id, {
       status: 'PENDING_VERIFICATION',
+      draftPayload: existingDraftPayload ?? existingTicket.draftPayload,
       currentRevision: existingTicket.currentRevision + 1,
       submittedByUserId: args.actor.userId,
       submittedAt: now,
@@ -801,6 +816,7 @@ async function mutateWorkflowTicket(args: {
   if (args.action.action === 'REQUEST_CHANGES') {
     await updateWorkflowTicketRow(existingTicket.id, {
       status: 'CHANGES_REQUESTED',
+      draftPayload: existingDraftPayload ?? existingTicket.draftPayload,
       currentRevision: existingTicket.currentRevision + 1,
       lastActorUserId: args.actor.userId,
       lastActorMessage: args.action.message.trim(),
@@ -832,10 +848,12 @@ async function mutateWorkflowTicket(args: {
   }
 
   if (args.action.action === 'VERIFY_AND_PUBLISH') {
-    await args.publishPayload(existingTicket.draftPayload as AcademicWorkflowDraftPayload | PtWorkflowDraftPayload, args.actor);
+    const publishPayload = existingDraftPayload ?? (existingTicket.draftPayload as AcademicWorkflowDraftPayload | PtWorkflowDraftPayload);
+    await args.publishPayload(publishPayload, args.actor);
 
     await updateWorkflowTicketRow(existingTicket.id, {
       status: 'VERIFIED',
+      draftPayload: publishPayload,
       currentRevision: existingTicket.currentRevision + 1,
       verifiedByUserId: args.actor.userId,
       verifiedAt: now,
@@ -869,7 +887,8 @@ async function mutateWorkflowTicket(args: {
   }
 
   if (args.action.action === 'OVERRIDE_PUBLISH') {
-    const validatedPayload = await args.validatePayload(args.action.payload);
+    const reconciledPayload = reconcileWorkflowDraftPayloadWithLive(args.action.payload, liveState.payload);
+    const validatedPayload = await args.validatePayload(reconciledPayload);
     await args.publishPayload(validatedPayload, args.actor);
 
     await updateWorkflowTicketRow(existingTicket.id, {

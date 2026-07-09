@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_ACADEMIC_GRADING_POLICY } from '@/app/lib/grading-policy';
-import { buildSemesterGradePreview } from '@/app/lib/reports/report-data';
+import { buildSemesterGradePreview, listSemesterGradeCandidates } from '@/app/lib/reports/report-data';
 import { db } from '@/app/db/client';
 import { getAcademicGradingPolicy } from '@/app/db/queries/academicGradingPolicy';
 import { listOCsBasic } from '@/app/db/queries/oc';
@@ -66,6 +66,23 @@ describe('buildSemesterGradePreview', () => {
         {
           includeTheory: true,
           includePractical: false,
+          theoryCredits: 2,
+          practicalCredits: 0,
+          subject: {
+            id: 'subject-2',
+            code: 'EC401',
+            name: 'Electronic Circuits II',
+            branch: 'E',
+            hasTheory: true,
+            hasPractical: false,
+            defaultTheoryCredits: 2,
+            defaultPracticalCredits: 0,
+          },
+          theory: { finalMarks: 76, totalMarks: 76, grade: 'AO' },
+        },
+        {
+          includeTheory: true,
+          includePractical: false,
           theoryCredits: 3,
           practicalCredits: 0,
           subject: {
@@ -116,6 +133,23 @@ describe('buildSemesterGradePreview', () => {
           {
             includeTheory: true,
             includePractical: false,
+            theoryCredits: 2,
+            practicalCredits: 0,
+            subject: {
+              id: 'subject-2',
+              code: 'EC401',
+              name: 'Electronic Circuits II',
+              branch: 'E',
+              hasTheory: true,
+              hasPractical: false,
+              defaultTheoryCredits: 2,
+              defaultPracticalCredits: 0,
+            },
+            theory: { finalMarks: 76, totalMarks: 76, grade: 'AO' },
+          },
+          {
+            includeTheory: true,
+            includePractical: false,
             theoryCredits: 3,
             practicalCredits: 0,
             subject: {
@@ -144,5 +178,49 @@ describe('buildSemesterGradePreview', () => {
 
     expect(preview.oc.jnuEnrollmentNo).toBe('001');
     expect(preview.oc.enrolmentNumber).toBe('MCEME/TES-50/001');
+  });
+
+  it('returns branch-specific subjects together with common subjects in the grade preview', async () => {
+    const preview = await buildSemesterGradePreview({
+      courseId: 'course-1',
+      semester: 4,
+      ocId: 'oc-1',
+    });
+
+    expect(preview.subjects.map((subject) => subject.subject)).toEqual([
+      'Electronic Circuits II',
+      'Military Art IV',
+    ]);
+  });
+
+  it('filters semester grade candidates by E/M only and does not require an O filter for common subjects', async () => {
+    vi.mocked(listOCsBasic).mockResolvedValueOnce([
+      {
+        id: 'oc-1',
+        ocNo: '4046',
+        name: 'Cadet One',
+        branch: 'E',
+      },
+      {
+        id: 'oc-2',
+        ocNo: '4047',
+        name: 'Cadet Two',
+        branch: 'M',
+      },
+      {
+        id: 'oc-3',
+        ocNo: '4048',
+        name: 'Cadet Three',
+        branch: 'O',
+      },
+    ] as any);
+
+    const candidates = await listSemesterGradeCandidates({
+      courseId: 'course-1',
+      semester: 4,
+      branches: ['E'],
+    });
+
+    expect(candidates.map((candidate) => candidate.ocId)).toEqual(['oc-1']);
   });
 });

@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { ApiError } from "@/app/lib/http";
 import { hasAdminRole, requireAuth } from "@/app/lib/authz";
+import { normalizePositionKey } from "@/app/lib/warning-management";
 
 type ClaimsWithApt = {
   apt?: {
@@ -40,6 +41,7 @@ export async function getRelegationAccessContext(req: NextRequest): Promise<Rele
   if (position) roleSet.add(position);
 
   const isAdmin = hasAdminRole(Array.from(roleSet));
+  const isDisciplineRelegationAuthority = normalizePositionKey(claims.apt?.position) === "dc-ci-mceme";
 
   const scopeTypeRaw = String(claims.apt?.scope?.type ?? "").trim();
   const scopeType = scopeTypeRaw ? scopeTypeRaw.toUpperCase() : null;
@@ -53,7 +55,7 @@ export async function getRelegationAccessContext(req: NextRequest): Promise<Rele
     roles: Array.from(roleSet),
     isAdmin,
     isPlatoonCommander,
-    canWriteSingle: isAdmin || isPlatoonCommander,
+    canWriteSingle: isAdmin || isPlatoonCommander || isDisciplineRelegationAuthority,
     canPromoteBatch: isAdmin,
     scopeType,
     scopeId,

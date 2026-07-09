@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Copy, Eye, EyeOff } from 'lucide-react';
@@ -32,10 +32,17 @@ export function PasswordField({ value, onChange, placeholder = 'Enter password' 
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
       />
-      <Button type="button" variant="outline" size="icon" onClick={() => setVisible((prev) => !prev)}>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="hover:bg-primary/10 hover:text-primary"
+        onClick={() => setVisible((prev) => !prev)}
+        aria-label={visible ? 'Hide password' : 'Show password'}
+      >
         {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
       </Button>
-      <Button type="button" variant="outline" size="icon" onClick={onCopy}>
+      <Button type="button" variant="outline" size="icon" onClick={onCopy} aria-label="Copy password">
         <Copy className="h-4 w-4" />
       </Button>
     </div>

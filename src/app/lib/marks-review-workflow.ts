@@ -414,6 +414,80 @@ export function buildPtPublishItems(payload: PtWorkflowDraftPayload) {
   }));
 }
 
+function isAcademicsDraftPayload(
+  payload: AcademicWorkflowDraftPayload | PtWorkflowDraftPayload,
+): payload is AcademicWorkflowDraftPayload {
+  return 'subjectId' in payload;
+}
+
+function sameAcademicsWorkflowSelection(
+  draft: AcademicWorkflowDraftPayload,
+  live: AcademicWorkflowDraftPayload,
+) {
+  return draft.courseId === live.courseId && draft.semester === live.semester && draft.subjectId === live.subjectId;
+}
+
+function samePtWorkflowSelection(draft: PtWorkflowDraftPayload, live: PtWorkflowDraftPayload) {
+  return draft.courseId === live.courseId && draft.semester === live.semester;
+}
+
+export function reconcileWorkflowDraftPayloadWithLive(
+  draft: AcademicWorkflowDraftPayload,
+  live: AcademicWorkflowDraftPayload,
+): AcademicWorkflowDraftPayload;
+export function reconcileWorkflowDraftPayloadWithLive(
+  draft: PtWorkflowDraftPayload,
+  live: PtWorkflowDraftPayload,
+): PtWorkflowDraftPayload;
+export function reconcileWorkflowDraftPayloadWithLive(
+  draft: AcademicWorkflowDraftPayload | PtWorkflowDraftPayload,
+  live: AcademicWorkflowDraftPayload | PtWorkflowDraftPayload,
+): AcademicWorkflowDraftPayload | PtWorkflowDraftPayload;
+export function reconcileWorkflowDraftPayloadWithLive(
+  draft: AcademicWorkflowDraftPayload | PtWorkflowDraftPayload,
+  live: AcademicWorkflowDraftPayload | PtWorkflowDraftPayload,
+): AcademicWorkflowDraftPayload | PtWorkflowDraftPayload {
+  if (isAcademicsDraftPayload(draft) && isAcademicsDraftPayload(live)) {
+    if (!sameAcademicsWorkflowSelection(draft, live)) return draft;
+
+    const draftItemsByOcId = new Map(draft.items.map((item) => [item.ocId, item]));
+    return {
+      ...live,
+      items: live.items.map((liveItem) => {
+        const draftItem = draftItemsByOcId.get(liveItem.ocId);
+        if (!draftItem) return liveItem;
+
+        return {
+          ...liveItem,
+          theory: draftItem.theory,
+          practical: draftItem.practical,
+        };
+      }),
+    };
+  }
+
+  if (!isAcademicsDraftPayload(draft) && !isAcademicsDraftPayload(live)) {
+    if (!samePtWorkflowSelection(draft, live)) return draft;
+
+    const draftItemsByOcId = new Map(draft.items.map((item) => [item.oc.id, item]));
+    return {
+      ...live,
+      items: live.items.map((liveItem) => {
+        const draftItem = draftItemsByOcId.get(liveItem.oc.id);
+        if (!draftItem) return liveItem;
+
+        return {
+          ...liveItem,
+          scores: draftItem.scores,
+          motivationValues: draftItem.motivationValues,
+        };
+      }),
+    };
+  }
+
+  return draft;
+}
+
 export function removeOcFromWorkflowDraftPayload(
   payload: Record<string, unknown>,
   ocId: string,

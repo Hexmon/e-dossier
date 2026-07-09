@@ -410,6 +410,13 @@ export const moduleManagementCard: ManagementCardConfig[] = [
     color: "destructive"
   },
   {
+    title: "Warning Management",
+    description: "Configure appointment-wise restriction point warning thresholds",
+    icon: ShieldAlert,
+    to: "/dashboard/genmgmt/warning-management",
+    color: "warning"
+  },
+  {
     title: "Interview Management",
     description: "Schedule, track, and manage interviews",
     icon: Users,
@@ -1399,6 +1406,12 @@ export const moduleManagementTabs = [
     title: "Punishment Management",
     icon: ShieldAlert,
     link: "/dashboard/genmgmt/punishments",
+  },
+  {
+    value: "warning-management",
+    title: "Warning Management",
+    icon: ShieldAlert,
+    link: "/dashboard/genmgmt/warning-management",
   },
   {
     value: "interviews-mgmt",

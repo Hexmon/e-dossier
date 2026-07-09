@@ -54,6 +54,7 @@ const SHARED_AUTHENTICATED_ADMIN_METHOD_RULES: Readonly<Record<string, readonly 
     { path: "/api/v1/admin/interview" },
     { path: "/api/v1/admin/punishments", exact: true },
     { path: "/api/v1/admin/physical-training" },
+    { path: "/api/v1/admin/warning-management", exact: true },
   ],
 };
 

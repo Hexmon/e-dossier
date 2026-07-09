@@ -86,6 +86,10 @@ export type FieldRule = {
   positionKey: string | null;
   roleId: string | null;
   roleKey: string | null;
+  appointmentId: string | null;
+  appointmentUserName?: string | null;
+  appointmentUserRank?: string | null;
+  appointmentPositionKey?: string | null;
   mode: 'ALLOW' | 'DENY' | 'OMIT' | 'MASK';
   fields: string[];
   note: string | null;
@@ -93,6 +97,39 @@ export type FieldRule = {
   updatedAt: string;
   defaultRule?: boolean;
   customRule?: boolean;
+};
+
+export type RbacFieldCatalogItem = {
+  id: string;
+  moduleLabel: string;
+  areaLabel: string;
+  tableName: string;
+  tableExport: string;
+  fieldKey: string;
+  fieldName: string;
+  fieldLabel: string;
+  columnName: string;
+  dataType: string;
+  resourceType: string | null;
+  readPermissionKey: string | null;
+  writePermissionKeys: string[];
+  technical: boolean;
+};
+
+export type RbacActiveAppointment = {
+  id: string;
+  userId: string;
+  userName: string;
+  username: string;
+  userRank: string | null;
+  positionId: string;
+  positionKey: string;
+  positionName: string | null;
+  scopeType: string;
+  scopeId: string | null;
+  assignment: string;
+  startsAt: string;
+  label: string;
 };
 
 export type RbacDefaultFieldRule = {
@@ -219,8 +256,15 @@ export const rbacApi = {
     );
   },
 
-  listFieldRules: async (params?: { permissionId?: string; positionId?: string; roleId?: string }) => {
-    return api.get<{ message: string; items: FieldRule[]; count: number; defaults: RbacFieldRuleDefaults }>('/api/v1/admin/rbac/field-rules', {
+  listFieldRules: async (params?: { permissionId?: string; positionId?: string; roleId?: string; appointmentId?: string }) => {
+    return api.get<{
+      message: string;
+      items: FieldRule[];
+      count: number;
+      defaults: RbacFieldRuleDefaults;
+      fieldCatalog: RbacFieldCatalogItem[];
+      activeAppointments: RbacActiveAppointment[];
+    }>('/api/v1/admin/rbac/field-rules', {
       query: params,
     });
   },
@@ -229,6 +273,7 @@ export const rbacApi = {
     permissionId: string;
     positionId?: string | null;
     roleId?: string | null;
+    appointmentId?: string | null;
     mode: 'ALLOW' | 'DENY' | 'OMIT' | 'MASK';
     fields?: string[];
     note?: string | null;
@@ -241,6 +286,7 @@ export const rbacApi = {
     input: {
       positionId?: string | null;
       roleId?: string | null;
+      appointmentId?: string | null;
       mode?: 'ALLOW' | 'DENY' | 'OMIT' | 'MASK';
       fields?: string[];
       note?: string | null;

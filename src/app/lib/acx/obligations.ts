@@ -27,18 +27,13 @@ function applyFieldOperation<TPayload extends Record<string, unknown>>(
   operation: 'omit' | 'mask'
 ): { updated: TPayload; touched: string[] } {
   const next = clonePayload(payload);
-  const mutableNext = next as Record<string, unknown>;
   const touched: string[] = [];
 
-  for (const field of fields) {
-    if (!(field in mutableNext)) continue;
+  applyFieldList(next, fields, (target, key, field) => {
     touched.push(field);
-    if (operation === 'omit') {
-      delete mutableNext[field];
-    } else {
-      mutableNext[field] = null;
-    }
-  }
+    if (operation === 'omit') delete target[key];
+    else target[key] = null;
+  });
 
   return { updated: next, touched };
 }
@@ -49,17 +44,53 @@ function applyAllowFields<TPayload extends Record<string, unknown>>(
 ): { updated: TPayload; touched: string[] } {
   if (fields.length === 0) return { updated: payload, touched: [] };
   const next = clonePayload(payload);
-  const mutableNext = next as Record<string, unknown>;
   const allowed = new Set(fields);
   const touched: string[] = [];
 
-  for (const key of Object.keys(mutableNext)) {
+  for (const key of Object.keys(next as Record<string, unknown>)) {
     if (allowed.has(key)) continue;
     touched.push(key);
-    delete mutableNext[key];
+    delete (next as Record<string, unknown>)[key];
   }
 
   return { updated: next, touched };
+}
+
+function fieldMatches(key: string, field: string): boolean {
+  if (key === field) return true;
+  const lastSegment = field.includes('.') ? field.split('.').pop() : field;
+  return key === lastSegment;
+}
+
+function applyFieldList(
+  value: unknown,
+  fields: string[],
+  apply: (target: Record<string, unknown>, key: string, field: string) => void
+) {
+  if (!value || typeof value !== 'object') return;
+  if (Array.isArray(value)) {
+    value.forEach((item) => applyFieldList(item, fields, apply));
+    return;
+  }
+
+  const target = value as Record<string, unknown>;
+  for (const key of Object.keys(target)) {
+    for (const field of fields) {
+      if (fieldMatches(key, field)) {
+        apply(target, key, field);
+        break;
+      }
+    }
+    applyFieldList(target[key], fields, apply);
+  }
+}
+
+function hasAnyField(value: unknown, fields: string[]): string[] {
+  const hits = new Set<string>();
+  applyFieldList(value, fields, (_target, _key, field) => {
+    hits.add(field);
+  });
+  return Array.from(hits);
 }
 
 export function applyFieldObligations<TPayload extends Record<string, unknown>>(
@@ -110,7 +141,7 @@ export function applyFieldObligations<TPayload extends Record<string, unknown>>(
 
     if (obligation.type === 'denyFields') {
       const fields = toFieldList((obligation.payload as { fields?: unknown })?.fields);
-      const hit = fields.filter((field) => Object.prototype.hasOwnProperty.call(nextPayload, field));
+      const hit = hasAnyField(nextPayload, fields);
       if (hit.length > 0) {
         allow = false;
         deniedFields.push(...hit);
