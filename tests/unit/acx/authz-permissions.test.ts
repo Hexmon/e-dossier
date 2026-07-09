@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyPlatoonCommanderMarksEntryOverrides,
   applyAdminAndSuperAdminOverrides,
+  applyDisciplineRelegationPermissionFallbackOverrides,
   applyInterviewPermissionFallbackOverrides,
   getAdminBaselineActions,
   normalizeRoleSet,
@@ -51,6 +52,9 @@ describe('authz-permissions helpers', () => {
     expect(admin?.permissionKeys).not.toContain('sidebar:dossier');
     expect(admin?.permissionKeys).toContain('me:read');
     expect(admin?.permissionKeys).toContain('me:navigation:read');
+    expect(admin?.permissionKeys).toContain('admin:warning-management:read');
+    expect(admin?.permissionKeys).toContain('me:warning-notifications:read');
+    expect(admin?.permissionKeys).toContain('me:warning-notifications:update');
     expect(admin?.permissionKeys).toContain('dashboard:data:course:read');
     expect(platoon?.permissionKeys).toContain('sidebar:dossier');
     expect(platoon?.permissionKeys).toContain('page:dashboard:milmgmt:physical-training:view');
@@ -59,9 +63,23 @@ describe('authz-permissions helpers', () => {
     expect(platoon?.permissionKeys).not.toContain('oc:physical-training:bulk:create');
     expect(platoon?.permissionKeys).toContain('me:read');
     expect(platoon?.permissionKeys).toContain('me:navigation:read');
+    expect(platoon?.permissionKeys).toContain('admin:warning-management:read');
+    expect(platoon?.permissionKeys).toContain('me:warning-notifications:read');
+    expect(platoon?.permissionKeys).toContain('me:warning-notifications:update');
+    expect(platoon?.permissionKeys).toContain('page:dashboard:settings:device:appointments:view');
+    expect(platoon?.permissionKeys).toContain('pl-cdr:cadet-appointments:read');
+    expect(platoon?.permissionKeys).toContain('pl-cdr:cadet-appointments:create');
+    expect(platoon?.permissionKeys).toContain('pl-cdr:cadet-appointments:update');
+    expect(platoon?.permissionKeys).toContain('pl-cdr:cadet-appointments:delete');
+    expect(platoon?.permissionKeys).toContain('pl-cdr:cadet-appointments:transfer:create');
+    expect(platoon?.permissionKeys).not.toContain('page:dashboard:settings:view');
+    expect(platoon?.permissionKeys).not.toContain('admin:device-site-settings:update');
     expect(platoon?.positionKeys).toContain('PTN_CDR');
     expect(platoon?.roleKeys).toContain('ptn_cdr');
     expect(otherUsers?.permissionKeys).toContain('page:dashboard:bulk-upload:view');
+    expect(otherUsers?.permissionKeys).toContain('admin:warning-management:read');
+    expect(otherUsers?.permissionKeys).toContain('me:warning-notifications:read');
+    expect(otherUsers?.permissionKeys).toContain('me:warning-notifications:update');
     expect(otherUsers?.permissionKeys).toContain('admin:courses:read');
     expect(otherUsers?.permissionKeys).toContain('admin:courses:offerings:read');
     expect(otherUsers?.permissionKeys).toContain('admin:physical-training:types:read');
@@ -96,7 +114,10 @@ describe('authz-permissions helpers', () => {
     expect(otherUserKeys).toContain('sidebar:dossier');
     expect(platoonKeys).toContain('sidebar:dossier');
     expect(platoonKeys).toContain('page:dashboard:reports:view');
+    expect(platoonKeys).toContain('page:dashboard:settings:device:appointments:view');
+    expect(platoonKeys).toContain('pl-cdr:cadet-appointments:read');
     expect(platoonKeys).not.toContain('page:dashboard:bulk-upload:view');
+    expect(platoonKeys).not.toContain('page:dashboard:settings:view');
     expect(resolveDefaultPermissionKeysForPosition('ADMIN')).toEqual([]);
   });
 
@@ -138,5 +159,30 @@ describe('authz-permissions helpers', () => {
       ])
     );
     expect(permissionSet.has(INTERVIEW_WRITE_PERMISSIONS.initial.plcdr)).toBe(true);
+  });
+
+  it('grants discipline-ground relegation marking APIs only to DC/CI positions', () => {
+    const dcciPermissions = new Set<string>();
+    const cdrPermissions = new Set<string>();
+
+    const dcci = applyDisciplineRelegationPermissionFallbackOverrides(
+      { position: 'DC & CI, MCEME' },
+      dcciPermissions
+    );
+    const cdr = applyDisciplineRelegationPermissionFallbackOverrides(
+      { position: 'CDR' },
+      cdrPermissions
+    );
+
+    expect(dcci.grantedPermissions).toEqual(
+      expect.arrayContaining([
+        'admin:relegation:ocs:read',
+        'admin:relegation:courses:read',
+        'admin:relegation:exception:create',
+      ])
+    );
+    expect(dcciPermissions.has('admin:relegation:exception:create')).toBe(true);
+    expect(cdr.grantedPermissions).toEqual([]);
+    expect(cdrPermissions.size).toBe(0);
   });
 });

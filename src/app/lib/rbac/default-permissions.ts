@@ -30,6 +30,9 @@ export const AUTHENTICATED_DASHBOARD_PERMISSION_KEYS = [
   "me:device-site-settings:read",
   "me:workflow-notifications:read",
   "me:workflow-notifications:update",
+  "me:warning-notifications:read",
+  "me:warning-notifications:update",
+  "admin:warning-management:read",
   "dashboard:data:appointments:read",
   "dashboard:data:course:read",
   "dashboard:data:platoon:read",
@@ -132,6 +135,13 @@ const ADMIN_DEVICE_SETTINGS_PERMISSION_KEYS = [
   "admin:device-site-settings:update",
 ] as const;
 
+export const PLATOON_CADET_APPOINTMENTS_PERMISSION_KEYS = [
+  "page:dashboard:settings:device:appointments:view",
+  ...API_ACTION_MAP.filter((entry) =>
+    entry.resourceType.startsWith("pl-cdr:cadet-appointments")
+  ).map((entry) => entry.action),
+] as const;
+
 const REPORTS_PERMISSION_KEYS = [
   "sidebar:reports",
   ...REPORTS_SUPPORT_PERMISSION_KEYS,
@@ -207,6 +217,7 @@ export function getPlatoonCommanderDefaultPermissionKeys(): string[] {
     ...COMMON_NAVIGATION_PERMISSION_KEYS,
     ...DOSSIER_PERMISSION_KEYS,
     ...REPORTS_PERMISSION_KEYS,
+    ...PLATOON_CADET_APPOINTMENTS_PERMISSION_KEYS,
     ...INTERVIEW_WRITE_PERMISSION_KEYS,
   ]);
 }

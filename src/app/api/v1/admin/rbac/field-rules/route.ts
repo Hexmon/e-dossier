@@ -4,7 +4,7 @@ import { withAuditRoute, AuditEventType, AuditResourceType } from '@/lib/audit';
 import type { AuditNextRequest } from '@/lib/audit';
 import { withAuthz } from '@/app/lib/acx/withAuthz';
 import { rbacFieldRuleCreateSchema } from '@/app/lib/validators.rbac';
-import { createFieldRule, getRbacDefaultFieldRuleMetadata, listFieldRules } from '@/app/db/queries/rbac-admin';
+import { createFieldRule, getRbacDefaultFieldRuleMetadata, getRbacFieldCatalogMetadata, listFieldRules } from '@/app/db/queries/rbac-admin';
 
 export const runtime = 'nodejs';
 
@@ -16,10 +16,12 @@ async function GETHandler(req: AuditNextRequest) {
     const permissionId = sp.get('permissionId') ?? undefined;
     const positionId = sp.get('positionId') ?? undefined;
     const roleId = sp.get('roleId') ?? undefined;
+    const appointmentId = sp.get('appointmentId') ?? undefined;
 
-    const [items, defaults] = await Promise.all([
-      listFieldRules({ permissionId, positionId, roleId }),
+    const [items, defaults, catalog] = await Promise.all([
+      listFieldRules({ permissionId, positionId, roleId, appointmentId }),
       Promise.resolve(getRbacDefaultFieldRuleMetadata()),
+      getRbacFieldCatalogMetadata(),
     ]);
 
     await req.audit.log({
@@ -33,7 +35,7 @@ async function GETHandler(req: AuditNextRequest) {
       },
     });
 
-    return json.ok({ message: 'Field rules retrieved successfully.', items, count: items.length, defaults });
+    return json.ok({ message: 'Field rules retrieved successfully.', items, count: items.length, defaults, ...catalog });
   } catch (error) {
     return handleApiError(error);
   }

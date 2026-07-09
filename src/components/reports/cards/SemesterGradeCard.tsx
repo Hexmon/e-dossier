@@ -27,7 +27,7 @@ import {
 } from '@/hooks/useReports';
 import type { ReportBranch } from '@/types/reports';
 
-const BRANCH_OPTIONS: ReportBranch[] = ['E', 'M', 'O'];
+const BRANCH_OPTIONS: ReportBranch[] = ['E', 'M'];
 
 export function SemesterGradeCard() {
   const ocSearchRef = useRef<HTMLDivElement | null>(null);

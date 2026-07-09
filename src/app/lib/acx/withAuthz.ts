@@ -178,6 +178,35 @@ function extractFieldRuleObligations(principal: Principal, action: string): Arra
   return obligations;
 }
 
+function isJsonResponse(response: Response): boolean {
+  return response.headers.get('content-type')?.toLowerCase().includes('application/json') ?? false;
+}
+
+async function applyReadFieldObligations(response: Response, obligations: Array<{ type: string; payload?: unknown }>) {
+  if (!isJsonResponse(response) || obligations.length === 0) return response;
+
+  try {
+    const payload = await response.clone().json();
+    if (!payload || typeof payload !== 'object') return response;
+    const wrapped = Array.isArray(payload) ? { data: payload } : payload;
+    const fieldResult = applyFieldObligations(wrapped as Record<string, unknown>, obligations);
+    if (!fieldResult.allow) {
+      return json.forbidden(fieldResult.denyReason ?? 'Access denied by field rule');
+    }
+
+    const nextPayload = Array.isArray(payload) ? fieldResult.payload.data : fieldResult.payload;
+    const headers = new Headers(response.headers);
+    headers.set('content-type', 'application/json');
+    return new Response(JSON.stringify(nextPayload), {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  } catch {
+    return response;
+  }
+}
+
 async function resolveAction<TParams>(
   req: AuditNextRequest,
   context: RouteContext<TParams>,
@@ -322,7 +351,11 @@ export function withAuthz<TParams = Record<string, string | string[] | undefined
         });
       }
 
-      return handler(req, context);
+      const response = await handler(req, context);
+      if (method === 'GET') {
+        return applyReadFieldObligations(response, combinedObligations);
+      }
+      return response;
     } catch (error) {
       const mappedError = mapAuthError(error);
       if (mappedError) return mappedError;

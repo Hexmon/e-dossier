@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const branchSchema = z.enum(['E', 'M', 'O']);
+const branchSchema = z.enum(['E', 'M']);
 const consolidatedSessionalSubjectTypeSchema = z.enum(['theory', 'practical']);
 
 export const reportSemesterSchema = z.coerce.number().int().min(1).max(6);
@@ -108,6 +108,7 @@ export const courseWisePerformanceDownloadBodySchema = z.object({
 
 export const courseWiseFinalPerformancePreviewQuerySchema = z.object({
   courseId: z.string().uuid(),
+  semester: reportSemesterSchema.min(2).optional(),
 });
 
 export const courseWiseFinalPerformanceDownloadBodySchema = z.object({

@@ -111,7 +111,7 @@ describe("discipline record route", () => {
     expect(res.status).toBe(200);
   });
 
-  it("soft deletes a discipline record", async () => {
+  it("hard deletes a discipline record", async () => {
     vi.mocked(ocQueries.getDiscipline).mockResolvedValue({
       id: recordId,
       ocId,
@@ -130,9 +130,14 @@ describe("discipline record route", () => {
 
     expect(res.status).toBe(200);
     expect(body.id).toBe(recordId);
+    expect(auditLogMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({ hardDeleted: true }),
+      })
+    );
   });
 
-  it("returns not_found when a soft-deleted discipline record is requested again", async () => {
+  it("returns not_found when a deleted discipline record is requested again", async () => {
     vi.mocked(ocQueries.getDiscipline).mockResolvedValue(null as any);
 
     const res = await deleteDisciplineRoute(

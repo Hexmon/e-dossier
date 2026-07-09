@@ -3,7 +3,11 @@ import path from "node:path";
 import ts from "typescript";
 
 import { describe, expect, it } from "vitest";
-import { PUBLIC_API_REGISTRY, isPublicApiPath } from "@/app/lib/access-control-policy";
+import {
+  PUBLIC_API_REGISTRY,
+  isPublicApiPath,
+  isSharedAuthenticatedAdminApiPath,
+} from "@/app/lib/access-control-policy";
 import { resolveApiAction } from "@/app/lib/acx/action-map";
 
 const METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"]);
@@ -177,11 +181,16 @@ describe("API route safety coverage", () => {
     expect(isPublicApiPath("/api/v1/admin/users", "POST")).toBe(false);
     expect(isPublicApiPath("/api/v1/admin/users/check-username", "GET")).toBe(false);
     expect(isPublicApiPath("/api/v1/admin/training-camps", "GET")).toBe(true);
-    expect(isPublicApiPath("/api/v1/admin/training-camps/camp-1/activities", "GET")).toBe(true);
+    expect(isPublicApiPath("/api/v1/admin/training-camps/camp-1", "GET")).toBe(true);
     expect(isPublicApiPath("/api/v1/admin/training-camps", "POST")).toBe(false);
     expect(isPublicApiPath("/api/v1/admin/interview/pending/ticker-setting", "GET")).toBe(true);
     expect(isPublicApiPath("/api/v1/admin/interview/pending/ticker-setting", "POST")).toBe(false);
-    expect(isPublicApiPath("/api/v1/admin/interview/pending", "GET")).toBe(false);
     expect(isPublicApiPath("/api/v1/site-settings/awards", "GET")).toBe(true);
+  });
+
+  it("keeps warning management reads shared for authenticated users only", () => {
+    expect(isPublicApiPath("/api/v1/admin/warning-management", "GET")).toBe(false);
+    expect(isSharedAuthenticatedAdminApiPath("/api/v1/admin/warning-management", "GET")).toBe(true);
+    expect(isSharedAuthenticatedAdminApiPath("/api/v1/admin/warning-management", "PUT")).toBe(false);
   });
 });

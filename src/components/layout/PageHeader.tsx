@@ -19,6 +19,7 @@ import OCSelectModal from "@/components/modals/OCSelectModal";
 import { buildDossierPathForOc, extractDossierContext, isDossierManagementRoute } from "@/lib/dossier-route";
 import { logoutAndRedirect } from "@/lib/auth/logout";
 import { canAccessInterviewPendingTickerSetting } from "@/lib/interview-pending-ticker";
+import WarningNotificationBell from "@/components/Dashboard/WarningNotificationBell";
 
 interface PageHeaderProps {
   title: string;
@@ -120,6 +121,7 @@ export function PageHeader({ title, description, onLogout }: PageHeaderProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-3">
+            <WarningNotificationBell />
             <Button
               type="button"
               variant="outline"

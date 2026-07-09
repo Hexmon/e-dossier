@@ -261,6 +261,14 @@ function getButton(container: HTMLElement, text: string) {
   return button as HTMLButtonElement;
 }
 
+function getTab(container: HTMLElement, text: string) {
+  const tab = Array.from(container.querySelectorAll('[role="tab"]')).find((item) =>
+    item.textContent?.includes(text)
+  );
+  expect(tab, `tab containing "${text}"`).toBeTruthy();
+  return tab as HTMLButtonElement;
+}
+
 function getInput(container: HTMLElement, placeholder: string) {
   const input = Array.from(container.querySelectorAll("input")).find(
     (item) => item.placeholder === placeholder
@@ -286,6 +294,13 @@ function getSelectsWithOption(container: HTMLElement, optionText: string) {
 async function click(button: HTMLButtonElement) {
   await act(async () => {
     button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await Promise.resolve();
+  });
+}
+
+async function selectTab(button: HTMLButtonElement) {
+  await act(async () => {
+    button.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0 }));
     await Promise.resolve();
   });
 }
@@ -324,6 +339,22 @@ describe("RbacManagement", () => {
     vi.clearAllMocks();
   });
 
+  it("groups RBAC workflows into three task-focused tabs", async () => {
+    act(() => {
+      root.render(<RbacManagement />);
+    });
+
+    expect(getTab(container, "Appointment Permissions").getAttribute("data-state")).toBe("active");
+    expect(getTab(container, "Field & Module Access")).toBeTruthy();
+    expect(getTab(container, "Review Access")).toBeTruthy();
+
+    await selectTab(getTab(container, "Field & Module Access"));
+
+    expect(getTab(container, "Field & Module Access").getAttribute("data-state")).toBe("active");
+    expect(container.textContent).toContain("Configure Field & Module Access");
+    expect(container.textContent).toContain("Advanced field rules");
+  });
+
   it("shows default mapping status and applies defaults through the position mapping API", async () => {
     act(() => {
       root.render(<RbacManagement />);
@@ -343,9 +374,6 @@ describe("RbacManagement", () => {
     expect(container.textContent).toContain("System");
     expect(container.textContent).toContain("Default grant");
     expect(container.textContent).toContain("Loaded 3 permissions / 560 total");
-    expect(container.textContent).toContain("Default rules: 0");
-    expect(container.textContent).toContain("Custom rules: 1");
-    expect(container.textContent).toContain("No default field rules defined");
     expect(getButton(container, "System managed").disabled).toBe(true);
 
     await click(getButton(container, "Apply defaults"));
@@ -401,6 +429,7 @@ describe("RbacManagement", () => {
     expect(container.textContent).toContain("Appointment Position Mapping: Admin");
     expect(container.textContent).toContain("Auto-selected position mapping: Admin");
 
+    await click(getButton(container, "Review Selected Access"));
     await click(getButton(container, "Preview Selected Access"));
 
     expect(mockState.getEffectivePermissions).toHaveBeenCalledWith({
@@ -414,6 +443,7 @@ describe("RbacManagement", () => {
       root.render(<RbacManagement />);
     });
 
+    await selectTab(getTab(container, "Review Access"));
     await click(getButton(container, "Advanced manual IDs"));
 
     act(() => {
@@ -424,7 +454,7 @@ describe("RbacManagement", () => {
       setInputValue(appointmentInput, "apt-1");
     });
 
-    await click(getButton(container, "Preview"));
+    await click(getButton(container, "Preview Selected Access"));
 
     expect(mockState.getEffectivePermissions).toHaveBeenCalledWith({
       userId: "user-1",

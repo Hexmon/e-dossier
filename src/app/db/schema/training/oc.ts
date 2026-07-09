@@ -349,6 +349,7 @@ export const ocSsbReports = pgTable('oc_ssb_reports', {
     ssbPdfContentType: varchar('ssb_pdf_content_type', { length: 128 }),
     ssbPdfSizeBytes: integer('ssb_pdf_size_bytes'),
     ssbPdfPasswordHash: text('ssb_pdf_password_hash'),
+    ssbPdfPasswordCiphertext: text('ssb_pdf_password_ciphertext'),
     ssbPdfPasswordAlgo: varchar('ssb_pdf_password_algo', { length: 32 }),
     ssbPdfSalt: varchar('ssb_pdf_salt', { length: 64 }),
     ssbPdfIv: varchar('ssb_pdf_iv', { length: 32 }),

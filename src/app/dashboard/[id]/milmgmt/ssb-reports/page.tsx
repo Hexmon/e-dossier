@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -19,6 +19,7 @@ import { fetchOCById } from "@/app/lib/api/ocApi";
 import { fetchCourseById } from "@/app/lib/api/courseApi";
 import type { Cadet } from "@/types/cadet";
 import { getSsbUploadForOc, openSsbPdf } from "@/app/lib/api/ssbUploadApi";
+import { useMe } from "@/hooks/useMe";
 import { PasswordField } from "@/components/reports/common/PasswordField";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -28,10 +29,17 @@ export default function SsbReportsPage() {
     const { id } = useParams();
     const ocId = Array.isArray(id) ? id[0] : id ?? "";
     const [cadet, setCadet] = useState<Cadet | null>(null);
-    const [hasUploadedPdf, setHasUploadedPdf] = useState(false);
+    const [canViewUploadedPdf, setCanViewUploadedPdf] = useState(false);
     const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
     const [pdfPassword, setPdfPassword] = useState("");
     const [openingPdf, setOpeningPdf] = useState(false);
+    const { data: meData } = useMe();
+    const activeAppointmentKey = [
+        meData?.user?.id ?? "",
+        meData?.apt?.id ?? "",
+        meData?.apt?.position ?? "",
+        meData?.authority?.delegationId ?? meData?.apt?.delegation_id ?? "",
+    ].join(":");
 
     const dispatch = useDispatch();
     const savedFormData = useSelector((state: RootState) =>
@@ -47,9 +55,9 @@ export default function SsbReportsPage() {
     useEffect(() => {
         if (!ocId) return;
         getSsbUploadForOc(ocId)
-            .then((res) => setHasUploadedPdf(Boolean(res.item?.hasUpload)))
-            .catch(() => setHasUploadedPdf(false));
-    }, [ocId]);
+            .then((res) => setCanViewUploadedPdf(Boolean(res.item?.hasUpload && res.item?.visibility?.canView !== false)))
+            .catch(() => setCanViewUploadedPdf(false));
+    }, [ocId, activeAppointmentKey]);
 
     useEffect(() => {
         let cancelled = false;
@@ -194,7 +202,7 @@ export default function SsbReportsPage() {
                         onSave={handleSave}
                         onAutoSave={handleAutoSave}
                         onClear={handleClearForm}
-                        hasUploadedPdf={hasUploadedPdf}
+                        hasUploadedPdf={canViewUploadedPdf}
                         onViewUploadedPdf={() => setPdfDialogOpen(true)}
                     />
                 </div>

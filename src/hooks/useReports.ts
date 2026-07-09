@@ -161,6 +161,24 @@ export function useCourseWiseFinalPerformancePreview(filters: {
   });
 }
 
+export function useMeritRankingPreview(filters: {
+  courseId: string;
+  semester: number | null;
+  enabled?: boolean;
+}) {
+  const isEnabled = (filters.enabled ?? true) && Boolean(filters.courseId && filters.semester);
+
+  return useQuery({
+    queryKey: ['reports', 'merit-rankings', filters.courseId, filters.semester],
+    queryFn: () =>
+      reportsApi.getMeritRankingPreview({
+        courseId: filters.courseId,
+        semester: filters.semester as number,
+      }),
+    enabled: isEnabled,
+  });
+}
+
 export function useReportsDownloads() {
   const consolidatedDownload = useMutation({
     mutationFn: (payload: ConsolidatedDownloadRequest) =>

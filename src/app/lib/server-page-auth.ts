@@ -153,6 +153,18 @@ async function enforceDashboardPagePermission(authContext: AdminPageAuthContext)
     redirect("/dashboard");
   }
 
+  if (
+    pathname === "/dashboard/settings/device/appointments" &&
+    authContext.scopeId &&
+    canManageCadetAppointments({
+      roles: authContext.roles,
+      position: authContext.position,
+      scopeType: authContext.scopeType,
+    })
+  ) {
+    return;
+  }
+
   if (authContext.roleGroup === "SUPER_ADMIN") return;
 
   const sectionKey = resolveSidebarSectionForDashboardPath(pathname);

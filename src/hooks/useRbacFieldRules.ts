@@ -17,6 +17,8 @@ export function useRbacFieldRules() {
       return {
         items: res.items ?? [],
         defaults: res.defaults ?? EMPTY_DEFAULTS,
+        fieldCatalog: res.fieldCatalog ?? [],
+        activeAppointments: res.activeAppointments ?? [],
       };
     },
   });
@@ -41,6 +43,8 @@ export function useRbacFieldRules() {
     ...query,
     data: query.data?.items ?? [],
     defaults: query.data?.defaults ?? EMPTY_DEFAULTS,
+    fieldCatalog: query.data?.fieldCatalog ?? [],
+    activeAppointments: query.data?.activeAppointments ?? [],
     createRule,
     updateRule,
     deleteRule,

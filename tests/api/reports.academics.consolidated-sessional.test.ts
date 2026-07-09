@@ -158,6 +158,20 @@ describe('Consolidated sessional report routes', () => {
     );
   });
 
+  it('preview rejects O as a report branch filter', async () => {
+    const req = makeJsonRequest({
+      method: 'GET',
+      path: `/api/v1/reports/academics/consolidated-sessional/preview?courseId=${courseId}&semester=1&subjectId=${subjectId}&branches=O`,
+    });
+
+    const res = await previewConsolidatedSessional(req as any, createRouteContext());
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.message).toBe('Validation failed');
+    expect(reportData.buildConsolidatedSessionalPreview).not.toHaveBeenCalled();
+  });
+
   it('download returns 401 when auth fails', async () => {
     vi.mocked(authz.requireAuth).mockRejectedValueOnce(
       new ApiError(401, 'Unauthorized', 'unauthorized'),

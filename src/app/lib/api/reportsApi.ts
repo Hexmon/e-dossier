@@ -7,6 +7,7 @@ import type {
   CourseWisePerformancePreview,
   CourseSemesterMetadata,
   FinalResultCompilationPreview,
+  MeritRankingPreview,
   PtAssessmentPreview,
   ReportBranch,
   SemesterGradeCandidate,
@@ -47,6 +48,11 @@ export type CourseWisePerformancePreviewResponse = {
 export type CourseWiseFinalPerformancePreviewResponse = {
   message: string;
   data: CourseWiseFinalPerformancePreview;
+};
+
+export type MeritRankingPreviewResponse = {
+  message: string;
+  data: MeritRankingPreview;
 };
 
 export type FinalResultCompilationPreviewResponse = {
@@ -162,6 +168,15 @@ export const reportsApi = {
   getCourseWiseFinalPerformancePreview(params: { courseId: string }) {
     return api.get<CourseWiseFinalPerformancePreviewResponse>(
       endpoints.reports.overallTraining.courseWiseFinalPerformance.preview,
+      {
+        query: params,
+      }
+    );
+  },
+
+  getMeritRankingPreview(params: { courseId: string; semester: number }) {
+    return api.get<MeritRankingPreviewResponse>(
+      endpoints.reports.overallTraining.meritRankings.preview,
       {
         query: params,
       }
