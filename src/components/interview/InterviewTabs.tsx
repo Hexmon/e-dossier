@@ -60,12 +60,14 @@ export default function InterviewTabs({
     canEditLockedSemesters = false,
     currentUserDisplayName,
     accessContext,
+    courseId,
 }: {
     readOnly?: boolean;
     currentSemester?: number | null;
     canEditLockedSemesters?: boolean;
     currentUserDisplayName?: string;
     accessContext: InterviewAccessContext;
+    courseId?: string | null;
 }) {
     const { id } = useParams();
     const searchParams = useSearchParams();
@@ -79,7 +81,7 @@ export default function InterviewTabs({
         legacyQueryKeys: ["sem", "semister"],
     });
     const [active, setActive] = useState<InterviewOfficer>("plcdr");
-    const { loading, templatesLoading, templatesError, fetchInitial, saveInitial, templateMappings } = useInterviewForms(ocId);
+    const { loading, templatesLoading, templatesError, fetchInitial, saveInitial, templateMappings } = useInterviewForms(ocId, courseId);
     const hydratedRef = useRef(false);
     const lastResetTokenRef = useRef<string>("");
     const [initialDataLoaded, setInitialDataLoaded] = useState(false);
@@ -107,7 +109,7 @@ export default function InterviewTabs({
     useEffect(() => {
         hydratedRef.current = false;
         setInitialDataLoaded(false);
-    }, [ocId]);
+    }, [ocId, courseId]);
 
     useEffect(() => {
         savedFormsRef.current = allSavedForms;

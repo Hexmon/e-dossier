@@ -40,12 +40,14 @@ export default function InterviewTermTabs({
     canEditLockedSemesters = false,
     currentUserDisplayName,
     accessContext,
+    courseId,
 }: {
     readOnly?: boolean;
     currentSemester?: number | null;
     canEditLockedSemesters?: boolean;
     currentUserDisplayName?: string;
     accessContext: InterviewAccessContext;
+    courseId?: string | null;
 }) {
     const { id } = useParams();
     const searchParams = useSearchParams();
@@ -88,13 +90,13 @@ export default function InterviewTermTabs({
         defaultValues: savedFormData?.formFields || {},
     });
 
-    const { fetchTerm, saveTerm, templateMappings } = useInterviewForms(ocId);
+    const { fetchTerm, saveTerm, templateMappings } = useInterviewForms(ocId, courseId);
     const allSavedForms = useSelector((state: RootState) => state.termInterview.forms[ocId] || {});
     const savedFormsRef = useRef(allSavedForms);
 
     useEffect(() => {
         hydratedRef.current = false;
-    }, [ocId]);
+    }, [ocId, courseId]);
 
     useEffect(() => {
         savedFormsRef.current = allSavedForms;

@@ -173,6 +173,7 @@ export default function InterviewsPage() {
               canEditLockedSemesters={canEditLockedSemesters}
               currentUserDisplayName={currentUserDisplayName}
               accessContext={interviewAccess}
+              courseId={course}
             />
           ) : (
             <InterviewTabs
@@ -181,6 +182,7 @@ export default function InterviewsPage() {
               canEditLockedSemesters={canEditLockedSemesters}
               currentUserDisplayName={currentUserDisplayName}
               accessContext={interviewAccess}
+              courseId={course}
             />
           )}
         </DossierTab>
