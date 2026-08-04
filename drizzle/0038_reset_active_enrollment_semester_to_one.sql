@@ -1,4 +1,5 @@
-UPDATE "oc_course_enrollments"
-SET "current_semester" = 1,
-    "updated_at" = now()
-WHERE "status" = 'ACTIVE';
+-- Intentionally a no-op. New enrollments already default to semester 1, while
+-- existing enrollment semesters must survive deployments and migration replays.
+DO $$ BEGIN
+  NULL;
+END $$;

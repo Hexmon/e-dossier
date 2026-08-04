@@ -13,7 +13,7 @@ import {
     saveTermInterview,
 } from "@/lib/interviewFormService";
 
-export function useInterviewForms(ocId?: string) {
+export function useInterviewForms(ocId?: string, courseId?: string | null) {
     const [loading, setLoading] = useState(false);
     const [templatesLoading, setTemplatesLoading] = useState(false);
     const [templatesError, setTemplatesError] = useState<string | null>(null);
@@ -33,38 +33,43 @@ export function useInterviewForms(ocId?: string) {
     >({});
 
     useEffect(() => {
+        let cancelled = false;
         mountedRef.current = true;
         setTemplatesLoading(true);
         setTemplatesError(null);
 
-        loadInterviewTemplates()
+        mappingsRef.current = null;
+        setTemplateMappings(null);
+
+        loadInterviewTemplates(courseId)
             .then((templates) => {
-                if (!mountedRef.current) return;
+                if (cancelled || !mountedRef.current) return;
                 const mappings = buildTemplateMappings(templates);
                 mappingsRef.current = mappings;
                 setTemplateMappings(mappings);
             })
             .catch((err) => {
-                if (!mountedRef.current) return;
+                if (cancelled || !mountedRef.current) return;
                 console.error("Failed to load interview templates:", err);
                 setTemplatesError(err instanceof Error ? err.message : "Failed to load templates");
             })
             .finally(() => {
-                if (mountedRef.current) setTemplatesLoading(false);
+                if (!cancelled && mountedRef.current) setTemplatesLoading(false);
             });
 
         return () => {
+            cancelled = true;
             mountedRef.current = false;
         };
-    }, []);
+    }, [courseId]);
 
     const ensureMappings = useCallback(async () => {
         if (mappingsRef.current) return mappingsRef.current;
-        const templates = await loadInterviewTemplates();
+        const templates = await loadInterviewTemplates(courseId);
         const mappings = buildTemplateMappings(templates);
         mappingsRef.current = mappings;
         return mappings;
-    }, []);
+    }, [courseId]);
 
     const fetchInitial = useCallback(async () => {
         if (!ocId) return null;
