@@ -1,14 +1,23 @@
 import { apiRequest } from "@/app/lib/apiClient";
 import type { TemplateField, TemplateGroup, TemplateInfo, TemplateSection } from "@/types/interview-templates";
 
-const templateCache = {
-    data: null as TemplateInfo[] | null,
-    promise: null as Promise<TemplateInfo[]> | null,
+type TemplateCacheEntry = {
+    data: TemplateInfo[] | null;
+    promise: Promise<TemplateInfo[]> | null;
 };
 
-export function clearInterviewTemplateCache() {
-    templateCache.data = null;
-    templateCache.promise = null;
+const templateCache = new Map<string, TemplateCacheEntry>();
+
+function cacheKey(courseId?: string | null) {
+    return courseId?.trim() || "__global__";
+}
+
+export function clearInterviewTemplateCache(courseId?: string | null) {
+    if (courseId === undefined) {
+        templateCache.clear();
+        return;
+    }
+    templateCache.delete(cacheKey(courseId));
 }
 
 function normalizeKey(value: string) {
@@ -67,14 +76,23 @@ function sortSections(sections: TemplateSection[]) {
     return [...sections].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 }
 
-export async function loadInterviewTemplates(): Promise<TemplateInfo[]> {
-    if (templateCache.data) return templateCache.data;
-    if (templateCache.promise) return templateCache.promise;
+export async function loadInterviewTemplates(courseId?: string | null): Promise<TemplateInfo[]> {
+    const key = cacheKey(courseId);
+    const cached = templateCache.get(key) ?? { data: null, promise: null };
+    templateCache.set(key, cached);
 
-    templateCache.promise = (async () => {
+    if (cached.data) return cached.data;
+    if (cached.promise) return cached.promise;
+
+    cached.promise = (async () => {
+        const params = new URLSearchParams({ hydrate: "true" });
+        if (courseId?.trim()) {
+            params.set("courseId", courseId.trim());
+            params.set("fallbackToLegacyGlobal", "true");
+        }
         const resp: any = await apiRequest<any>({
             method: "GET",
-            endpoint: "/api/v1/admin/interview/templates?hydrate=true",
+            endpoint: `/api/v1/admin/interview/templates?${params.toString()}`,
         });
         const templates: any[] = resp?.items ?? [];
 
@@ -123,15 +141,15 @@ export async function loadInterviewTemplates(): Promise<TemplateInfo[]> {
             };
         });
 
-        templateCache.data = detailed;
+        cached.data = detailed;
         return detailed;
     })();
 
-    templateCache.promise.catch((err) => {
-        templateCache.data = null;
-        templateCache.promise = null;
+    cached.promise.catch((err) => {
+        cached.data = null;
+        cached.promise = null;
         console.error("Failed to load interview templates:", err);
     });
 
-    return templateCache.promise;
+    return cached.promise;
 }

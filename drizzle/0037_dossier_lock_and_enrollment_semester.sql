@@ -20,7 +20,6 @@ ALTER TABLE "oc_relegations" ADD COLUMN "to_semester" integer;
 ALTER TABLE "oc_course_enrollments" ADD CONSTRAINT "oc_course_enrollments_current_semester_check" CHECK ("current_semester" BETWEEN 1 AND 6);
 --> statement-breakpoint
 CREATE INDEX "idx_oc_course_enrollment_course_status_semester" ON "oc_course_enrollments" USING btree ("course_id","status","current_semester");
---> statement-breakpoint
-UPDATE "oc_course_enrollments"
-SET "current_semester" = 1
-WHERE "status" = 'ACTIVE';
+
+-- Existing rows receive the column default when the column is added. Do not reset
+-- active enrollments here: promoted/relegated semester state is business data.
