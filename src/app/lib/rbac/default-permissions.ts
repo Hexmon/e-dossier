@@ -38,6 +38,16 @@ export const AUTHENTICATED_DASHBOARD_PERMISSION_KEYS = [
   "dashboard:data:platoon:read",
 ] as const;
 
+export const WARNING_NOTIFICATION_TARGET_PERMISSION_KEYS = [
+  "page:dashboard:milmgmt:discip-records:view",
+  "page:dashboard:milmgmt:med-record:view",
+  "oc:read",
+  "oc:personal:read",
+  "oc:discipline:read",
+  "oc:medical:read",
+  "oc:medical-category:read",
+] as const;
+
 const ADMIN_SECTION_SUPPORT_API_PATHS = new Set<string>([
   "/api/v1/admin/courses",
   "/api/v1/admin/courses/:courseId/offerings",
@@ -207,6 +217,7 @@ export function getAdminDefaultPermissionKeys(): string[] {
     ...COMMON_NAVIGATION_PERMISSION_KEYS,
     ...ADMIN_SECTION_PERMISSION_KEYS,
     ...ADMIN_DEVICE_SETTINGS_PERMISSION_KEYS,
+    ...WARNING_NOTIFICATION_TARGET_PERMISSION_KEYS,
     ...REPORTS_PERMISSION_KEYS,
   ]);
 }

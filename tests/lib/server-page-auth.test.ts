@@ -397,6 +397,73 @@ describe("server page auth", () => {
     expect(redirect).toHaveBeenCalledWith("/dashboard");
   });
 
+  it.each([
+    "/dashboard/oc-1/milmgmt/discip-records",
+    "/dashboard/oc-1/milmgmt/med-record",
+  ])("allows a granted warning target page while the dossier sidebar is hidden: %s", async (pathname) => {
+    process.env.AUTHZ_V2_ENABLED = "true";
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "true";
+    (headers as any).mockResolvedValueOnce({
+      get: (name: string) => (name === "x-pathname" ? pathname : null),
+    });
+    const action = pathname.endsWith("discip-records")
+      ? "page:dashboard:milmgmt:discip-records:view"
+      : "page:dashboard:milmgmt:med-record:view";
+    (getEffectivePermissionBundleCached as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      appointment: {
+        appointmentId: null,
+        positionId: null,
+        positionKey: "ADMIN",
+        scopeType: "GLOBAL",
+        scopeId: null,
+      },
+      isAdmin: true,
+      isSuperAdmin: false,
+      permissions: [action],
+      deniedPermissions: [],
+      fieldRulesByAction: {},
+      policyVersion: 2,
+    });
+
+    const ctx = await requireDashboardOcModuleAccess("oc-1", "DOSSIER");
+
+    expect(ctx.permissions).toContain(action);
+    expect(redirect).not.toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("keeps an explicitly denied warning target page blocked", async () => {
+    process.env.AUTHZ_V2_ENABLED = "true";
+    process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "true";
+    const action = "page:dashboard:milmgmt:med-record:view";
+    (headers as any).mockResolvedValueOnce({
+      get: (name: string) =>
+        name === "x-pathname" ? "/dashboard/oc-1/milmgmt/med-record" : null,
+    });
+    (getEffectivePermissionBundleCached as any).mockResolvedValueOnce({
+      userId: "admin-1",
+      roles: ["ADMIN"],
+      appointment: {
+        appointmentId: null,
+        positionId: null,
+        positionKey: "ADMIN",
+        scopeType: "GLOBAL",
+        scopeId: null,
+      },
+      isAdmin: true,
+      isSuperAdmin: false,
+      permissions: [action],
+      deniedPermissions: [action],
+      fieldRulesByAction: {},
+      policyVersion: 2,
+    });
+
+    await expect(requireDashboardOcModuleAccess("oc-1", "DOSSIER")).rejects.toThrow(
+      "REDIRECT:/dashboard"
+    );
+  });
+
   it("allows scoped platoon commanders onto cadet appointment settings under v2 without opening all settings", async () => {
     process.env.AUTHZ_V2_ENABLED = "true";
     process.env.NEXT_PUBLIC_AUTHZ_V2_ENABLED = "true";

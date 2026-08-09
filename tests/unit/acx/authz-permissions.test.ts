@@ -55,6 +55,11 @@ describe('authz-permissions helpers', () => {
     expect(admin?.permissionKeys).toContain('admin:warning-management:read');
     expect(admin?.permissionKeys).toContain('me:warning-notifications:read');
     expect(admin?.permissionKeys).toContain('me:warning-notifications:update');
+    expect(admin?.permissionKeys).toContain('page:dashboard:milmgmt:discip-records:view');
+    expect(admin?.permissionKeys).toContain('page:dashboard:milmgmt:med-record:view');
+    expect(admin?.permissionKeys).toContain('oc:discipline:read');
+    expect(admin?.permissionKeys).toContain('oc:medical:read');
+    expect(admin?.permissionKeys).toContain('oc:medical-category:read');
     expect(admin?.permissionKeys).toContain('dashboard:data:course:read');
     expect(platoon?.permissionKeys).toContain('sidebar:dossier');
     expect(platoon?.permissionKeys).toContain('page:dashboard:milmgmt:physical-training:view');

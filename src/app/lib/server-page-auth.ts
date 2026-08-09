@@ -30,6 +30,11 @@ import { and, eq, isNull } from "drizzle-orm";
 import { cookies, headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
+const WARNING_NOTIFICATION_TARGET_PAGE_ACTIONS = new Set([
+  "page:dashboard:milmgmt:discip-records:view",
+  "page:dashboard:milmgmt:med-record:view",
+]);
+
 type AdminPageAuthContext = {
   userId: string;
   roles: string[];
@@ -168,12 +173,21 @@ async function enforceDashboardPagePermission(authContext: AdminPageAuthContext)
   if (authContext.roleGroup === "SUPER_ADMIN") return;
 
   const sectionKey = resolveSidebarSectionForDashboardPath(pathname);
-  if (sectionKey && !hasResolvedSectionAccess(authContext.moduleAccess, sectionKey)) {
-    redirect("/dashboard");
-  }
-
   const permissions = new Set(authContext.permissions);
   const deniedPermissions = new Set(authContext.deniedPermissions);
+  const hasWarningTargetPageAccess =
+    WARNING_NOTIFICATION_TARGET_PAGE_ACTIONS.has(page.action) &&
+    permissions.has(page.action) &&
+    !deniedPermissions.has(page.action);
+
+  // A direct page grant is authoritative even when the broader sidebar module
+  // is hidden. Warning recipients use this narrow path to the medical or
+  // discipline record without opening the complete Dossier navigation module.
+  if (sectionKey && !hasResolvedSectionAccess(authContext.moduleAccess, sectionKey)) {
+    if (!hasWarningTargetPageAccess) {
+      redirect("/dashboard");
+    }
+  }
   if (permissions.has("*")) return;
   if (deniedPermissions.has(page.action)) {
     redirect("/dashboard");

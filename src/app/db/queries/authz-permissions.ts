@@ -18,6 +18,7 @@ import {
   normalizeRbacKey,
   PLATOON_CADET_APPOINTMENTS_PERMISSION_KEYS,
   RBAC_WILDCARD_PERMISSION,
+  WARNING_NOTIFICATION_TARGET_PERMISSION_KEYS,
 } from '@/app/lib/rbac/default-permissions';
 import {
   INTERVIEW_DEFAULT_ROLE_PERMISSIONS,
@@ -249,6 +250,7 @@ const RBAC_DASHBOARD_SESSION_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v2_dashboa
 const RBAC_OTHER_USER_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v3_other_user_defaults';
 const RBAC_ROLE_GROUP_DEFAULTS_STATE_KEY = 'rbac_code_defaults_v6_warning_notifications';
 const RBAC_PLATOON_CADET_APPOINTMENTS_STATE_KEY = 'rbac_code_defaults_v7_platoon_cadet_appointments';
+const RBAC_WARNING_NOTIFICATION_TARGET_STATE_KEY = 'rbac_code_defaults_v8_warning_notification_targets';
 let ensureCodeRbacDefaultsPromise: Promise<void> | null = null;
 
 async function upsertPermissionKeys(permissionKeys: string[]): Promise<Map<string, string>> {
@@ -552,6 +554,22 @@ async function applyPlatoonCadetAppointmentsDefaultsToExistingSubjects(
   }
 }
 
+async function applyWarningNotificationTargetDefaults(
+  permissionIdByKey: Map<string, string>
+): Promise<void> {
+  const permissionIds = getPermissionIds(
+    permissionIdByKey,
+    WARNING_NOTIFICATION_TARGET_PERMISSION_KEYS
+  );
+  if (permissionIds.length === 0) return;
+
+  await applyPermissionsToRolesAndPositions({
+    roleKeys: ['admin', 'commandant'],
+    positionKeys: ['ADMIN', 'COMMANDANT'],
+    permissionIds,
+  });
+}
+
 export async function applyDefaultPermissionsToPosition(
   positionId: string,
   positionKey: string
@@ -596,6 +614,12 @@ async function ensureCodeRbacDefaultsInner(): Promise<void> {
   if (!(await hasRbacDefaultsState(RBAC_PLATOON_CADET_APPOINTMENTS_STATE_KEY))) {
     await applyPlatoonCadetAppointmentsDefaultsToExistingSubjects(permissionIdByKey);
     await markRbacDefaultsState(RBAC_PLATOON_CADET_APPOINTMENTS_STATE_KEY);
+    changed = true;
+  }
+
+  if (!(await hasRbacDefaultsState(RBAC_WARNING_NOTIFICATION_TARGET_STATE_KEY))) {
+    await applyWarningNotificationTargetDefaults(permissionIdByKey);
+    await markRbacDefaultsState(RBAC_WARNING_NOTIFICATION_TARGET_STATE_KEY);
     changed = true;
   }
 
